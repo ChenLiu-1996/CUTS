@@ -4,14 +4,11 @@ import time
 import numpy as np
 import phate
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from data_util import CUTSDataset, collate_contrastive, get_data_berkeley, get_data_brain, get_data_macular_edema, \
-    get_data_polyp, get_data_retina, select_near_positive, select_negative_random
+from data import collate_contrastive, select_near_positive, select_negative_random
+from datasets import BerkeleySegmentation, BrainArman, DiabeticMacularEdema, PolyP, Retina
 from loss import local_nce_loss_fast
 from metric import dice_coeff
 from model import CUTSEncoder
-from PIL import Image
 from torch import optim
 from torch.utils.data import DataLoader
 
@@ -24,23 +21,17 @@ LOAD_POOLS = True
 
 
 if DATA == 'retina':
-    data, label, names = get_data_retina()
+    data = Retina()
 elif DATA == 'berkeley':
-    data, label, names = get_data_berkeley()
+    data = BerkeleySegmentation
 elif DATA == 'polyp':
-    data, label, names = get_data_polyp()
+    data = PolyP()
 elif DATA == 'macular_edema':
-    data, label, names = get_data_macular_edema()
+    data = DiabeticMacularEdema()
 elif DATA == 'brain':
-    data, label, names = get_data_brain()
+    data = BrainArman()
 else:
     raise Exception('fix DATA option')
-
-data = torch.from_numpy(data).float()
-data_input = data.permute(0, 3, 1, 2)
-label = torch.from_numpy(label).float()
-
-print(data_input.min(), data_input.max())  # should be in [-1, 1]
 
 DATA_FOLDER = 'output_{}_{}'.format(DATA, MODEL)
 if not os.path.exists(DATA_FOLDER):
@@ -48,24 +39,6 @@ if not os.path.exists(DATA_FOLDER):
 ####################
 
 
-####################
-# use one pixel of ground truth to select cluster in the end
-label_mask = np.zeros_like(label)
-for i in range(label.shape[0]):
-    label_argwhere = np.argwhere(label[i])  # shape: [2, x]
-    median_x_coord = np.median(label_argwhere[0, :]).reshape(
-        (1, 1))  # shape: [1, 1]
-    median_y_coord = np.median(label_argwhere[1, :]).reshape(
-        (1, 1))  # shape: [1, 1]
-    middle_pt = np.concatenate(
-        [median_x_coord, median_y_coord], axis=0)  # shape: [2, 1]
-    dist_to_middle_pt = ((label_argwhere - middle_pt)
-                         ** 2).sum(axis=0)  # shape: [x]
-    argmin = np.argmin(dist_to_middle_pt)  # shape: [] (it's a scalar)
-    # this sets the "middle pixel" of the ground truth to 1
-    label_mask[i, label_argwhere[:, argmin]
-               [0], label_argwhere[:, argmin][1]] = 1
-label_mask = torch.from_numpy(label_mask).float()
 ####################
 
 
