@@ -1,4 +1,5 @@
 from glob import glob
+from typing import Tuple
 
 import numpy as np
 # from data import ContrastiveViewGenerator
@@ -56,8 +57,7 @@ class Retina(Dataset):
     def __len__(self) -> int:
         return len(self.img_path)
 
-    def __getitem__(self, idx) -> tuple[np.array, np.array]:
-        print(self.data_image.shape)
+    def __getitem__(self, idx) -> Tuple[np.array, np.array]:
         image = self.data_image[idx]
         label = self.data_label[idx]
         # if self.contrastive_gen is not None:

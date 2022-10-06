@@ -1,5 +1,4 @@
 import argparse
-import time
 
 import numpy as np
 import phate
@@ -10,6 +9,7 @@ from datasets import BerkeleySegmentation, BrainArman, DiabeticMacularEdema, Pol
 from model import CUTSEncoder
 from torch import optim
 from torch.utils.data import DataLoader, random_split
+from tqdm import tqdm
 from util import AttributeHashmap, dice_coeff, local_nce_loss_fast
 
 # DATA_FOLDER = 'output_{}_{}'.format(DATA, MODEL)
@@ -239,24 +239,18 @@ def train(config: AttributeHashmap):
         model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
 
     loss_fn = torch.nn.CrossEntropyLoss()
-    for epoch in range(config.max_epochs):
+    for epoch_idx in range(config.max_epochs):
         epoch_loss = 0
         feature_all = []
         model.train()
-        t = time.time()
-        for i, (x_train, _y_train) in enumerate(train_set):
-            if i and i % 10 == 0:
-                print('iter {} loss: {:.3f}/{:.3f} ({:.1f} sec)'.format(i,
-                                                                        train_loss.item(), patchify_loss, time.time() - t))
-                t = time.time()
-            x_train, _y_train = x_train.to(device).type(
-                torch.FloatTensor), _y_train.to(device).type(torch.FloatTensor)
+        for batch_idx, (x_train, _) in tqdm(enumerate(train_set)):
+            x_train = x_train.type(torch.FloatTensor).to(device)
             optimizer.zero_grad()
             features, patchify_loss = model(x_train)
             # train_loss_ = local_nce_loss_fast(
             #     features, negative_pool[2*i:2*(i+1)], positive_pool[2*i:2*(i+1)])
 
-            train_loss = loss_fn(features, _y_train)
+            train_loss = loss_fn(features)
 
             # train_loss = lambda_contrastive_loss * \
             #     train_loss_ + lambda_patchify_loss * patchify_loss

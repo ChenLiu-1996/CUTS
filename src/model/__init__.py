@@ -1,1 +1,1 @@
-from .CUTS_encoder import CUTSEncoder
+from .CUTS_model import CUTSEncoder
