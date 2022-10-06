@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 
 
-def local_nce_loss_fast(features, negative_pool, positive_pool):
+def local_nce_loss_fast(features: np.array, negative_pool: torch.Tensor, positive_pool: torch.Tensor) -> torch.Tensor:
     temperature = 0.25
 
     # feature1 = features[:2]

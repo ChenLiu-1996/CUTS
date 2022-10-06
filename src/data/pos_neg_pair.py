@@ -1,7 +1,6 @@
 import numpy as np
 import torch
-
-from ..util import check_ssim
+from util import check_ssim
 
 
 def select_near_positive(img_data, full_version=True):

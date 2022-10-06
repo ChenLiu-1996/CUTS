@@ -1,4 +1,7 @@
-def dice_coeff(pred, label):
+import numpy as np
+
+
+def dice_coeff(pred: np.array, label: np.array) -> float:
     # inter = torch.dot(pred.view(-1), label.view(-1))
     # union = torch.sum(pred) + torch.sum(label)
     # dice = (2 * inter.float() ) / union.float()

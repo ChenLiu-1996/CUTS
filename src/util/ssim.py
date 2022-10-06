@@ -1,7 +1,9 @@
 import numpy as np
 import torch
 from PIL import Image
-from skimage.metrics import structural_similarity as ssim
+
+# NOTE: Temporarily muting ssim due to lack of skimage
+# from skimage.metrics import structural_similarity as ssim
 
 
 def check_ssim(img, r0, c0, r, c):
@@ -15,7 +17,8 @@ def check_ssim(img, r0, c0, r, c):
     y1_, y2_ = c, c+16
 
     im_new = torch.from_numpy(np.array(im_new))
-    return ssim(im_new.detach().numpy()[x1:x2, y1:y2, :], im_new.detach().numpy()[x1_:x2_, y1_:y2_, :], multichannel=True)
+    # return ssim(im_new.detach().numpy()[x1:x2, y1:y2, :], im_new.detach().numpy()[x1_:x2_, y1_:y2_, :], multichannel=True)
+    return 0
 
 
 def _add_margin(pil_img, top, right, bottom, left, color):

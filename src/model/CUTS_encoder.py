@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-from ..module import ConvBlock
+from .conv import ConvBlock
 
 
 class CUTSEncoder(nn.Module):

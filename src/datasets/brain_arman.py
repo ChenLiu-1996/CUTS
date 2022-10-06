@@ -4,7 +4,7 @@ from torch.utils.data import Dataset
 
 class BrainArman(Dataset):
     def __init__(self,
-                 base_path: str = './data/output_brain_arman/'):
+                 base_path: str = '../../data/output_brain_arman/'):
 
         # Pre-load all the data to CPU. Saves time.
         with open('%s/output.npz' % base_path, 'rb') as f:
@@ -27,7 +27,7 @@ class BrainArman(Dataset):
     def __len__(self) -> int:
         return len(self.img_path)
 
-    def __getitem__(self, idx) -> tuple(np.array, np.array):
+    def __getitem__(self, idx) -> tuple[np.array, np.array]:
         image = self.data_image[idx]
         label = self.data_label[idx]
         return image, label

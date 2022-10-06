@@ -4,7 +4,7 @@ from torch.utils.data import Dataset
 
 class DiabeticMacularEdema(Dataset):
     def __init__(self,
-                 base_path: str = './data/diabetic_macular_edema/'):
+                 base_path: str = '../../data/diabetic_macular_edema/'):
 
         # Pre-load all the data to CPU. Saves time.
         with open('%s/data.npz' % base_path, 'rb') as f:
@@ -25,7 +25,7 @@ class DiabeticMacularEdema(Dataset):
     def __len__(self) -> int:
         return len(self.img_path)
 
-    def __getitem__(self, idx) -> tuple(np.array, np.array):
+    def __getitem__(self, idx) -> tuple[np.array, np.array]:
         image = self.data_image[idx]
         label = self.data_label[idx]
         return image, label
