@@ -12,13 +12,16 @@ class PatchSampler(object):
     positive and negative pairs for contrastive learning purposes.
 
     Current strategy is to sample N anchor patches,
-    then sample 1 positive patch and 1 negative patch for each anchor patch.
+    then sample 1 positive patch for each anchor patch.
+
+    We don't need to sample negative patches, as they can be directly inferred.
     """
 
-    def __init__(self, random_seed: int = None, patch_size: int = 7, samples_per_batch: int = 1):
+    def __init__(self, random_seed: int = None, patch_size: int = 7, samples_per_batch: int = 16):
         self.random_seed = random_seed
         self.patch_size = patch_size
         self.samples_per_batch = samples_per_batch
+        self.max_attempts = 10  # give up finding positive sample.
 
     def sample(self, image: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -40,32 +43,36 @@ class PatchSampler(object):
         # First sample `samples_per_batch` anchors. Then find pos/neg patches against each of them.
         random.seed(self.random_seed)
         for batch_idx in range(B):
-            for patch_idx in range(self.samples_per_batch):
-                anchors_hw[batch_idx, patch_idx, :] = [
+            for sample_idx in range(self.samples_per_batch):
+                anchors_hw[batch_idx, sample_idx, :] = [
                     random.randrange(start=h_range[0], stop=h_range[1]),
                     random.randrange(start=w_range[0], stop=w_range[1]),
                 ]
 
                 # Sample nearby the anchor and check SSIM. Repeat if not similar enough.
-                pos_xy_candidate = sample_hw_nearby(
-                    anchors_hw[batch_idx, patch_idx, :], H=H, W=W, patch_size=self.patch_size)
-                while not similar_enough(image[batch_idx, ...].cpu().detach().numpy(),
-                                         h1w1=anchors_hw[batch_idx,
-                                                         patch_idx, :],
-                                         h2w2=pos_xy_candidate, patch_size=self.patch_size):
-                    pos_xy_candidate = sample_hw_nearby(
-                        anchors_hw[batch_idx, patch_idx, :], H=H, W=W, patch_size=self.patch_size)
-                positives_hw[batch_idx, patch_idx, :] = pos_xy_candidate
+                pos_hw_candidate = sample_hw_nearby(
+                    anchors_hw[batch_idx, sample_idx, :], H=H, W=W, patch_size=self.patch_size)
 
-                # # Randomly sample a patch, and it will be a negative patch.
-                # negatives_hw[batch_idx, patch_idx, :] = [
-                #     random.randrange(start=h_range[0], stop=h_range[1]),
-                #     random.randrange(start=w_range[0], stop=w_range[1]),
-                # ]
+                pos_sample_found = False
+                for _ in range(self.max_attempts):
+                    if similar_enough(image[batch_idx, ...].cpu().detach().numpy(),
+                                      h1w1=anchors_hw[batch_idx,
+                                                      sample_idx, :],
+                                      h2w2=pos_hw_candidate, patch_size=self.patch_size):
+                        positives_hw[batch_idx, sample_idx,
+                                     :] = pos_hw_candidate
+                        pos_sample_found = True
+                    else:
+                        pos_hw_candidate = sample_hw_nearby(
+                            anchors_hw[batch_idx, sample_idx, :], H=H, W=W, patch_size=self.patch_size)
+
+                # TODO: Maybe do something better than using the sample itself as the positive sample?
+                if not pos_sample_found:
+                    pos_hw_candidate = anchors_hw
 
         # and anchors_hw.shape == negatives_hw.shape
         assert anchors_hw.shape == positives_hw.shape
-        return anchors_hw, positives_hw  # , negatives_hw
+        return anchors_hw, positives_hw
 
 
 def sample_hw_nearby(hw: Tuple[int, int], H: int, W: int, neighborhood: int = 5, patch_size: int = 7) -> Tuple[int, int]:
@@ -77,7 +84,7 @@ def sample_hw_nearby(hw: Tuple[int, int], H: int, W: int, neighborhood: int = 5,
 
 def similar_enough(image: np.array,
                    h1w1: Tuple[int, int], h2w2: Tuple[int, int],
-                   patch_size: int, ssim_thr: float = 0.8) -> bool:
+                   patch_size: int, ssim_thr: float = 0.5) -> bool:
     """
     `image` dimension: [C, H, W]
     """

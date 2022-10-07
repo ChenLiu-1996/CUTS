@@ -19,8 +19,6 @@ class NTXentLoss(nn.Module):
 
     def forward(self, anchors: torch.Tensor, positives: torch.Tensor):
 
-        large_number = 1e9
-        batch_size = anchors.shape[0]
         Z = F.normalize(input=anchors, p=2, dim=1)
         Z_pos = F.normalize(input=positives, p=2, dim=1)
 

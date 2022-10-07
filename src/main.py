@@ -241,8 +241,7 @@ def train(config: AttributeHashmap):
     loss_fn_contrastive = NTXentLoss()
 
     for _ in range(config.max_epochs):
-        epoch_loss = 0
-        # feature_all = []
+        train_loss, validation_loss = 0, 0
         model.train()
         for _, (x_train, _) in tqdm(enumerate(train_set), total=len(train_set)):
             x_train = x_train.type(torch.FloatTensor).to(device)
@@ -251,20 +250,33 @@ def train(config: AttributeHashmap):
 
             loss_recon = loss_fn_recon(x_anchors, x_recon)
             loss_contrastive = loss_fn_contrastive(z_anchors, z_positives)
-            train_loss = config.lambda_contrastive_loss * \
+            loss = config.lambda_contrastive_loss * \
                 loss_contrastive + config.lambda_recon_loss * loss_recon
 
-            train_loss.backward()
+            loss.backward()
             optimizer.step()
 
-            epoch_loss += train_loss.item()
-            print('loss_recon', loss_recon.item(),
-                  'loss_contrastive', loss_contrastive.item())
-            # feature_all.append(features.cpu())
+            train_loss += loss.item()
 
-        epoch_loss = epoch_loss / len(train_set)
+        train_loss = train_loss / len(train_set)
+        print('train loss: {:.3f}'.format(train_loss))
 
-        print('loss: {:.3f}'.format(epoch_loss))
+        model.eval()
+        with torch.no_grad():
+            for _, (x_validation, _) in tqdm(enumerate(validation_set), total=len(validation_set)):
+                x_validation = x_train.type(torch.FloatTensor).to(device)
+                x_anchors, x_recon, z_anchors, z_positives = model(
+                    x_validation)
+
+                loss_recon = loss_fn_recon(x_anchors, x_recon)
+                loss_contrastive = loss_fn_contrastive(z_anchors, z_positives)
+                loss = config.lambda_contrastive_loss * \
+                    loss_contrastive + config.lambda_recon_loss * loss_recon
+
+                validation_loss += loss.item()
+
+        validation_loss = validation_loss / len(validation_set)
+        print('validation loss: {:.3f}'.format(validation_loss))
 
     return
 
