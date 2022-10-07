@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 
 class BrainArman(Dataset):
     def __init__(self,
-                 base_path: str = '../../data/output_brain_arman/'):
+                 base_path: str = '../../data/brain_arman/'):
 
         # Pre-load all the data to CPU. Saves time.
         with open('%s/output.npz' % base_path, 'rb') as f:

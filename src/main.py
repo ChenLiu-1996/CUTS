@@ -9,7 +9,7 @@ from model import CUTSEncoder
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
-from util import AttributeHashmap, MSELoss, NTXentLoss, dice_coeff
+from utils import AttributeHashmap, MSELoss, NTXentLoss, dice_coeff
 
 # DATA_FOLDER = 'output_{}_{}'.format(DATA, MODEL)
 # if not os.path.exists(DATA_FOLDER):
