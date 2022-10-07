@@ -29,11 +29,11 @@ class CUTSEncoder(nn.Module):
         self.recon = CUTSRecon(channels=self.channels,
                                patch_size=self.patch_size)
 
-    def forward(self, image):
+    def forward(self, x):
         # `x` is the image input.
-        B, C, _, _ = image.shape
+        B, C, _, _ = x.shape
 
-        z = F.leaky_relu(self.batch_norm1(self.conv1(image)))
+        z = F.leaky_relu(self.batch_norm1(self.conv1(x)))
         z = F.leaky_relu(self.batch_norm2(self.conv2(z)))
         z = F.leaky_relu(self.batch_norm3(self.conv3(z)))
 
@@ -43,70 +43,52 @@ class CUTSEncoder(nn.Module):
         # of the image patch centered at x[i][j].
 
         # Sample patches for contrastive loss & reconstruction loss
-        anchors_xy, positives_xy, negatives_xy = self.patch_sampler.sample(
-            image)
+        # anchors_hw, positives_hw, negatives_hw = \
+        anchors_hw, positives_hw = self.patch_sampler.sample(x)
 
-        anchor_patches = torch.zeros(
-            (B, C, self.patch_size, self.patch_size), requires_grad=False).to(image.device)
-        positive_patches = torch.zeros_like(anchor_patches).to(image.device)
-        negative_patches = torch.zeros_like(anchor_patches).to(image.device)
-        encoded_anchor_patches = torch.zeros(
-            (B, z.shape[1]), requires_grad=False).to(image.device)
+        # These are containers that will later hold the torch.Tensors.
+        # They won't track gradients themselves but the Tensors they contain will.
+        x_anchors = torch.zeros(
+            (B, C, self.patch_size, self.patch_size)).to(x.device)
+        z_anchors = torch.zeros(
+            (B, z.shape[1])).to(x.device)
+        z_positives = torch.zeros_like(z_anchors).to(x.device)
+        # z_negatives = torch.zeros_like(z_anchors).to(x.device)
 
-        assert anchors_xy.shape[0] == B
+        assert anchors_hw.shape[0] == B
         for batch_idx in range(B):
-            for patch_idx in range(anchors_xy.shape[1]):
-                anchor_patches[batch_idx, ...] = image[batch_idx, :,
-                                                       anchors_xy[batch_idx, patch_idx, 0]-self.patch_size//2:
-                                                       anchors_xy[batch_idx, patch_idx, 0] -
-                                                           self.patch_size//2+self.patch_size,
-                                                       anchors_xy[batch_idx, patch_idx, 1]-self.patch_size//2:
-                                                       anchors_xy[batch_idx, patch_idx, 1]-self.patch_size//2+self.patch_size]
-                positive_patches[batch_idx, ...] = image[batch_idx, :,
-                                                         positives_xy[batch_idx, patch_idx, 0]-self.patch_size//2:
-                                                         positives_xy[batch_idx, patch_idx, 0] -
-                                                             self.patch_size//2+self.patch_size,
-                                                         positives_xy[batch_idx, patch_idx, 1]-self.patch_size//2:
-                                                         positives_xy[batch_idx, patch_idx, 1]-self.patch_size//2+self.patch_size]
-                negative_patches[batch_idx, ...] = image[batch_idx, :,
-                                                         negatives_xy[batch_idx, patch_idx, 0]-self.patch_size//2:
-                                                         negatives_xy[batch_idx, patch_idx, 0] -
-                                                             self.patch_size//2+self.patch_size,
-                                                         negatives_xy[batch_idx, patch_idx, 1]-self.patch_size//2:
-                                                         negatives_xy[batch_idx, patch_idx, 1]-self.patch_size//2+self.patch_size]
-                encoded_anchor_patches[batch_idx, ...] = z[batch_idx, :,
-                                                           negatives_xy[batch_idx,
-                                                                        patch_idx, 0],
-                                                           negatives_xy[batch_idx,
-                                                                        patch_idx, 1]
-                                                           ]
+            for sample_idx in range(anchors_hw.shape[1]):
+                x_anchors[batch_idx, ...] = x[batch_idx, :,
+                                              anchors_hw[batch_idx, sample_idx, 0]-self.patch_size//2:
+                                              anchors_hw[batch_idx, sample_idx, 0] -
+                                              self.patch_size//2+self.patch_size,
+                                              anchors_hw[batch_idx, sample_idx, 1]-self.patch_size//2:
+                                              anchors_hw[batch_idx, sample_idx, 1]-self.patch_size//2+self.patch_size]
+                z_anchors[batch_idx, ...] = z[batch_idx, :,
+                                              anchors_hw[batch_idx,
+                                                         sample_idx, 0],
+                                              anchors_hw[batch_idx,
+                                                         sample_idx, 1]
+                                              ]
+                z_positives[batch_idx, ...] = z[batch_idx, :,
+                                                positives_hw[batch_idx,
+                                                             sample_idx, 0],
+                                                positives_hw[batch_idx,
+                                                             sample_idx, 1]
+                                                ]
+                # z_negatives[batch_idx, ...] = z[batch_idx, :,
+                #                                 negatives_hw[batch_idx,
+                #                                              patch_idx, 0],
+                #                                 negatives_hw[batch_idx,
+                #                                              patch_idx, 1]
+                #                                 ]
 
         # Reconstruction.
         # Reshape to [B, -1]
-        x = torch.clone(anchor_patches)  # `anchor_patches` is used later.
-        x = x.reshape(x.shape[0], -1)
-        z = encoded_anchor_patches
-        z = z.reshape(z.shape[0], -1)
+        x_anchors = x_anchors.reshape(x_anchors.shape[0], -1)
+        x_recon = self.recon(z_anchors.reshape(z_anchors.shape[0], -1))
 
-        x_recon = self.recon(z)
-        print(x.shape, x_recon.shape)
-
-        # patchify_target = []
-        # for i in range(x.shape[0]):
-        #     tmp = x[i]
-
-        #     tmp = F.pad(tmp, pad=[self.k // 2, self.k //
-        #                 2, self.k // 2, self.k // 2], value=0)
-
-        #     tmp = tmp.unfold(1, self.k, 1).unfold(2, self.k, 1).reshape(
-        #         self.channels, -1, self.k, self.k).permute(1, 0, 2, 3)
-        #     tmp = tmp.reshape([tmp.shape[0], -1])
-        #     patchify_target.append(tmp)
-        # patchify_target = torch.stack(patchify_target, dim=0)
-        # patchify_loss = (
-        #     (torch.tanh(self.recon(x3)) - patchify_target)**2).mean()
-
-        return anchor_patches, positive_patches, negative_patches, encoded_anchor_patches
+        return x_anchors, x_recon, z_anchors, z_positives  # , z_negatives
 
 
 class CUTSRecon(nn.Module):

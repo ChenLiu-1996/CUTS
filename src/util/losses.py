@@ -1,6 +1,40 @@
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn import MSELoss
+
+
+class NTXentLoss(nn.Module):
+    """
+    Need to provide the `anchor, positive` pairs.
+    Negative sample can be directly inferred by using
+    the positive sample from a different anchor in the same batch.
+    """
+
+    def __init__(self, temperature: float = 0.5):
+        super(NTXentLoss, self).__init__()
+        self.temperature = temperature
+        self.epsilon = 1e-7
+
+    def forward(self, anchors: torch.Tensor, positives: torch.Tensor):
+
+        large_number = 1e9
+        batch_size = anchors.shape[0]
+        Z = F.normalize(input=anchors, p=2, dim=1)
+        Z_pos = F.normalize(input=positives, p=2, dim=1)
+
+        sim_matrix = torch.matmul(Z, Z_pos.T)
+
+        # Entries along the diagonal are the positive pairs.
+        numerator = torch.sum(
+            torch.exp(torch.diagonal(sim_matrix) / self.temperature))
+
+        # Entries everywhere eles are the negative pairs.
+        denominator = torch.sum(
+            torch.exp(sim_matrix / self.temperature)) - numerator
+
+        return -torch.log(numerator / (denominator + self.epsilon) + self.epsilon)
 
 
 def local_nce_loss_fast(features: np.array, negative_pool: torch.Tensor, positive_pool: torch.Tensor) -> torch.Tensor:

@@ -4,13 +4,12 @@ import numpy as np
 import phate
 import torch
 import yaml
-from data import collate_contrastive, select_near_positive, select_negative_random
 from datasets import BerkeleySegmentation, BrainArman, DiabeticMacularEdema, PolyP, Retina
 from model import CUTSEncoder
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
-from util import AttributeHashmap, dice_coeff, local_nce_loss_fast
+from util import AttributeHashmap, MSELoss, NTXentLoss, dice_coeff
 
 # DATA_FOLDER = 'output_{}_{}'.format(DATA, MODEL)
 # if not os.path.exists(DATA_FOLDER):
@@ -181,8 +180,8 @@ def parse_settings(config: AttributeHashmap):
     config.learning_rate = float(config.learning_rate)
     config.weight_decay = float(config.weight_decay)
     # for ablation test
-    if config.model_setting == 'no_patchify':
-        config.lambda_patchify_loss = 0
+    if config.model_setting == 'no_recon':
+        config.lambda_recon_loss = 0
     if config.model_setting == 'no_contrastive':
         config.lambda_contrastive_loss = 0
     return config
@@ -238,34 +237,34 @@ def train(config: AttributeHashmap):
     optimizer = optim.Adam(
         model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
 
-    loss_fn = torch.nn.CrossEntropyLoss()
-    for epoch_idx in range(config.max_epochs):
+    loss_fn_recon = MSELoss()
+    loss_fn_contrastive = NTXentLoss()
+
+    for _ in range(config.max_epochs):
         epoch_loss = 0
-        feature_all = []
+        # feature_all = []
         model.train()
-        for batch_idx, (x_train, _) in tqdm(enumerate(train_set)):
+        for _, (x_train, _) in tqdm(enumerate(train_set), total=len(train_set)):
             x_train = x_train.type(torch.FloatTensor).to(device)
             optimizer.zero_grad()
-            features, patchify_loss = model(x_train)
-            # train_loss_ = local_nce_loss_fast(
-            #     features, negative_pool[2*i:2*(i+1)], positive_pool[2*i:2*(i+1)])
+            x_anchors, x_recon, z_anchors, z_positives = model(x_train)
 
-            train_loss = loss_fn(features)
-
-            # train_loss = lambda_contrastive_loss * \
-            #     train_loss_ + lambda_patchify_loss * patchify_loss
+            loss_recon = loss_fn_recon(x_anchors, x_recon)
+            loss_contrastive = loss_fn_contrastive(z_anchors, z_positives)
+            train_loss = config.lambda_contrastive_loss * \
+                loss_contrastive + config.lambda_recon_loss * loss_recon
 
             train_loss.backward()
             optimizer.step()
 
             epoch_loss += train_loss.item()
-            feature_all.append(features.cpu())
+            print('loss_recon', loss_recon.item(),
+                  'loss_contrastive', loss_contrastive.item())
+            # feature_all.append(features.cpu())
 
         epoch_loss = epoch_loss / len(train_set)
 
         print('loss: {:.3f}'.format(epoch_loss))
-
-        return epoch_loss, feature_all
 
     return
 

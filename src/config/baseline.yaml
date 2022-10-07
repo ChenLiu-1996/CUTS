@@ -1,12 +1,12 @@
 dataset_name: 'retina'
 dataset_path: '/gpfs/gibbs/pi/krishnaswamy_smita/cl2482/CUTS/data/retina'
-model_setting: 'full' # 'full', 'no_patchify', 'no_contrastive'
+model_setting: 'full' # 'full', 'no_recon', 'no_contrastive'
 learning_rate: 1e-4
 weight_decay: 1e-5
 max_epochs: 25
-batch_size: 2  # right now must stay at 2
-num_workers: 0
+batch_size: 4
+num_workers: 1
 lambda_contrastive_loss: 1
-lambda_patchify_loss: 10
+lambda_recon_loss: 10
 random_seed: 1
 train_val_test_ratio: '8:1:1'
