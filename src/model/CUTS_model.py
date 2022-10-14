@@ -35,12 +35,14 @@ class CUTSEncoder(nn.Module):
                                latent_channel=self.latent_channel)
 
     def save_weights(self, model_save_path: str) -> None:
-        os.makedirs(os.path.basename(model_save_path), exist_ok=True)
+        os.makedirs(os.path.dirname(model_save_path), exist_ok=True)
         torch.save(self.state_dict(), model_save_path)
+        print('CUTSEncoder: Model weights successfully saved.')
         return
 
     def load_weights(self, model_save_path: str) -> None:
         self.load_state_dict(torch.load(model_save_path))
+        print('CUTSEncoder: Model weights successfully loaded.')
         return
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, ...]:
