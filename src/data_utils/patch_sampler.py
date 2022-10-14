@@ -50,21 +50,17 @@ class PatchSampler(object):
                 ]
 
                 # Sample nearby the anchor and check SSIM. Repeat if not similar enough.
-                pos_hw_candidate = sample_hw_nearby(
-                    anchors_hw[batch_idx, sample_idx, :], H=H, W=W, patch_size=self.patch_size)
-
                 pos_sample_found = False
                 for _ in range(self.max_attempts):
+                    pos_hw_candidate = sample_hw_nearby(
+                        anchors_hw[batch_idx, sample_idx, :], H=H, W=W, patch_size=self.patch_size)
                     if similar_enough(image[batch_idx, ...].cpu().detach().numpy(),
-                                      h1w1=anchors_hw[batch_idx,
-                                                      sample_idx, :],
-                                      h2w2=pos_hw_candidate, patch_size=self.patch_size):
+                                        h1w1=anchors_hw[batch_idx,
+                                                        sample_idx, :],
+                                        h2w2=pos_hw_candidate, patch_size=self.patch_size):
                         positives_hw[batch_idx, sample_idx,
                                      :] = pos_hw_candidate
                         pos_sample_found = True
-                    else:
-                        pos_hw_candidate = sample_hw_nearby(
-                            anchors_hw[batch_idx, sample_idx, :], H=H, W=W, patch_size=self.patch_size)
 
                 # TODO: Maybe do something better than using the sample itself as the positive sample?
                 if not pos_sample_found:
@@ -83,8 +79,8 @@ def sample_hw_nearby(hw: Tuple[int, int], H: int, W: int, neighborhood: int = 5,
 
 
 def similar_enough(image: np.array,
-                   h1w1: Tuple[int, int], h2w2: Tuple[int, int],
-                   patch_size: int, ssim_thr: float = 0.5) -> bool:
+                     h1w1: Tuple[int, int], h2w2: Tuple[int, int],
+                     patch_size: int, ssim_thr: float = 0.5) -> bool:
     """
     `image` dimension: [C, H, W]
     """

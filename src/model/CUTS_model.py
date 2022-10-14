@@ -1,11 +1,14 @@
+import os
+from typing import Tuple
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from data import PatchSampler
+from data_utils import PatchSampler
 
 
 class CUTSEncoder(nn.Module):
-    def __init__(self, in_channels: int = 3, num_kernels: int = 32, random_seed: int = None):
+    def __init__(self, in_channels: int = 3, num_kernels: int = 64, random_seed: int = None):
         super(CUTSEncoder, self).__init__()
 
         self.channels = in_channels
@@ -20,6 +23,7 @@ class CUTSEncoder(nn.Module):
                                kernel_size=3, padding='same')
         self.conv3 = nn.Conv2d(num_kernels*2, num_kernels*4,
                                kernel_size=3, padding='same')
+        self.latent_channel = num_kernels*4
 
         self.patch_sampler = PatchSampler(random_seed=random_seed)
 
@@ -27,9 +31,19 @@ class CUTSEncoder(nn.Module):
 
         # Reconstruction module.
         self.recon = CUTSRecon(channels=self.channels,
-                               patch_size=self.patch_size)
+                               patch_size=self.patch_size,
+                               latent_channel=self.latent_channel)
 
-    def forward(self, x):
+    def save_weights(self, model_save_path: str) -> None:
+        os.makedirs(os.path.basename(model_save_path), exist_ok=True)
+        torch.save(self.state_dict(), model_save_path)
+        return
+
+    def load_weights(self, model_save_path: str) -> None:
+        self.load_state_dict(torch.load(model_save_path))
+        return
+
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, ...]:
         # `x` is the image input.
         B, C, _, _ = x.shape
 
@@ -53,7 +67,6 @@ class CUTSEncoder(nn.Module):
         z_anchors = torch.zeros(
             (B, z.shape[1])).to(x.device)
         z_positives = torch.zeros_like(z_anchors).to(x.device)
-        # z_negatives = torch.zeros_like(z_anchors).to(x.device)
 
         assert anchors_hw.shape[0] == B
         for batch_idx in range(B):
@@ -76,19 +89,13 @@ class CUTSEncoder(nn.Module):
                                                 positives_hw[batch_idx,
                                                              sample_idx, 1]
                                                 ]
-                # z_negatives[batch_idx, ...] = z[batch_idx, :,
-                #                                 negatives_hw[batch_idx,
-                #                                              patch_idx, 0],
-                #                                 negatives_hw[batch_idx,
-                #                                              patch_idx, 1]
-                #                                 ]
 
         # Reconstruction.
         # Reshape to [B, -1]
         x_anchors = x_anchors.reshape(x_anchors.shape[0], -1)
         x_recon = self.recon(z_anchors.reshape(z_anchors.shape[0], -1))
 
-        return x_anchors, x_recon, z_anchors, z_positives  # , z_negatives
+        return z, x_anchors, x_recon, z_anchors, z_positives
 
 
 class CUTSRecon(nn.Module):
@@ -97,11 +104,12 @@ class CUTSRecon(nn.Module):
     # TODO: Consider a convolutional reconstruction module.
     """
 
-    def __init__(self, channels: int = None, patch_size: int = None):
+    def __init__(self, channels: int = None, patch_size: int = None, latent_channel: int = None):
         super(CUTSRecon, self).__init__()
         self.channels = channels
         self.patch_size = patch_size
-        self.recon = nn.Linear(128, self.channels * self.patch_size**2)
+        self.recon = nn.Linear(
+            latent_channel, self.channels * self.patch_size**2)
 
     def forward(self, z):
         return self.recon(z)

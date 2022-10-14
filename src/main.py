@@ -1,182 +1,19 @@
 import argparse
 
 import numpy as np
-import phate
 import torch
 import yaml
+from data_utils import split_dataset
 from datasets import BerkeleySegmentation, BrainArman, DiabeticMacularEdema, PolyP, Retina
 from model import CUTSEncoder
 from torch import optim
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 from tqdm import tqdm
-from utils import AttributeHashmap, MSELoss, NTXentLoss, dice_coeff
-
-# DATA_FOLDER = 'output_{}_{}'.format(DATA, MODEL)
-# if not os.path.exists(DATA_FOLDER):
-#     os.mkdir(DATA_FOLDER)
-####################
-
-
-####################
-
-
-# def save_pools(positive_pool, negative_pool, DATA):
-#     with open('saved_pools/{}.npz'.format(DATA), 'wb+') as f:
-#         np.savez(f, positive_pool=positive_pool, negative_pool=negative_pool)
-
-
-# def load_pools(DATA):
-#     with open('saved_pools/{}.npz'.format(DATA), 'rb') as f:
-#         npzfile = np.load(f)
-#         positive_pool = npzfile['positive_pool']
-#         negative_pool = npzfile['negative_pool']
-#     return positive_pool, negative_pool
-
-
-####################
-# model hyperparameters
-
-
-####################
-
-
-# ####################
-# build the dataset object
-# train_index = np.arange(data.shape[0]).tolist()
-
-# training_set = CUTSDataset(train_index, data_input, label)
-# training_generator = DataLoader(
-#     training_set, batch_size=batch_size, shuffle=True, collate_fn=collate_contrastive)
-# eval_generator = DataLoader(training_set, batch_size=batch_size, shuffle=False)
-# ####################
-
-
-# ####################
-# ####################
-
-
-# ####################
-# # calculate the pools of positive and negative examples for contrastive loss
-# # if LOAD_POOLS:
-# #     positive_pool, negative_pool = load_pools(DATA)
-# #     positive_pool = torch.from_numpy(positive_pool)
-# #     negative_pool = torch.from_numpy(negative_pool)
-# # else:
-# #     t = time.time()
-# #     positive_pool = select_near_positive(data_input)
-# #     print('positive pool done')
-# #     negative_pool = select_negative_random(data_input)
-# #     print('negative pool done')
-
-# #     save_pools(positive_pool, negative_pool, DATA)
-# #     print('saved pools')
-# #     print('{:.1f} seconds'.format(time.time() - t))
-# ####################
-
-# t = time.time()
-# positive_pool = select_near_positive(data_input)
-# print('positive pool done')
-# negative_pool = select_negative_random(data_input)
-# print('negative pool done')
-# print('{:.1f} seconds'.format(time.time() - t))
-
-
-# ####################
-# # train the model
-
-
-# def train(model, iterator, optimizer, negative_pool, positive_pool, lambda_contrastive_loss=1, lambda_patchify_loss=10):
-#     loss = 0
-#     feature_all = []
-#     model.train()
-#     t = time.time()
-#     for i, (train_batch, train_labels) in enumerate(iterator):
-#         if i and i % 10 == 0:
-#             print('  iter {} loss: {:.3f}/{:.3f} ({:.1f} sec)'.format(i,
-#                   train_loss_.item(), patchify_loss, time.time() - t))
-#             t = time.time()
-#         optimizer.zero_grad()
-
-#         features, patchify_loss = model(train_batch)
-#         train_loss_ = local_nce_loss_fast(
-#             features, negative_pool[2*i:2*(i+1)], positive_pool[2*i:2*(i+1)])
-#         train_loss = lambda_contrastive_loss * \
-#             train_loss_ + lambda_patchify_loss * patchify_loss
-
-#         train_loss.backward()
-#         optimizer.step()
-
-#         loss += train_loss.item()
-#         feature_all.append(features.cpu())
-
-#     loss = loss / len(iterator)
-
-#     print('loss: {:.3f}'.format(loss))
-
-#     return loss, feature_all
-
-
-# for epoch in range(max_epochs):
-#     train_loss, features = train(model, training_generator, optimizer, negative_pool, positive_pool,
-#                                  lambda_contrastive_loss=lambda_contrastive_loss, lambda_patchify_loss=lambda_patchify_loss)
-#     if epoch % 2 == 0:
-#         print("epoch : {}/{}, loss = {:.6f}".format(epoch + 1, max_epochs, train_loss))
-# ####################
-
-# ####################
-# # get model predictions out (latent feature space)
-# model.eval()
-# features = []
-# for i, (eval_batch, _) in enumerate(eval_generator):
-#     feats_, _ = model(eval_batch)
-#     features.append(feats_)
-# features_all = np.concatenate(
-#     [feats[:2].detach() for feats in features], axis=0).reshape((-1, 128, 128, 128))
-# ####################
-
-
-# ####################
-# # cluster latent feature space and produce pixel-level predictions
-
-
-# ncluster = 6
-# predicted_segmentations = []
-# dice_coeffs = []
-# for i in range(len(features_all)):
-
-#     feature = features_all[i]
-#     try:
-#         fn_ = names[i].split('/')[-1].split('.')[0]
-#     except:
-#         fn_ = names[i]
-#     print(fn_)
-
-#     feature = feature.reshape((-1, 128))
-
-#     phate_operator = phate.PHATE(n_components=3, knn=100, n_landmark=500, t=2)
-#     phate_data = phate_operator.fit_transform(feature)
-#     cluster_ = phate.cluster.kmeans(phate_operator, n_clusters=ncluster)
-
-#     predicted_segmentation = cluster_.reshape([128, 128])
-#     predicted_segmentations.append(predicted_segmentation)
-
-#     if dataset_name in ['retina', 'polyp', 'brain']:
-#         true_cluster = np.argwhere(np.logical_and(label_mask[i], label[i]))
-#         true_cluster = predicted_segmentation[true_cluster[0], true_cluster[1]]
-
-#         final_preds = np.where(predicted_segmentation == true_cluster, 1., 0.)
-#     else:
-#         final_preds = np.zeros_like(predicted_segmentation)
-
-#     score = dice_coeff(final_preds, label[i].numpy())
-#     dice_coeffs.append(score)
-#     print('{}: Dice coef: {:.3f} (mean: {:.3f})'.format(
-#         i, score, np.mean(dice_coeffs)))
-# ####################
+from utils import AttributeHashmap, LatentEvaluator, MSELoss, NTXentLoss
 
 
 def parse_settings(config: AttributeHashmap):
-    # type issues
+    # fix typing issues
     config.learning_rate = float(config.learning_rate)
     config.weight_decay = float(config.weight_decay)
     # for ablation test
@@ -204,15 +41,9 @@ def prepare_dataset(config: AttributeHashmap, mode: str = 'train'):
 
     # Train/Validation/Test Split
     ratios = [float(c) for c in config.train_val_test_ratio.split(':')]
-    ratios = [c/sum(ratios) for c in ratios]
-
-    train_len = int(len(dataset) * ratios[0])
-    validation_len = int(len(dataset) * ratios[1])
-
-    train_set, remaining = random_split(dataset, lengths=[train_len, len(dataset)-train_len],
-                                        generator=torch.Generator().manual_seed(config.random_seed))
-    validation_set, test_set = random_split(remaining, lengths=[validation_len, len(remaining)-validation_len],
-                                            generator=torch.Generator().manual_seed(config.random_seed))
+    ratios = tuple([c/sum(ratios) for c in ratios])
+    train_set, validation_set, test_set = split_dataset(
+        dataset=dataset, splits=ratios, random_seed=config.random_seed)
 
     # Load into DataLoader
     if mode == 'train':
@@ -220,7 +51,7 @@ def prepare_dataset(config: AttributeHashmap, mode: str = 'train'):
             dataset=train_set, batch_size=config.batch_size, shuffle=True, num_workers=config.num_workers)
         validation_set = DataLoader(
             dataset=validation_set, batch_size=config.batch_size, shuffle=False, num_workers=config.num_workers)
-        return train_set, validation_set, dataset.all_images()
+        return train_set, validation_set
     else:
         test_set = DataLoader(
             dataset=test_set, batch_size=config.batch_size, shuffle=False, num_workers=config.num_workers)
@@ -229,7 +60,7 @@ def prepare_dataset(config: AttributeHashmap, mode: str = 'train'):
 
 def train(config: AttributeHashmap):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    train_set, validation_set, all_train_images = prepare_dataset(
+    train_set, validation_set = prepare_dataset(
         config=config, mode='train')
 
     # Build the model
@@ -242,11 +73,12 @@ def train(config: AttributeHashmap):
 
     for _ in range(config.max_epochs):
         train_loss, validation_loss = 0, 0
+
         model.train()
         for _, (x_train, _) in tqdm(enumerate(train_set), total=len(train_set)):
             x_train = x_train.type(torch.FloatTensor).to(device)
             optimizer.zero_grad()
-            x_anchors, x_recon, z_anchors, z_positives = model(x_train)
+            _, x_anchors, x_recon, z_anchors, z_positives = model(x_train)
 
             loss_recon = loss_fn_recon(x_anchors, x_recon)
             loss_contrastive = loss_fn_contrastive(z_anchors, z_positives)
@@ -263,9 +95,9 @@ def train(config: AttributeHashmap):
 
         model.eval()
         with torch.no_grad():
-            for _, (x_validation, _) in tqdm(enumerate(validation_set), total=len(validation_set)):
-                x_validation = x_train.type(torch.FloatTensor).to(device)
-                x_anchors, x_recon, z_anchors, z_positives = model(
+            for _, (x_validation, y_validation) in tqdm(enumerate(validation_set), total=len(validation_set)):
+                x_validation = x_validation.type(torch.FloatTensor).to(device)
+                z, x_anchors, x_recon, z_anchors, z_positives = model(
                     x_validation)
 
                 loss_recon = loss_fn_recon(x_anchors, x_recon)
@@ -276,22 +108,47 @@ def train(config: AttributeHashmap):
                 validation_loss += loss.item()
 
         validation_loss = validation_loss / len(validation_set)
-        print('validation loss: {:.3f}'.format(validation_loss))
+        validation_dice_coeff = np.mean(validation_dice_coeff)
+        print('validation loss: %.3f' % (validation_loss))
 
+    model.save_weights(config.model_save_path)
     return
 
 
 def test(config: AttributeHashmap):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     test_set = prepare_dataset(config=config, mode='test')
 
-    return
+    # Build the model
+    model = CUTSEncoder().to(device)
+    model.load_weights(config.model_save_path)
 
-####################
-# write out results
-# with open('{}/output.npz'.format(DATA_FOLDER), 'wb+') as f:
-#     np.savez(f, predicted_segmentations=predicted_segmentations, features=features,
-#              data=data, label=label, names=names, dice_coeffs=dice_coeffs)
-####################
+    loss_fn_recon = MSELoss()
+    loss_fn_contrastive = NTXentLoss()
+    latent_evaluator = LatentEvaluator(oneshot_prior=config.oneshot_prior)
+
+    test_loss, test_dice_coeffs = 0, []
+    model.eval()
+    with torch.no_grad():
+        for _, (x_test, y_test) in tqdm(enumerate(test_set), total=len(test_set)):
+            x_test = x_test.type(torch.FloatTensor).to(device)
+            z, x_anchors, x_recon, z_anchors, z_positives = model(
+                x_test)
+
+            loss_recon = loss_fn_recon(x_anchors, x_recon)
+            loss_contrastive = loss_fn_contrastive(z_anchors, z_positives)
+            loss = config.lambda_contrastive_loss * \
+                loss_contrastive + config.lambda_recon_loss * loss_recon
+
+            test_loss += loss.item()
+
+            dice_coeffs = latent_evaluator.dice(z, y_test)
+            test_dice_coeffs.extend(dice_coeffs)
+
+    test_loss = test_loss / len(test_set)
+    test_dice_coeffs = np.mean(test_dice_coeffs)
+    print('Test loss: %.3f dice coeff: %.3f' % (test_loss, test_dice_coeffs))
+    return
 
 
 if __name__ == '__main__':
@@ -313,5 +170,6 @@ if __name__ == '__main__':
 
     if args.train:
         train(config=config)
+        test(config=config)
     else:
         test(config=config)
