@@ -8,7 +8,7 @@ from data_utils import PatchSampler
 
 
 class CUTSEncoder(nn.Module):
-    def __init__(self, in_channels: int = 3, num_kernels: int = 64, random_seed: int = None):
+    def __init__(self, in_channels: int = 3, num_kernels: int = 16, random_seed: int = None):
         super(CUTSEncoder, self).__init__()
 
         self.channels = in_channels
@@ -16,6 +16,7 @@ class CUTSEncoder(nn.Module):
         self.batch_norm1 = nn.BatchNorm2d(num_kernels)
         self.batch_norm2 = nn.BatchNorm2d(num_kernels*2)
         self.batch_norm3 = nn.BatchNorm2d(num_kernels*4)
+        self.batch_norm4 = nn.BatchNorm2d(num_kernels*8)
 
         self.conv1 = nn.Conv2d(in_channels, num_kernels,
                                kernel_size=3, padding='same')
@@ -23,11 +24,16 @@ class CUTSEncoder(nn.Module):
                                kernel_size=3, padding='same')
         self.conv3 = nn.Conv2d(num_kernels*2, num_kernels*4,
                                kernel_size=3, padding='same')
-        self.latent_channel = num_kernels*4
+        self.conv4 = nn.Conv2d(num_kernels*4, num_kernels*8,
+                               kernel_size=3, padding='same')
+        self.latent_channel = num_kernels*8
 
-        self.patch_sampler = PatchSampler(random_seed=random_seed)
+        # Encoder includes 9 x 9 neighbor information
+        # (3x3 kernel, 4 layers, receptive field is 9x9).
+        self.patch_size = 9
 
-        self.patch_size = 7  # Encoder includes 7 x 7 neighbor information
+        self.patch_sampler = PatchSampler(
+            random_seed=random_seed, patch_size=self.patch_size)
 
         # Reconstruction module.
         self.recon = CUTSRecon(channels=self.channels,
@@ -37,12 +43,10 @@ class CUTSEncoder(nn.Module):
     def save_weights(self, model_save_path: str) -> None:
         os.makedirs(os.path.dirname(model_save_path), exist_ok=True)
         torch.save(self.state_dict(), model_save_path)
-        print('CUTSEncoder: Model weights successfully saved.')
         return
 
     def load_weights(self, model_save_path: str) -> None:
         self.load_state_dict(torch.load(model_save_path))
-        print('CUTSEncoder: Model weights successfully loaded.')
         return
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, ...]:
@@ -52,6 +56,7 @@ class CUTSEncoder(nn.Module):
         z = F.leaky_relu(self.batch_norm1(self.conv1(x)))
         z = F.leaky_relu(self.batch_norm2(self.conv2(z)))
         z = F.leaky_relu(self.batch_norm3(self.conv3(z)))
+        z = F.leaky_relu(self.batch_norm4(self.conv4(z)))
 
         # At this point, `z` is the latent projection of x.
         # We deliberately chose the layers such that the image-space resolution is the same.

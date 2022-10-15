@@ -2,14 +2,12 @@ from glob import glob
 from typing import Tuple
 
 import numpy as np
-# from data import ContrastiveViewGenerator
 from PIL import Image
 from torch.utils.data import Dataset
 
 
 class Retina(Dataset):
     def __init__(self,
-                 #  contrastive: bool = False,
                  base_path: str = '../../data/retina',
                  image_folder: str = 'selected_128',
                  label_folder: str = 'label_128'):
@@ -40,8 +38,6 @@ class Retina(Dataset):
             self.data_image.append(np.array(Image.open(img)))
         self.data_image = np.array(self.data_image)
 
-        # NOTE: Made this modification
-        # self.data_image = (self.data_image / 255 * 2) - 1
         self.data_image = (self.data_image / 255)
         # channel last to channel first to comply with Torch.
         self.data_image = np.moveaxis(self.data_image, -1, 1)
@@ -50,9 +46,6 @@ class Retina(Dataset):
             self.data_label.append(np.load(label))
         self.data_label = np.array(self.data_label)
 
-        # self.contrastive_gen = None
-        # if contrastive:
-        #     self.contrastive_gen = ContrastiveViewGenerator()
 
     def __len__(self) -> int:
         return len(self.img_path)
@@ -60,8 +53,6 @@ class Retina(Dataset):
     def __getitem__(self, idx) -> Tuple[np.array, np.array]:
         image = self.data_image[idx]
         label = self.data_label[idx]
-        # if self.contrastive_gen is not None:
-        #     image = self.contrastive_gen(image)
         return image, label
 
     def all_images(self) -> np.array:

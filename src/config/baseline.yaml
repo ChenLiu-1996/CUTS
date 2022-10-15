@@ -3,13 +3,14 @@ dataset_path: '/gpfs/gibbs/pi/krishnaswamy_smita/cl2482/CUTS/rewritten_CUTS/data
 model_save_path: '/gpfs/gibbs/pi/krishnaswamy_smita/cl2482/CUTS/rewritten_CUTS/checkpoints/baseline.pty'
 log_folder: '/gpfs/gibbs/pi/krishnaswamy_smita/cl2482/CUTS/rewritten_CUTS/logs'
 model_setting: 'full' # 'full', 'no_recon', 'no_contrastive'
-learning_rate: 1e-3
+learning_rate: 1e-4
 weight_decay: 1e-5
-max_epochs: 25
-batch_size: 4
+max_epochs: 50
+patience: 5
+batch_size: 16
 num_workers: 0
 lambda_contrastive_loss: 1
 lambda_recon_loss: 10
 random_seed: 1
-oneshot_prior: 'mask' # 'point', 'mask'
+oneshot_prior: 'point' # 'point', 'mask'
 train_val_test_ratio: '8:1:1'

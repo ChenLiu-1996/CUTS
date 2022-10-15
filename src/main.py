@@ -4,13 +4,14 @@ import os
 import numpy as np
 import torch
 import yaml
-from data_utils import split_dataset
+from data_utils import ExtendedDataset, split_dataset
 from datasets import BerkeleySegmentation, BrainArman, DiabeticMacularEdema, PolyP, Retina
 from model import CUTSEncoder
+from this import d
 from torch import optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from utils import AttributeHashmap, LatentEvaluator, MSELoss, NTXentLoss, log
+from utils import AttributeHashmap, EarlyStopping, LatentEvaluator, MSELoss, NTXentLoss, log
 
 
 def parse_settings(config: AttributeHashmap, log_settings: bool = True):
@@ -49,7 +50,8 @@ def prepare_dataset(config: AttributeHashmap, mode: str = 'train'):
     elif config.dataset_name == 'brain':
         dataset = BrainArman(base_path=config.dataset_path)
     else:
-        raise Exception('fix DATA option')
+        raise Exception(
+            'Dataset not found. Check `dataset_name` in config yaml file.')
 
     # Train/Val/Test Split
     ratios = [float(c) for c in config.train_val_test_ratio.split(':')]
@@ -59,14 +61,19 @@ def prepare_dataset(config: AttributeHashmap, mode: str = 'train'):
 
     # Load into DataLoader
     if mode == 'train':
+        # Extend the training set for more comparable results across different batch size.
+        extend_factor = 10
+        train_set = ExtendedDataset(
+            dataset=train_set, desired_len=max(len(train_set), extend_factor*config.batch_size))
         train_set = DataLoader(
             dataset=train_set, batch_size=config.batch_size, shuffle=True, num_workers=config.num_workers)
         val_set = DataLoader(
-            dataset=val_set, batch_size=config.batch_size, shuffle=False, num_workers=config.num_workers)
+            dataset=val_set, batch_size=len(val_set), shuffle=False, num_workers=config.num_workers)
+
         return train_set, val_set
     else:
         test_set = DataLoader(
-            dataset=test_set, batch_size=config.batch_size, shuffle=False, num_workers=config.num_workers)
+            dataset=test_set, batch_size=len(test_set), shuffle=False, num_workers=config.num_workers)
         return test_set
 
 
@@ -81,7 +88,11 @@ def train(config: AttributeHashmap):
         model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
 
     loss_fn_recon = MSELoss()
-    loss_fn_contrastive = NTXentLoss()
+    loss_fn_contrastive = NTXentLoss(batch_size=config.batch_size)
+    early_stopper = EarlyStopping(
+        mode='min', patience=config.patience, percentage=False)
+
+    best_val_loss = np.inf
 
     for epoch_idx in tqdm(range(config.max_epochs)):
         train_loss_recon, train_loss_contrastive, train_loss = 0, 0, 0
@@ -109,7 +120,7 @@ def train(config: AttributeHashmap):
         train_loss = train_loss / len(train_set)
 
         log('Train [%s/%s] recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f' % (
-            epoch_idx, config.max_epochs, train_loss_recon, train_loss_contrastive, train_loss),
+            epoch_idx+1, config.max_epochs, train_loss_recon, train_loss_contrastive, train_loss),
             filepath=config.log_dir, to_console=False)
 
         val_loss_recon, val_loss_contrastive, val_loss = 0, 0, 0
@@ -117,8 +128,7 @@ def train(config: AttributeHashmap):
         with torch.no_grad():
             for _, (x_val, _) in enumerate(val_set):
                 x_val = x_val.type(torch.FloatTensor).to(device)
-                _, x_anchors, x_recon, z_anchors, z_positives = model(
-                    x_val)
+                _, x_anchors, x_recon, z_anchors, z_positives = model(x_val)
 
                 loss_recon = loss_fn_recon(x_anchors, x_recon)
                 loss_contrastive = loss_fn_contrastive(z_anchors, z_positives)
@@ -133,10 +143,21 @@ def train(config: AttributeHashmap):
         val_loss_contrastive = val_loss_contrastive / len(val_set)
         val_loss = val_loss / len(val_set)
         log('Validation [%s/%s] recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f' % (
-            epoch_idx, config.max_epochs, val_loss_recon, val_loss_contrastive, val_loss),
+            epoch_idx+1, config.max_epochs, val_loss_recon, val_loss_contrastive, val_loss),
             filepath=config.log_dir, to_console=False)
 
-    model.save_weights(config.model_save_path)
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            model.save_weights(config.model_save_path)
+            log('CUTSEncoder: Model weights successfully saved.',
+                filepath=config.log_dir, to_console=False)
+
+        if early_stopper.step(val_loss):
+            # If the validation loss stop decreasing, stop training.
+            log('Early stopping criterion met. Ending training.',
+                filepath=config.log_dir, to_console=True)
+            break
+
     return
 
 
@@ -147,9 +168,11 @@ def test(config: AttributeHashmap):
     # Build the model
     model = CUTSEncoder().to(device)
     model.load_weights(config.model_save_path)
+    log('CUTSEncoder: Model weights successfully loaded.',
+        filepath=config.log_dir, to_console=False)
 
     loss_fn_recon = MSELoss()
-    loss_fn_contrastive = NTXentLoss()
+    loss_fn_contrastive = NTXentLoss(batch_size=config.batch_size)
     latent_evaluator = LatentEvaluator(oneshot_prior=config.oneshot_prior)
 
     test_loss, test_dice_coeffs = 0, []
