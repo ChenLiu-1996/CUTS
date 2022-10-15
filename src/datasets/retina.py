@@ -57,3 +57,7 @@ class Retina(Dataset):
 
     def all_images(self) -> np.array:
         return self.data_image
+
+    def num_image_channel(self) -> int:
+        # [B, C, H, W]
+        return self.data_image.shape[1]

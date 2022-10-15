@@ -1,5 +1,6 @@
 import argparse
 import os
+import random
 
 import numpy as np
 import torch
@@ -7,7 +8,6 @@ import yaml
 from data_utils import ExtendedDataset, split_dataset
 from datasets import BerkeleySegmentation, BrainArman, DiabeticMacularEdema, PolyP, Retina
 from model import CUTSEncoder
-from this import d
 from torch import optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -27,7 +27,8 @@ def parse_settings(config: AttributeHashmap, log_settings: bool = True):
 
     # Initialize log file.
     config.log_dir = config.log_folder + '/' + \
-        os.path.basename(config.config_file_name).rstrip('.yaml') + '_log.txt'
+        os.path.basename(
+            config.config_file_name).replace('.yaml', '') + '_log.txt'
     if log_settings:
         log_str = 'Config: \n'
         for key in config.keys():
@@ -53,6 +54,8 @@ def prepare_dataset(config: AttributeHashmap, mode: str = 'train'):
         raise Exception(
             'Dataset not found. Check `dataset_name` in config yaml file.')
 
+    num_image_channel = dataset.num_image_channel()
+
     # Train/Val/Test Split
     ratios = [float(c) for c in config.train_val_test_ratio.split(':')]
     ratios = tuple([c/sum(ratios) for c in ratios])
@@ -61,29 +64,36 @@ def prepare_dataset(config: AttributeHashmap, mode: str = 'train'):
 
     # Load into DataLoader
     if mode == 'train':
-        # Extend the training set for more comparable results across different batch size.
-        extend_factor = 10
+        # Round up the dataset to avoid trailing batch.
+        if len(train_set) > config.batch_size:
+            desired_len = len(train_set) + config.batch_size % len(train_set)
+        else:
+            desired_len = config.batch_size
         train_set = ExtendedDataset(
-            dataset=train_set, desired_len=max(len(train_set), extend_factor*config.batch_size))
+            dataset=train_set, desired_len=desired_len)
+
         train_set = DataLoader(
             dataset=train_set, batch_size=config.batch_size, shuffle=True, num_workers=config.num_workers)
         val_set = DataLoader(
             dataset=val_set, batch_size=len(val_set), shuffle=False, num_workers=config.num_workers)
-
-        return train_set, val_set
+        return train_set, val_set, num_image_channel
     else:
         test_set = DataLoader(
             dataset=test_set, batch_size=len(test_set), shuffle=False, num_workers=config.num_workers)
-        return test_set
+        return test_set, num_image_channel
 
 
 def train(config: AttributeHashmap):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    train_set, val_set = prepare_dataset(
-        config=config, mode='train')
+    train_set, val_set, num_image_channel = \
+        prepare_dataset(config=config, mode='train')
 
     # Build the model
-    model = CUTSEncoder().to(device)
+    model = CUTSEncoder(
+        in_channels=num_image_channel,
+        num_kernels=config.num_kernels,
+        random_seed=config.random_seed,
+        sampled_patches_per_image=config.sampled_patches_per_image).to(device)
     optimizer = optim.Adam(
         model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
 
@@ -163,20 +173,28 @@ def train(config: AttributeHashmap):
 
 def test(config: AttributeHashmap):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    test_set = prepare_dataset(config=config, mode='test')
+    test_set, num_image_channel = prepare_dataset(config=config, mode='test')
 
     # Build the model
-    model = CUTSEncoder().to(device)
+    model = CUTSEncoder(
+        in_channels=num_image_channel,
+        num_kernels=config.num_kernels,
+        random_seed=config.random_seed,
+        sampled_patches_per_image=config.sampled_patches_per_image).to(device)
     model.load_weights(config.model_save_path)
     log('CUTSEncoder: Model weights successfully loaded.',
         filepath=config.log_dir, to_console=False)
 
     loss_fn_recon = MSELoss()
     loss_fn_contrastive = NTXentLoss(batch_size=config.batch_size)
-    latent_evaluator = LatentEvaluator(oneshot_prior=config.oneshot_prior)
+    latent_evaluator = LatentEvaluator(
+        oneshot_prior=config.oneshot_prior, random_seed=config.random_seed)
 
     test_loss, test_dice_coeffs = 0, []
     model.eval()
+
+    # Results to save.
+    test_images, test_labels, test_mc_segs, test_bin_segs = None, None, None, None
     with torch.no_grad():
         for _, (x_test, y_test) in tqdm(enumerate(test_set), total=len(test_set)):
             x_test = x_test.type(torch.FloatTensor).to(device)
@@ -190,13 +208,38 @@ def test(config: AttributeHashmap):
 
             test_loss += loss.item()
 
-            dice_coeffs = latent_evaluator.dice(z, y_test)
+            dice_coeffs, multiclass_segs, binary_segs = latent_evaluator.dice(
+                z, y_test)
             test_dice_coeffs.extend(dice_coeffs)
+
+            if test_images is None:
+                test_images = x_test.cpu().detach().numpy()
+                test_labels = y_test.cpu().detach().numpy()
+                test_mc_segs = multiclass_segs
+                test_bin_segs = binary_segs
+            else:
+                test_images = np.concatenate(
+                    (test_images, x_test.cpu().detach().numpy()), axis=0)
+                test_labels = np.concatenate(
+                    (test_labels, y_test.cpu().detach().numpy()), axis=0)
+                test_mc_segs = np.concatenate(
+                    (test_mc_segs, multiclass_segs.cpu().detach().numpy()), axis=0)
+                test_bin_segs = np.concatenate(
+                    (test_bin_segs, binary_segs.cpu().detach().numpy()), axis=0)
 
     test_loss = test_loss / len(test_set)
     test_dice_coeffs = np.mean(test_dice_coeffs)
     log('Test loss: %.3f dice coeff: %.3f' % (test_loss, test_dice_coeffs),
         filepath=config.log_dir, to_console=False)
+
+    log('Saving images, labels, multi-class segmentations and binary segmentations.')
+    os.makedirs(config.output_save_path, exist_ok=True)
+    np.save(file=config.output_save_path + 'test_images.npy', arr=test_images)
+    np.save(file=config.output_save_path + 'test_labels.npy', arr=test_labels)
+    np.save(file=config.output_save_path +
+            'test_multiclass_segs.npy', arr=test_mc_segs)
+    np.save(file=config.output_save_path +
+            'test_binary_segs.npy', arr=test_bin_segs)
     return
 
 
@@ -216,6 +259,8 @@ if __name__ == '__main__':
     # Currently supports 2 modes: `train`: Train+Validation+Test & `test`: Test.
     assert args.mode in ['train', 'test']
 
+    random.seed(config.random_seed)
+    torch.manual_seed(config.random_seed)
     if args.mode == 'train':
         train(config=config)
         test(config=config)

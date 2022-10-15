@@ -12,7 +12,6 @@ class OneShotClusterEstimator(object):
 
     def __init__(self, oneshot_prior: str = 'point') -> None:
         self.oneshot_prior = oneshot_prior
-        assert self.oneshot_prior in ['point', 'mask']
 
     def estimate_cluster(self, label: np.array = None, clusters: np.array = None) -> int:
         """
@@ -20,20 +19,21 @@ class OneShotClusterEstimator(object):
         """
         if self.oneshot_prior == 'point':
             return self.__est_cluster_with_point(label, clusters)
-        elif self.oneshot_prior == 'mask':
-            return self.__est_cluster_with_mask(label, clusters)
         else:
             raise NotImplementedError
 
     def __est_cluster_with_point(self, label: np.array = None, clusters: np.array = None) -> int:
         """
-        In this method, we use one point from one ground truth segmentation
+        In this method, we use one point from the ground truth segmentation
         as the prior. We will use this point to estimate the desired cluster ID.
 
         Since the exact centroid is not necessarily in the segmentation foreground,
         we would rather use the "middle point" in the sorted x-y coordinates.
 
         Dimension of `label` and `clusters` are expected to be [H, W].
+
+        NOTE: This is currently done such that a point needs to be provided for each image.
+        May need to improve this!
         """
         assert len(label.shape) == 2
         assert label.shape == clusters.shape
@@ -52,14 +52,18 @@ class OneShotClusterEstimator(object):
         Dimension of `label` and `clusters` are expected to be [H, W].
 
         Assuming entries in `clusters` are non-negative integers.
+
+        NOTE: Ideally, we would want to use 1 mask for the entire dataset.
+        Currently this is not implemented.
         """
-        assert len(label.shape) == 2
-        assert label.shape == clusters.shape
+        # assert len(label.shape) == 2
+        # assert label.shape == clusters.shape
 
-        foreground_xy = np.argwhere(label)  # shape: [2, num_points]
+        # foreground_xy = np.argwhere(label)  # shape: [2, num_points]
 
-        cluster_ids = []
-        for xy in foreground_xy:
-            cluster_ids.append(clusters[xy[0], xy[1]])
+        # cluster_ids = []
+        # for xy in foreground_xy:
+        #     cluster_ids.append(clusters[xy[0], xy[1]])
 
-        return np.bincount(cluster_ids).argmax()
+        # return np.bincount(cluster_ids).argmax()
+        raise NotImplementedError

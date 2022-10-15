@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import numpy as np
 import phate
 import torch
@@ -14,14 +16,14 @@ class LatentEvaluator(object):
 
     init @params:
         `oneshot_prior`:
-            == 'point': use a center point in one mask to estimate the desired cluster.
-            == 'mask': use the entirety of one mask to estimate the desired cluster.
+            == 'point': use a center point in each mask to estimate the desired cluster.
     """
 
-    def __init__(self, oneshot_prior: str = 'point') -> None:
+    def __init__(self, oneshot_prior: str = 'point', random_seed: int = None) -> None:
         self.oneshot_estimator = OneShotClusterEstimator(oneshot_prior)
+        self.random_seed = random_seed
 
-    def dice(self, latent: torch.Tensor, label: torch.Tensor) -> float:
+    def dice(self, latent: torch.Tensor, label: torch.Tensor) -> Tuple[float, np.array, np.array]:
         """
         @params:
         `latent`: latent encoding by the model.
@@ -30,25 +32,24 @@ class LatentEvaluator(object):
         `latent` and `label` are expected to have dimension [B, H, W, C].
         """
         ncluster = 6
-
         latent = latent.cpu().detach().numpy()
         latent = np.moveaxis(latent, 1, -1)  # channel-first to channel-last
         label = label.cpu().detach().numpy()
 
-        B, H, W, _ = latent.shape
+        B, H, W, C = latent.shape
 
-        dice_coeffs = []
+        dice_coeffs, multiclass_segs, binary_segs = [], None, None
         for batch_idx in range(B):
             # [H, W, C] to [H x W, C]
             feature = latent[batch_idx]
-            feature = feature.reshape((-1, feature.shape[-1]))
+            feature = feature.reshape((H*W, C))
 
             # Perform PHATE clustering.
             phate_operator = phate.PHATE(
-                n_components=3, knn=100, n_landmark=500, t=2, verbose=False)
+                n_components=3, knn=100, n_landmark=500, t=2, verbose=False, random_state=self.random_seed)
             _phate_embedding = phate_operator.fit_transform(feature)
             clusters = phate.cluster.kmeans(
-                phate_operator, n_clusters=ncluster)
+                phate_operator, n_clusters=ncluster, random_state=self.random_seed)
 
             assert clusters.shape == (H * W,)
             clusters = clusters.reshape((H, W))
@@ -62,11 +63,19 @@ class LatentEvaluator(object):
 
             dice_coeffs.append(dice_coeff(seg_pred, seg_true))
 
-        return dice_coeffs
+            if multiclass_segs is None:
+                multiclass_segs = clusters[np.newaxis, ...]
+                binary_segs = seg_pred[np.newaxis, ...]
+            else:
+                multiclass_segs = np.concatenate(
+                    (multiclass_segs, clusters[np.newaxis, ...]), axis=0)
+                binary_segs = np.concatenate(
+                    (binary_segs, seg_pred[np.newaxis, ...]), axis=0)
+
+        return dice_coeffs, multiclass_segs, binary_segs
 
 
 def dice_coeff(pred: np.array, label: np.array) -> float:
     intersection = np.logical_and(pred, label).sum()
-    union = pred.sum() + label.sum()
-    dice = (2 * intersection) / union
+    dice = (2 * intersection) / (pred.sum() + label.sum())
     return dice

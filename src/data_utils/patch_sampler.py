@@ -17,10 +17,10 @@ class PatchSampler(object):
     We don't need to sample negative patches, as they can be directly inferred.
     """
 
-    def __init__(self, random_seed: int = None, patch_size: int = 7, samples_per_batch: int = 16):
+    def __init__(self, random_seed: int = None, patch_size: int = None, sampled_patches_per_image: int = None) -> None:
         self.random_seed = random_seed
         self.patch_size = patch_size
-        self.samples_per_batch = samples_per_batch
+        self.sampled_patches_per_image = sampled_patches_per_image
         # Give up finding positive sample after this many unsuccessful attempts.
         self.max_attempts = 10
 
@@ -34,7 +34,8 @@ class PatchSampler(object):
 
         B, _, H, W = image.shape
 
-        anchors_hw = np.zeros((B, self.samples_per_batch, 2), dtype=int)
+        anchors_hw = np.zeros(
+            (B, self.sampled_patches_per_image, 2), dtype=int)
         positives_hw = np.zeros_like(anchors_hw)
 
         h_range = (self.patch_size // 2, H - self.patch_size // 2)
@@ -43,7 +44,7 @@ class PatchSampler(object):
         # First sample `samples_per_batch` anchors. Then find pos/neg patches against each of them.
         random.seed(self.random_seed)
         for batch_idx in range(B):
-            for sample_idx in range(self.samples_per_batch):
+            for sample_idx in range(self.sampled_patches_per_image):
                 anchors_hw[batch_idx, sample_idx, :] = [
                     random.randrange(start=h_range[0], stop=h_range[1]),
                     random.randrange(start=w_range[0], stop=w_range[1]),
@@ -72,7 +73,8 @@ class PatchSampler(object):
         return anchors_hw, positives_hw
 
 
-def sample_hw_nearby(hw: Tuple[int, int], H: int, W: int, neighborhood: int = 5, patch_size: int = 7) -> Tuple[int, int]:
+def sample_hw_nearby(hw: Tuple[int, int], H: int, W: int,
+                     neighborhood: int = 5, patch_size: int = 7) -> Tuple[int, int]:
     if max(hw[0]-neighborhood, patch_size//2) >= min(hw[0]+neighborhood, H-patch_size//2):
         return None
     if max(hw[1]-neighborhood, patch_size//2) >= min(hw[1]+neighborhood, W-patch_size//2):

@@ -7,14 +7,9 @@ from torch.nn import MSELoss  # For re-export.
 
 class NTXentLoss(nn.Module):
     """
-    Need to provide the `anchor, positive` pairs.
+    Need to provide the `anchor, positive` patch pairs within the same image.
     Negative sample can be directly inferred by using
-    the positive sample from a different anchor in the same batch.
-
-    TODO: This method is batch-size-dependent.
-    Also, it is quite catastrophic when hitting a batch size of 1,
-    including when it is a trailing batch.
-    Current workaround is to load the entire dataset as a single batch for val and test.
+    the positive sample from a different anchor in the same image.
     """
 
     def __init__(self, temperature: float = 0.5, batch_size: int = 2):
@@ -24,27 +19,40 @@ class NTXentLoss(nn.Module):
         self.batch_size = batch_size
 
     def forward(self, anchors: torch.Tensor, positives: torch.Tensor):
-        assert len(anchors.shape) == 2
+        """
+        Assuming `anchors` and `positives` to have dimension [B, S, L]
+            B: batch size
+            S: number of sampled patches per image
+            L: latent vector dimension
+        """
+        assert len(anchors.shape) == 3
         assert anchors.shape == positives.shape
 
-        B = anchors.shape[0]
+        B, S, _ = anchors.shape
 
-        # Create a matrix that represent the [i,j] entries of positive pairs.
-        pos_pair_ij = torch.diag(torch.ones(B)).bool()
+        loss = 0
+        # We would like to learn contrastively across patches in the same image.
+        # So we will use all sampled patches within the same batch idx to compute the loss.
+        for batch_idx in range(B):
+            Z_anchors = anchors[batch_idx, ...]
+            Z_pos = positives[batch_idx, ...]
 
-        Z_anchor = F.normalize(input=anchors, p=2, dim=1)
-        Z_pos = F.normalize(input=positives, p=2, dim=1)
-        sim_matrix = torch.matmul(Z_anchor, Z_pos.T)
+            # Create a matrix that represent the [i,j] entries of positive pairs.
+            pos_pair_ij = torch.diag(torch.ones(S)).bool()
 
-        # Entries noted by 1's in `pos_pair_ij` are the positive pairs.
-        numerator = torch.sum(
-            torch.exp(sim_matrix[pos_pair_ij] / self.temperature))
+            Z_anchor = F.normalize(input=Z_anchors, p=2, dim=1)
+            Z_pos = F.normalize(input=Z_pos, p=2, dim=1)
+            sim_matrix = torch.matmul(Z_anchor, Z_pos.T)
 
-        # Entries elsewhere are the negative pairs.
-        denominator = torch.sum(
-            torch.exp(sim_matrix[~pos_pair_ij] / self.temperature))
+            # Entries noted by 1's in `pos_pair_ij` are similarities of positive pairs.
+            numerator = torch.sum(
+                torch.exp(sim_matrix[pos_pair_ij] / self.temperature))
 
-        loss = -torch.log(numerator / (denominator +
-                          self.epsilon) + self.epsilon)
+            # Entries elsewhere are similarities of negative pairs.
+            denominator = torch.sum(
+                torch.exp(sim_matrix[~pos_pair_ij] / self.temperature))
 
-        return loss
+            loss += -torch.log(numerator / (denominator +
+                                            self.epsilon) + self.epsilon)
+
+        return loss / B

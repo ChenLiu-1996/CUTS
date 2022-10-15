@@ -10,11 +10,12 @@ How we created the conda environment:
 ```
 conda create --name $OUR_CONDA_ENV pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
 conda activate $OUR_CONDA_ENV
+conda install -c anaconda scikit-image pillow
 ```
 
 ## Usage
 ```
 cd ./src
 conda activate $OUR_CONDA_ENV
-python main.py --mode train --config ./config/baseline.yaml
+python main.py --mode train --config ../config/baseline.yaml
 ```
