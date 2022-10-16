@@ -47,7 +47,7 @@ class LatentEvaluator(object):
             # Perform PHATE clustering.
             phate_operator = phate.PHATE(
                 n_components=3, knn=100, n_landmark=500, t=2, verbose=False, random_state=self.random_seed)
-            _phate_embedding = phate_operator.fit_transform(feature)
+            phate_operator.fit_transform(feature)
             clusters = phate.cluster.kmeans(
                 phate_operator, n_clusters=ncluster, random_state=self.random_seed)
 

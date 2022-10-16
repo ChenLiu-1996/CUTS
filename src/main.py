@@ -56,30 +56,35 @@ def prepare_dataset(config: AttributeHashmap, mode: str = 'train'):
 
     num_image_channel = dataset.num_image_channel()
 
-    # Train/Val/Test Split
-    ratios = [float(c) for c in config.train_val_test_ratio.split(':')]
-    ratios = tuple([c/sum(ratios) for c in ratios])
-    train_set, val_set, test_set = split_dataset(
-        dataset=dataset, splits=ratios, random_seed=config.random_seed)
-
+    '''
+    Dataset Split.
+    Something special here.
+    Since the method is unsupervised/self-supervised, we believe it is justifiable to:
+        (1) Split the dataset to a train set and a validation set when training the model.
+        (2) Use the entire dataset as the test set for evaluating the segmentation performance.
+    We believe this is justifiable because no ground truth label is used during the training stage.
+    '''
     # Load into DataLoader
     if mode == 'train':
-        # Round up the dataset to avoid trailing batch.
-        if len(train_set) > config.batch_size:
-            desired_len = len(train_set) + config.batch_size % len(train_set)
-        else:
-            desired_len = config.batch_size
+        ratios = [float(c) for c in config.train_val_ratio.split(':')]
+        ratios = tuple([c/sum(ratios) for c in ratios])
+        train_set, val_set = split_dataset(
+            dataset=dataset, splits=ratios, random_seed=config.random_seed)
+
+        min_batch_per_epoch = 5
+        desired_len = max(
+            len(train_set), config.batch_size * min_batch_per_epoch)
         train_set = ExtendedDataset(
             dataset=train_set, desired_len=desired_len)
 
         train_set = DataLoader(
             dataset=train_set, batch_size=config.batch_size, shuffle=True, num_workers=config.num_workers)
         val_set = DataLoader(
-            dataset=val_set, batch_size=len(val_set), shuffle=False, num_workers=config.num_workers)
+            dataset=val_set, batch_size=1, shuffle=False, num_workers=config.num_workers)
         return train_set, val_set, num_image_channel
     else:
         test_set = DataLoader(
-            dataset=test_set, batch_size=len(test_set), shuffle=False, num_workers=config.num_workers)
+            dataset=dataset, batch_size=1, shuffle=False, num_workers=config.num_workers)
         return test_set, num_image_channel
 
 
@@ -94,7 +99,7 @@ def train(config: AttributeHashmap):
         num_kernels=config.num_kernels,
         random_seed=config.random_seed,
         sampled_patches_per_image=config.sampled_patches_per_image).to(device)
-    optimizer = optim.Adam(
+    optimizer = optim.AdamW(
         model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
 
     loss_fn_recon = MSELoss()
@@ -190,7 +195,7 @@ def test(config: AttributeHashmap):
     latent_evaluator = LatentEvaluator(
         oneshot_prior=config.oneshot_prior, random_seed=config.random_seed)
 
-    test_loss, test_dice_coeffs = 0, []
+    test_loss_recon, test_loss_contrastive, test_loss, test_dice_coeffs = 0, 0, 0, []
     model.eval()
 
     # Results to save.
@@ -206,12 +211,15 @@ def test(config: AttributeHashmap):
             loss = config.lambda_contrastive_loss * \
                 loss_contrastive + config.lambda_recon_loss * loss_recon
 
+            test_loss_recon += loss_recon.item()
+            test_loss_contrastive += loss_contrastive.item()
             test_loss += loss.item()
 
             dice_coeffs, multiclass_segs, binary_segs = latent_evaluator.dice(
                 z, y_test)
             test_dice_coeffs.extend(dice_coeffs)
 
+            # Collect the numpy arrays to save.
             if test_images is None:
                 test_images = x_test.cpu().detach().numpy()
                 test_labels = y_test.cpu().detach().numpy()
@@ -223,16 +231,22 @@ def test(config: AttributeHashmap):
                 test_labels = np.concatenate(
                     (test_labels, y_test.cpu().detach().numpy()), axis=0)
                 test_mc_segs = np.concatenate(
-                    (test_mc_segs, multiclass_segs.cpu().detach().numpy()), axis=0)
+                    (test_mc_segs, multiclass_segs), axis=0)
                 test_bin_segs = np.concatenate(
-                    (test_bin_segs, binary_segs.cpu().detach().numpy()), axis=0)
+                    (test_bin_segs, binary_segs), axis=0)
 
+    test_loss_recon = test_loss_recon / len(test_set)
+    test_loss_contrastive = test_loss_contrastive / len(test_set)
     test_loss = test_loss / len(test_set)
-    test_dice_coeffs = np.mean(test_dice_coeffs)
-    log('Test loss: %.3f dice coeff: %.3f' % (test_loss, test_dice_coeffs),
+    test_dice_coeffs, test_dice_coeffs_std = \
+        np.mean(test_dice_coeffs), np.std(test_dice_coeffs)
+    log('Test recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f. dice coeff: %.3f \u00B1 %.3f' %
+        (test_loss_recon, test_loss_contrastive, test_loss,
+         test_dice_coeffs, test_dice_coeffs_std),
         filepath=config.log_dir, to_console=False)
 
-    log('Saving images, labels, multi-class segmentations and binary segmentations.')
+    log('Saving images, labels, multi-class segmentations and binary segmentations.\n',
+        filepath=config.log_dir, to_console=False)
     os.makedirs(config.output_save_path, exist_ok=True)
     np.save(file=config.output_save_path + 'test_images.npy', arr=test_images)
     np.save(file=config.output_save_path + 'test_labels.npy', arr=test_labels)

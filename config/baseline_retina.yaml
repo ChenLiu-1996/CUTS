@@ -4,16 +4,16 @@ model_save_path: '/gpfs/gibbs/pi/krishnaswamy_smita/cl2482/CUTS/rewritten_CUTS/c
 output_save_path: '/gpfs/gibbs/pi/krishnaswamy_smita/cl2482/CUTS/rewritten_CUTS/results/retina/'
 log_folder: '/gpfs/gibbs/pi/krishnaswamy_smita/cl2482/CUTS/rewritten_CUTS/logs'
 model_setting: 'full' # 'full', 'no_recon', 'no_contrastive'
-learning_rate: 1e-4
-weight_decay: 1e-5
+learning_rate: 1e-3
+weight_decay: 1e-4
 max_epochs: 200
 patience: 5
-batch_size: 8
-num_kernels: 16
-sampled_patches_per_image: 4
+batch_size: 16
+num_kernels: 8
+sampled_patches_per_image: 16 # recommend: 4 or above.
 num_workers: 0
 lambda_contrastive_loss: 1
 lambda_recon_loss: 10
 random_seed: 1
 oneshot_prior: 'point' # 'point'
-train_val_test_ratio: '8:1:1'
+train_val_ratio: '8:1'
