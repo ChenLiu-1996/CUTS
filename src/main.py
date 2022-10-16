@@ -215,8 +215,8 @@ def test(config: AttributeHashmap):
             test_loss_contrastive += loss_contrastive.item()
             test_loss += loss.item()
 
-            dice_coeffs, multiclass_segs, binary_segs = latent_evaluator.dice(
-                z, y_test)
+            dice_coeffs, multiclass_segs, binary_segs = \
+                latent_evaluator.dice(z, y_test)
             test_dice_coeffs.extend(dice_coeffs)
 
             # Collect the numpy arrays to save.

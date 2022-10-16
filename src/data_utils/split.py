@@ -23,7 +23,7 @@ def split_dataset(dataset: Dataset,
     if len(splits) == 2:
         val_size = int(splits[1] * n)
         train_size = n - val_size
-        train_set, val_set, test_set = random_split(
+        train_set, val_set = random_split(
             dataset, [train_size, val_size], generator=torch.Generator().manual_seed(random_seed))
         return train_set, val_set
     else:
