@@ -27,8 +27,7 @@ class OneShotClusterEstimator(object):
         In this method, we use one point from the ground truth segmentation
         as the prior. We will use this point to estimate the desired cluster ID.
 
-        Since the exact centroid is not necessarily in the segmentation foreground,
-        we would rather use the "middle point" in the sorted x-y coordinates.
+        We will find the foreground point that is closest to the cluster centroid.
 
         Dimension of `label` and `clusters` are expected to be [H, W].
 
@@ -38,8 +37,11 @@ class OneShotClusterEstimator(object):
         assert len(label.shape) == 2
         assert label.shape == clusters.shape
 
-        foreground_xy = np.argwhere(label)  # shape: [2, num_points]
-        middle_point_xy = foreground_xy[len(foreground_xy)//2]
+        # Find the
+        foreground_xys = np.argwhere(label)  # shape: [2, num_points]
+        centroid_xy = np.mean(foreground_xys, axis=0)
+        distances = ((foreground_xys - centroid_xy)**2).sum(axis=1)
+        middle_point_xy = foreground_xys[np.argmin(distances)]
 
         cluster_id = clusters[middle_point_xy[0], middle_point_xy[1]]
         return cluster_id

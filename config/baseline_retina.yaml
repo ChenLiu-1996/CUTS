@@ -7,11 +7,11 @@ model_setting: 'full' # 'full', 'no_recon', 'no_contrastive'
 learning_rate: 1e-3
 weight_decay: 1e-4
 max_epochs: 200
-patience: 5
+patience: 10
 batch_size: 16
-num_kernels: 8
+num_kernels: 16
 sampled_patches_per_image: 8 # recommend: 4 or above.
-num_workers: 0
+num_workers: 8
 lambda_contrastive_loss: 1
 lambda_recon_loss: 10
 random_seed: 1

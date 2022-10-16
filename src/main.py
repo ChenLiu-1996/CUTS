@@ -199,7 +199,7 @@ def test(config: AttributeHashmap):
     model.eval()
 
     # Results to save.
-    test_images, test_labels, test_mc_segs, test_bin_segs = None, None, None, None
+    test_images, test_labels, test_mc_segs, test_bin_segs, test_embeddings = None, None, None, None, None
     with torch.no_grad():
         for _, (x_test, y_test) in tqdm(enumerate(test_set), total=len(test_set)):
             x_test = x_test.type(torch.FloatTensor).to(device)
@@ -215,8 +215,8 @@ def test(config: AttributeHashmap):
             test_loss_contrastive += loss_contrastive.item()
             test_loss += loss.item()
 
-            dice_coeffs, multiclass_segs, binary_segs = \
-                latent_evaluator.dice(z, y_test)
+            dice_coeffs, multiclass_segs, binary_segs, embeddings = \
+                latent_evaluator.dice(z, y_test, return_additional_info=True)
             test_dice_coeffs.extend(dice_coeffs)
 
             # Collect the numpy arrays to save.
@@ -225,6 +225,7 @@ def test(config: AttributeHashmap):
                 test_labels = y_test.cpu().detach().numpy()
                 test_mc_segs = multiclass_segs
                 test_bin_segs = binary_segs
+                test_embeddings = embeddings
             else:
                 test_images = np.concatenate(
                     (test_images, x_test.cpu().detach().numpy()), axis=0)
@@ -234,26 +235,26 @@ def test(config: AttributeHashmap):
                     (test_mc_segs, multiclass_segs), axis=0)
                 test_bin_segs = np.concatenate(
                     (test_bin_segs, binary_segs), axis=0)
+                test_embeddings = np.concatenate(
+                    (test_embeddings, embeddings), axis=0)
 
     test_loss_recon = test_loss_recon / len(test_set)
     test_loss_contrastive = test_loss_contrastive / len(test_set)
     test_loss = test_loss / len(test_set)
-    test_dice_coeffs, test_dice_coeffs_std = \
+    test_dice_coeffs_mean, test_dice_coeffs_std = \
         np.mean(test_dice_coeffs), np.std(test_dice_coeffs)
     log('Test recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f. dice coeff: %.3f \u00B1 %.3f' %
         (test_loss_recon, test_loss_contrastive, test_loss,
-         test_dice_coeffs, test_dice_coeffs_std),
+         test_dice_coeffs_mean, test_dice_coeffs_std),
         filepath=config.log_dir, to_console=False)
 
-    log('Saving images, labels, multi-class segmentations and binary segmentations.\n',
+    log('Saving images, labels, segmentations and latent vectors.\n',
         filepath=config.log_dir, to_console=False)
     os.makedirs(config.output_save_path, exist_ok=True)
-    np.save(file=config.output_save_path + 'test_images.npy', arr=test_images)
-    np.save(file=config.output_save_path + 'test_labels.npy', arr=test_labels)
-    np.save(file=config.output_save_path +
-            'test_multiclass_segs.npy', arr=test_mc_segs)
-    np.save(file=config.output_save_path +
-            'test_binary_segs.npy', arr=test_bin_segs)
+    with open(config.output_save_path + 'output.npz', 'wb+') as f:
+        np.savez(f, test_images=test_images, test_labels=test_labels,
+                 test_multiclass_segs=test_mc_segs, test_binary_segs=test_bin_segs,
+                 test_embeddings=test_embeddings, dice_coeffs=dice_coeffs)
     return
 
 

@@ -23,7 +23,8 @@ class LatentEvaluator(object):
         self.oneshot_estimator = OneShotClusterEstimator(oneshot_prior)
         self.random_seed = random_seed
 
-    def dice(self, latent: torch.Tensor, label: torch.Tensor) -> Tuple[float, np.array, np.array]:
+    def dice(self, latent: torch.Tensor, label: torch.Tensor,
+             return_additional_info: bool = False) -> Tuple[float, np.array, np.array]:
         """
         @params:
         `latent`: latent encoding by the model.
@@ -31,7 +32,7 @@ class LatentEvaluator(object):
 
         `latent` and `label` are expected to have dimension [B, H, W, C].
         """
-        ncluster = 6
+        ncluster = 10
         latent = latent.cpu().detach().numpy()
         latent = np.moveaxis(latent, 1, -1)  # channel-first to channel-last
         label = label.cpu().detach().numpy()
@@ -39,15 +40,16 @@ class LatentEvaluator(object):
         B, H, W, C = latent.shape
 
         dice_coeffs, multiclass_segs, binary_segs = [], None, None
+
         for batch_idx in range(B):
+            feature_map = latent[batch_idx]
             # [H, W, C] to [H x W, C]
-            feature = latent[batch_idx]
-            feature = feature.reshape((H*W, C))
+            feature_map = feature_map.reshape((H*W, C))
 
             # Perform PHATE clustering.
             phate_operator = phate.PHATE(
                 n_components=3, knn=100, n_landmark=500, t=2, verbose=False, random_state=self.random_seed)
-            phate_operator.fit_transform(feature)
+            phate_operator.fit_transform(feature_map)
             clusters = phate.cluster.kmeans(
                 phate_operator, n_clusters=ncluster, random_state=self.random_seed)
 
@@ -72,7 +74,10 @@ class LatentEvaluator(object):
                 binary_segs = np.concatenate(
                     (binary_segs, seg_pred[np.newaxis, ...]), axis=0)
 
-        return dice_coeffs, multiclass_segs, binary_segs
+        if return_additional_info:
+            return dice_coeffs, multiclass_segs, binary_segs, latent
+        else:
+            return dice_coeffs
 
 
 def dice_coeff(pred: np.array, label: np.array) -> float:
