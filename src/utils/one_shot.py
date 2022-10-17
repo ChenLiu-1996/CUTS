@@ -17,15 +17,16 @@ class OneShotClusterEstimator(object):
         """
         Dimension of `label` and `clusters` are expected to be [H, W].
         """
+        assert self.oneshot_prior in ['point', 'mask']
         if self.oneshot_prior == 'point':
             return self.__est_cluster_with_point(label, clusters)
         else:
-            raise NotImplementedError
+            return self.__est_cluster_with_mask(label, clusters)
 
     def __est_cluster_with_point(self, label: np.array = None, clusters: np.array = None) -> int:
         """
-        In this method, we use one point from the ground truth segmentation
-        as the prior. We will use this point to estimate the desired cluster ID.
+        In this method, we use **one point** from the ground truth segmentation of **each image in the dataset**
+        as the prior. We will use this point to estimate the desired cluster ID for each image.
 
         We will find the foreground point that is closest to the cluster centroid.
 
@@ -37,7 +38,8 @@ class OneShotClusterEstimator(object):
         assert len(label.shape) == 2
         assert label.shape == clusters.shape
 
-        # Find the
+        # Find the "middle point" of the foreground,
+        # defined as the foreground point closest to the foreground centroid.
         foreground_xys = np.argwhere(label)  # shape: [2, num_points]
         centroid_xy = np.mean(foreground_xys, axis=0)
         distances = ((foreground_xys - centroid_xy)**2).sum(axis=1)
@@ -48,24 +50,24 @@ class OneShotClusterEstimator(object):
 
     def __est_cluster_with_mask(self, label: np.array = None, clusters: np.array = None) -> int:
         """
-        In this method, we use one ground truth segmentation mask
-        as the prior. We will use this mask to estimate the desired cluster ID.
+        In this method, we use the ground truth segmentation **mask** of **one image over the entire dataset**
+        as the prior. We will use this mask to estimate the desired cluster ID for the entire dataset.
 
         Dimension of `label` and `clusters` are expected to be [H, W].
 
-        Assuming entries in `clusters` are non-negative integers.
-
-        NOTE: Ideally, we would want to use 1 mask for the entire dataset.
-        Currently this is not implemented.
+        NOTE: Assuming entries in `clusters` are non-negative integers.
         """
-        # assert len(label.shape) == 2
-        # assert label.shape == clusters.shape
+        assert len(label.shape) == 2
+        assert label.shape == clusters.shape
+        assert np.sum(clusters < 0) == 0
+        # TODO: How to elegantly assert entries in `clusters` are integers?
 
-        # foreground_xy = np.argwhere(label)  # shape: [2, num_points]
+        foreground_xy = np.argwhere(label)  # shape: [2, num_points]
 
-        # cluster_ids = []
-        # for xy in foreground_xy:
-        #     cluster_ids.append(clusters[xy[0], xy[1]])
+        cluster_ids = []
+        for xy in foreground_xy:
+            cluster_ids.append(clusters[xy[0], xy[1]])
 
-        # return np.bincount(cluster_ids).argmax()
-        raise NotImplementedError
+        # Find the most frequent number.
+        cluster_id = np.bincount(cluster_ids).argmax()
+        return cluster_id
