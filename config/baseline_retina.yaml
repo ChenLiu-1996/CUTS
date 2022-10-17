@@ -8,12 +8,12 @@ learning_rate: 1e-3
 weight_decay: 1e-4
 max_epochs: 200
 patience: 10
-batch_size: 64
+batch_size: 16
 num_kernels: 16
 sampled_patches_per_image: 16 # recommend: 4 or above.
 num_workers: 8
 lambda_contrastive_loss: 1
 lambda_recon_loss: 10
 random_seed: 1
-oneshot_prior: 'point' # 'point'
+oneshot_prior: 'point' # 'point', 'mask'
 train_val_ratio: '8:1'

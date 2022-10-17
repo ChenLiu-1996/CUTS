@@ -83,6 +83,7 @@ class LatentEvaluator(object):
                         (binary_segs, seg_pred[np.newaxis, ...]), axis=0)
 
         elif self.oneshot_prior == 'mask':
+            # TODO: This is currently unbearably slow... I haven't even successfully run this once.
             '''
             Hypothetically, we are asking the user to provide 1 segmented image as a segmentation prior.
             In practice, we would take one ground truth mask over the entire dataset

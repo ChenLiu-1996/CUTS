@@ -80,11 +80,11 @@ def prepare_dataset(config: AttributeHashmap, mode: str = 'train'):
         train_set = DataLoader(
             dataset=train_set, batch_size=config.batch_size, shuffle=True, num_workers=config.num_workers)
         val_set = DataLoader(
-            dataset=val_set, batch_size=1, shuffle=False, num_workers=config.num_workers)
+            dataset=val_set, batch_size=len(val_set), shuffle=False, num_workers=config.num_workers)
         return train_set, val_set, num_image_channel
     else:
         test_set = DataLoader(
-            dataset=dataset, batch_size=1, shuffle=False, num_workers=config.num_workers)
+            dataset=dataset, batch_size=len(dataset), shuffle=False, num_workers=config.num_workers)
         return test_set, num_image_channel
 
 
@@ -188,7 +188,7 @@ def test(config: AttributeHashmap):
         sampled_patches_per_image=config.sampled_patches_per_image).to(device)
     model.load_weights(config.model_save_path)
     log('CUTSEncoder: Model weights successfully loaded.',
-        filepath=config.log_dir, to_console=False)
+        filepath=config.log_dir, to_console=True)
 
     loss_fn_recon = MSELoss()
     loss_fn_contrastive = NTXentLoss(batch_size=config.batch_size)
@@ -201,7 +201,7 @@ def test(config: AttributeHashmap):
     # Results to save.
     test_images, test_labels, test_mc_segs, test_bin_segs, test_embeddings = None, None, None, None, None
     with torch.no_grad():
-        for _, (x_test, y_test) in tqdm(enumerate(test_set), total=len(test_set)):
+        for _, (x_test, y_test) in enumerate(test_set):
             x_test = x_test.type(torch.FloatTensor).to(device)
             z, x_anchors, x_recon, z_anchors, z_positives = model(
                 x_test)
@@ -246,10 +246,10 @@ def test(config: AttributeHashmap):
     log('Test recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f. dice coeff: %.3f \u00B1 %.3f' %
         (test_loss_recon, test_loss_contrastive, test_loss,
          test_dice_coeffs_mean, test_dice_coeffs_std),
-        filepath=config.log_dir, to_console=False)
+        filepath=config.log_dir, to_console=True)
 
     log('Saving images, labels, segmentations and latent vectors.\n',
-        filepath=config.log_dir, to_console=False)
+        filepath=config.log_dir, to_console=True)
     os.makedirs(config.output_save_path, exist_ok=True)
     with open(config.output_save_path + 'output.npz', 'wb+') as f:
         np.savez(f, test_images=test_images, test_labels=test_labels,
