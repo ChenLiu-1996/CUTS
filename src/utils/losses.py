@@ -1,8 +1,6 @@
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import MSELoss  # For re-export.
 
 
 class NTXentLoss(nn.Module):
@@ -12,11 +10,10 @@ class NTXentLoss(nn.Module):
     the positive sample from a different anchor in the same image.
     """
 
-    def __init__(self, temperature: float = 0.5, batch_size: int = 2):
+    def __init__(self, temperature: float = 0.5):
         super(NTXentLoss, self).__init__()
         self.temperature = temperature
         self.epsilon = 1e-7
-        self.batch_size = batch_size
 
     def forward(self, anchors: torch.Tensor, positives: torch.Tensor):
         """
@@ -40,8 +37,8 @@ class NTXentLoss(nn.Module):
             # Create a matrix that represent the [i,j] entries of positive pairs.
             pos_pair_ij = torch.diag(torch.ones(S)).bool()
 
-            Z_anchor = F.normalize(input=Z_anchors, p=2, dim=1)
-            Z_pos = F.normalize(input=Z_pos, p=2, dim=1)
+            Z_anchor = F.normalize(input=Z_anchors, p=2, dim=-1)
+            Z_pos = F.normalize(input=Z_pos, p=2, dim=-1)
             sim_matrix = torch.matmul(Z_anchor, Z_pos.T)
 
             # Entries noted by 1's in `pos_pair_ij` are similarities of positive pairs.
@@ -52,7 +49,7 @@ class NTXentLoss(nn.Module):
             denominator = torch.sum(
                 torch.exp(sim_matrix[~pos_pair_ij] / self.temperature))
 
-            loss += -torch.log(numerator / (denominator +
-                                            self.epsilon) + self.epsilon)
+            loss += -torch.log(numerator /
+                               (denominator + self.epsilon) + self.epsilon)
 
         return loss / B

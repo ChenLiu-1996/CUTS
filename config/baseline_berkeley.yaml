@@ -1,7 +1,7 @@
-dataset_name: 'retina'
-dataset_path: '$CUTS_ROOT/data/retina/'
-model_save_path: '$CUTS_ROOT/checkpoints/baseline_retina.pty'
-output_save_path: '$CUTS_ROOT/results/retina/'
+dataset_name: 'berkeley'
+dataset_path: '$CUTS_ROOT/data/berkeley_image_segmentation/'
+model_save_path: '$CUTS_ROOT/checkpoints/baseline_berkeley.pty'
+output_save_path: '$CUTS_ROOT/results/berkeley/'
 log_folder: '$CUTS_ROOT/logs'
 model_setting: 'full' # 'full', 'no_recon', 'no_contrastive'
 learning_rate: 1e-3
@@ -18,4 +18,4 @@ random_seed: 1
 train_val_ratio: '8:1'
 pos_enc_gamma: 0.0
 segmentation_paradigm: 'kmeans_point'
-test_metric: 'dice'
+test_metric: None

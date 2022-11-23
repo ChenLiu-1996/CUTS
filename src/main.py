@@ -1,5 +1,4 @@
 import argparse
-import os
 import random
 
 import numpy as np
@@ -11,31 +10,7 @@ from model import CUTSEncoder
 from torch import optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from utils import AttributeHashmap, EarlyStopping, LatentEvaluator, MSELoss, NTXentLoss, log
-
-
-def parse_settings(config: AttributeHashmap, log_settings: bool = True):
-    # fix typing issues
-    config.learning_rate = float(config.learning_rate)
-    config.weight_decay = float(config.weight_decay)
-
-    # for ablation test
-    if config.model_setting == 'no_recon':
-        config.lambda_recon_loss = 0
-    if config.model_setting == 'no_contrastive':
-        config.lambda_contrastive_loss = 0
-
-    # Initialize log file.
-    config.log_dir = config.log_folder + '/' + \
-        os.path.basename(
-            config.config_file_name).replace('.yaml', '') + '_log.txt'
-    if log_settings:
-        log_str = 'Config: \n'
-        for key in config.keys():
-            log_str += '%s: %s\n' % (key, config[key])
-        log_str += '\nTraining History:'
-        log(log_str, filepath=config.log_dir, to_console=True)
-    return config
+from utils import AttributeHashmap, EarlyStopping, LatentEvaluator, NTXentLoss, log, parse_settings
 
 
 def prepare_dataset(config: AttributeHashmap, mode: str = 'train'):
@@ -55,36 +30,41 @@ def prepare_dataset(config: AttributeHashmap, mode: str = 'train'):
             'Dataset not found. Check `dataset_name` in config yaml file.')
 
     num_image_channel = dataset.num_image_channel()
-
     '''
     Dataset Split.
     Something special here.
     Since the method is unsupervised/self-supervised, we believe it is justifiable to:
         (1) Split the dataset to a train set and a validation set when training the model.
         (2) Use the entire dataset as the test set for evaluating the segmentation performance.
-    We believe this is justifiable because no ground truth label is used during the training stage.
+    We believe this is reasonable because ground truth label is NOT used during the training stage.
     '''
     # Load into DataLoader
     if mode == 'train':
         ratios = [float(c) for c in config.train_val_ratio.split(':')]
-        ratios = tuple([c/sum(ratios) for c in ratios])
-        train_set, val_set = split_dataset(
-            dataset=dataset, splits=ratios, random_seed=config.random_seed)
+        ratios = tuple([c / sum(ratios) for c in ratios])
+        train_set, val_set = split_dataset(dataset=dataset,
+                                           splits=ratios,
+                                           random_seed=config.random_seed)
 
         min_batch_per_epoch = 5
-        desired_len = max(
-            len(train_set), config.batch_size * min_batch_per_epoch)
-        train_set = ExtendedDataset(
-            dataset=train_set, desired_len=desired_len)
+        desired_len = max(len(train_set),
+                          config.batch_size * min_batch_per_epoch)
+        train_set = ExtendedDataset(dataset=train_set, desired_len=desired_len)
 
-        train_set = DataLoader(
-            dataset=train_set, batch_size=config.batch_size, shuffle=True, num_workers=config.num_workers)
-        val_set = DataLoader(
-            dataset=val_set, batch_size=len(val_set), shuffle=False, num_workers=config.num_workers)
+        train_set = DataLoader(dataset=train_set,
+                               batch_size=config.batch_size,
+                               shuffle=True,
+                               num_workers=config.num_workers)
+        val_set = DataLoader(dataset=val_set,
+                             batch_size=len(val_set),
+                             shuffle=False,
+                             num_workers=config.num_workers)
         return train_set, val_set, num_image_channel
     else:
-        test_set = DataLoader(
-            dataset=dataset, batch_size=len(dataset), shuffle=False, num_workers=config.num_workers)
+        test_set = DataLoader(dataset=dataset,
+                              batch_size=len(dataset),
+                              shuffle=False,
+                              num_workers=config.num_workers)
         return test_set, num_image_channel
 
 
@@ -99,13 +79,15 @@ def train(config: AttributeHashmap):
         num_kernels=config.num_kernels,
         random_seed=config.random_seed,
         sampled_patches_per_image=config.sampled_patches_per_image).to(device)
-    optimizer = optim.AdamW(
-        model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
+    optimizer = optim.AdamW(model.parameters(),
+                            lr=config.learning_rate,
+                            weight_decay=config.weight_decay)
 
-    loss_fn_recon = MSELoss()
-    loss_fn_contrastive = NTXentLoss(batch_size=config.batch_size)
-    early_stopper = EarlyStopping(
-        mode='min', patience=config.patience, percentage=False)
+    loss_fn_recon = torch.nn.MSELoss()
+    loss_fn_contrastive = NTXentLoss()
+    early_stopper = EarlyStopping(mode='min',
+                                  patience=config.patience,
+                                  percentage=False)
 
     best_val_loss = np.inf
 
@@ -115,9 +97,9 @@ def train(config: AttributeHashmap):
         model.train()
         for _, (x_train, _) in enumerate(train_set):
             x_train = x_train.type(torch.FloatTensor).to(device)
-            _, x_anchors, x_recon, z_anchors, z_positives = model(x_train)
+            _, patch_real, patch_recon, z_anchors, z_positives = model(x_train)
 
-            loss_recon = loss_fn_recon(x_anchors, x_recon)
+            loss_recon = loss_fn_recon(patch_real, patch_recon)
             loss_contrastive = loss_fn_contrastive(z_anchors, z_positives)
             loss = config.lambda_contrastive_loss * \
                 loss_contrastive + config.lambda_recon_loss * loss_recon
@@ -134,18 +116,21 @@ def train(config: AttributeHashmap):
         train_loss_contrastive = train_loss_contrastive / len(train_set)
         train_loss = train_loss / len(train_set)
 
-        log('Train [%s/%s] recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f' % (
-            epoch_idx+1, config.max_epochs, train_loss_recon, train_loss_contrastive, train_loss),
-            filepath=config.log_dir, to_console=False)
+        log('Train [%s/%s] recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f'
+            % (epoch_idx + 1, config.max_epochs, train_loss_recon,
+               train_loss_contrastive, train_loss),
+            filepath=config.log_dir,
+            to_console=False)
 
         val_loss_recon, val_loss_contrastive, val_loss = 0, 0, 0
         model.eval()
         with torch.no_grad():
             for _, (x_val, _) in enumerate(val_set):
                 x_val = x_val.type(torch.FloatTensor).to(device)
-                _, x_anchors, x_recon, z_anchors, z_positives = model(x_val)
+                _, patch_real, patch_recon, z_anchors, z_positives = model(
+                    x_val)
 
-                loss_recon = loss_fn_recon(x_anchors, x_recon)
+                loss_recon = loss_fn_recon(patch_real, patch_recon)
                 loss_contrastive = loss_fn_contrastive(z_anchors, z_positives)
                 loss = config.lambda_contrastive_loss * \
                     loss_contrastive + config.lambda_recon_loss * loss_recon
@@ -157,22 +142,25 @@ def train(config: AttributeHashmap):
         val_loss_recon = val_loss_recon / len(val_set)
         val_loss_contrastive = val_loss_contrastive / len(val_set)
         val_loss = val_loss / len(val_set)
-        log('Validation [%s/%s] recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f' % (
-            epoch_idx+1, config.max_epochs, val_loss_recon, val_loss_contrastive, val_loss),
-            filepath=config.log_dir, to_console=False)
+        log('Validation [%s/%s] recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f'
+            % (epoch_idx + 1, config.max_epochs, val_loss_recon,
+               val_loss_contrastive, val_loss),
+            filepath=config.log_dir,
+            to_console=False)
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             model.save_weights(config.model_save_path)
             log('CUTSEncoder: Model weights successfully saved.',
-                filepath=config.log_dir, to_console=False)
+                filepath=config.log_dir,
+                to_console=False)
 
         if early_stopper.step(val_loss):
             # If the validation loss stop decreasing, stop training.
             log('Early stopping criterion met. Ending training.',
-                filepath=config.log_dir, to_console=True)
+                filepath=config.log_dir,
+                to_console=True)
             break
-
     return
 
 
@@ -188,25 +176,27 @@ def test(config: AttributeHashmap):
         sampled_patches_per_image=config.sampled_patches_per_image).to(device)
     model.load_weights(config.model_save_path)
     log('CUTSEncoder: Model weights successfully loaded.',
-        filepath=config.log_dir, to_console=True)
+        filepath=config.log_dir,
+        to_console=False)
 
-    loss_fn_recon = MSELoss()
-    loss_fn_contrastive = NTXentLoss(batch_size=config.batch_size)
+    loss_fn_recon = torch.nn.MSELoss()
+    loss_fn_contrastive = NTXentLoss()
     latent_evaluator = LatentEvaluator(
-        oneshot_prior=config.oneshot_prior, random_seed=config.random_seed)
+        segmentation_paradigm=config.segmentation_paradigm,
+        pos_enc_gamma=config.pos_enc_gamma,
+        save_path=config.output_save_path,
+        num_workers=config.num_workers,
+        random_seed=config.random_seed)
 
     test_loss_recon, test_loss_contrastive, test_loss, test_dice_coeffs = 0, 0, 0, []
     model.eval()
 
-    # Results to save.
-    test_images, test_labels, test_mc_segs, test_bin_segs, test_embeddings = None, None, None, None, None
     with torch.no_grad():
         for _, (x_test, y_test) in enumerate(test_set):
             x_test = x_test.type(torch.FloatTensor).to(device)
-            z, x_anchors, x_recon, z_anchors, z_positives = model(
-                x_test)
+            z, patch_real, patch_recon, z_anchors, z_positives = model(x_test)
 
-            loss_recon = loss_fn_recon(x_anchors, x_recon)
+            loss_recon = loss_fn_recon(patch_real, patch_recon)
             loss_contrastive = loss_fn_contrastive(z_anchors, z_positives)
             loss = config.lambda_contrastive_loss * \
                 loss_contrastive + config.lambda_recon_loss * loss_recon
@@ -215,55 +205,43 @@ def test(config: AttributeHashmap):
             test_loss_contrastive += loss_contrastive.item()
             test_loss += loss.item()
 
-            dice_coeffs, multiclass_segs, binary_segs, embeddings = \
-                latent_evaluator.dice(z, y_test, return_additional_info=True)
-            test_dice_coeffs.extend(dice_coeffs)
+            # Each pixel embedding recons to a patch.
+            # Here we only take the center pixel of the reconed patch and collect into a reconed image.
+            B, L, H, W = z.shape
+            z_for_recon = z.permute((0, 2, 3, 1)).reshape(B, H * W, L)
+            patch_recon = model.recon(z_for_recon)
+            C = patch_recon.shape[2]
+            P = patch_recon.shape[-1]
+            patch_recon = patch_recon[:, :, :, P // 2, P // 2]
+            patch_recon = patch_recon.permute((0, 2, 1)).reshape(B, C, H, W)
 
-            # Collect the numpy arrays to save.
-            if test_images is None:
-                test_images = x_test.cpu().detach().numpy()
-                test_labels = y_test.cpu().detach().numpy()
-                test_mc_segs = multiclass_segs
-                test_bin_segs = binary_segs
-                test_embeddings = embeddings
-            else:
-                test_images = np.concatenate(
-                    (test_images, x_test.cpu().detach().numpy()), axis=0)
-                test_labels = np.concatenate(
-                    (test_labels, y_test.cpu().detach().numpy()), axis=0)
-                test_mc_segs = np.concatenate(
-                    (test_mc_segs, multiclass_segs), axis=0)
-                test_bin_segs = np.concatenate(
-                    (test_bin_segs, binary_segs), axis=0)
-                test_embeddings = np.concatenate(
-                    (test_embeddings, embeddings), axis=0)
+            dice_coeffs = latent_evaluator.eval(image_batch=x_test,
+                                                recon_batch=patch_recon,
+                                                label_true_batch=y_test,
+                                                latent_batch=z,
+                                                metric=config.test_metric)
+            test_dice_coeffs.extend(dice_coeffs)
 
     test_loss_recon = test_loss_recon / len(test_set)
     test_loss_contrastive = test_loss_contrastive / len(test_set)
     test_loss = test_loss / len(test_set)
     test_dice_coeffs_mean, test_dice_coeffs_std = \
         np.mean(test_dice_coeffs), np.std(test_dice_coeffs)
-    log('Test recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f. dice coeff: %.3f \u00B1 %.3f' %
-        (test_loss_recon, test_loss_contrastive, test_loss,
-         test_dice_coeffs_mean, test_dice_coeffs_std),
-        filepath=config.log_dir, to_console=True)
 
-    log('Saving images, labels, segmentations and latent vectors.\n',
-        filepath=config.log_dir, to_console=True)
-    os.makedirs(config.output_save_path, exist_ok=True)
-    with open(config.output_save_path + 'output.npz', 'wb+') as f:
-        np.savez(f, test_images=test_images, test_labels=test_labels,
-                 test_multiclass_segs=test_mc_segs, test_binary_segs=test_bin_segs,
-                 test_embeddings=test_embeddings, dice_coeffs=dice_coeffs)
+    log('Test recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f. dice coeff: %.3f \u00B1 %.3f'
+        % (test_loss_recon, test_loss_contrastive, test_loss,
+           test_dice_coeffs_mean, test_dice_coeffs_std),
+        filepath=config.log_dir,
+        to_console=True)
     return
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Entry point to run CUTS.')
-    parser.add_argument(
-        '--mode', help='`train` or `test`?', required=True)
-    parser.add_argument(
-        '--config', help='Path to config yaml file.', required=True)
+    parser.add_argument('--mode', help='`train` or `test`?', required=True)
+    parser.add_argument('--config',
+                        help='Path to config yaml file.',
+                        required=True)
     args = vars(parser.parse_args())
 
     args = AttributeHashmap(args)

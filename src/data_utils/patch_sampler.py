@@ -17,12 +17,16 @@ class PatchSampler(object):
     We don't need to sample negative patches, as they can be directly inferred.
     """
 
-    def __init__(self, random_seed: int = None, patch_size: int = None, sampled_patches_per_image: int = None) -> None:
+    def __init__(self,
+                 random_seed: int = None,
+                 patch_size: int = None,
+                 sampled_patches_per_image: int = None) -> None:
         self.random_seed = random_seed
         self.patch_size = patch_size
         self.sampled_patches_per_image = sampled_patches_per_image
         # Give up finding positive sample after this many unsuccessful attempts.
         self.max_attempts = 10
+        self.ssim_thr = 0.5
 
     def sample(self, image: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -34,8 +38,8 @@ class PatchSampler(object):
 
         B, _, H, W = image.shape
 
-        anchors_hw = np.zeros(
-            (B, self.sampled_patches_per_image, 2), dtype=int)
+        anchors_hw = np.zeros((B, self.sampled_patches_per_image, 2),
+                              dtype=int)
         positives_hw = np.zeros_like(anchors_hw)
 
         h_range = (self.patch_size // 2, H - self.patch_size // 2)
@@ -50,56 +54,71 @@ class PatchSampler(object):
                     random.randrange(start=w_range[0], stop=w_range[1]),
                 ]
 
-                # Sample nearby the anchor and check SSIM. Repeat if not similar enough.
-                pos_sample_found = False
+                # Sample nearby the anchor and check SSIM.
+                # Only samples with high enough SSIM are considered positive.
+                # Keep the one with highest SSIM.
+                highest_ssim = 0
+                best_pos_hw_candidate = None
                 for _ in range(self.max_attempts):
                     pos_hw_candidate = sample_hw_nearby(
-                        anchors_hw[batch_idx, sample_idx, :], H=H, W=W, patch_size=self.patch_size)
-                    if pos_hw_candidate is None:
-                        continue
-                    if similar_enough(image[batch_idx, ...].cpu().detach().numpy(),
-                                      h1w1=anchors_hw[batch_idx,
-                                                      sample_idx, :],
-                                      h2w2=pos_hw_candidate, patch_size=self.patch_size):
-                        positives_hw[batch_idx, sample_idx,
-                                     :] = pos_hw_candidate
-                        pos_sample_found = True
+                        anchors_hw[batch_idx, sample_idx, :],
+                        H=H,
+                        W=W,
+                        patch_size=self.patch_size)
 
-                # TODO: Maybe do something better than using the sample itself as the positive sample?
-                if not pos_sample_found:
-                    pos_hw_candidate = anchors_hw
+                    curr_ssim = compute_ssim(image[batch_idx,
+                                                   ...].cpu().detach().numpy(),
+                                             h1w1=anchors_hw[batch_idx,
+                                                             sample_idx, :],
+                                             h2w2=pos_hw_candidate,
+                                             patch_size=self.patch_size)
+
+                    if curr_ssim > self.ssim_thr and curr_ssim > highest_ssim:
+                        highest_ssim = curr_ssim
+                        best_pos_hw_candidate = pos_hw_candidate
+
+                if best_pos_hw_candidate is None:
+                    # If positive sample not found, just take a nearest neighbor.
+                    neighbor_hw = anchors_hw[batch_idx, sample_idx, :]
+                    neighbor_hw[0] = neighbor_hw[0] - 1 if neighbor_hw[
+                        0] > H // 2 else neighbor_hw[0] + 1
+                    neighbor_hw[1] = neighbor_hw[1] - 1 if neighbor_hw[
+                        1] > W // 2 else neighbor_hw[1] + 1
+                    best_pos_hw_candidate = neighbor_hw
+
+                positives_hw[batch_idx, sample_idx, :] = best_pos_hw_candidate
 
         assert anchors_hw.shape == positives_hw.shape
         return anchors_hw, positives_hw
 
 
-def sample_hw_nearby(hw: Tuple[int, int], H: int, W: int,
-                     neighborhood: int = 5, patch_size: int = 7) -> Tuple[int, int]:
-    if max(hw[0]-neighborhood, patch_size//2) >= min(hw[0]+neighborhood, H-patch_size//2):
-        return None
-    if max(hw[1]-neighborhood, patch_size//2) >= min(hw[1]+neighborhood, W-patch_size//2):
-        return None
+def sample_hw_nearby(hw: Tuple[int, int],
+                     H: int,
+                     W: int,
+                     neighborhood: int = 5,
+                     patch_size: int = 7) -> Tuple[int, int]:
+    h_start = max(hw[0] - neighborhood, patch_size // 2)
+    h_stop = min(hw[0] + neighborhood, H - patch_size // 2)
+    w_start = max(hw[1] - neighborhood, patch_size // 2)
+    w_stop = min(hw[1] + neighborhood, W - patch_size // 2)
 
-    return (random.randrange(start=max(hw[0]-neighborhood, patch_size//2),
-                             stop=min(hw[0]+neighborhood, H-patch_size//2)),
-            random.randrange(start=max(hw[1]-neighborhood, patch_size//2),
-                             stop=min(hw[1]+neighborhood, W-patch_size//2)))
+    return (random.randrange(start=h_start, stop=h_stop),
+            random.randrange(start=w_start, stop=w_stop))
 
 
-def similar_enough(image: np.array,
-                   h1w1: Tuple[int, int], h2w2: Tuple[int, int],
-                   patch_size: int, ssim_thr: float = 0.5) -> bool:
+def compute_ssim(image: np.array, h1w1: Tuple[int, int], h2w2: Tuple[int, int],
+                 patch_size: int) -> float:
     """
     `image` dimension: [C, H, W]
     """
-    patch1 = image[:,
-                   h1w1[0]-patch_size//2: h1w1[0]-patch_size//2+patch_size,
-                   h1w1[1]-patch_size//2: h1w1[1]-patch_size//2+patch_size]
-    patch2 = image[:,
-                   h2w2[0]-patch_size//2: h2w2[0]-patch_size//2+patch_size,
-                   h2w2[1]-patch_size//2: h2w2[1]-patch_size//2+patch_size]
+    patch1 = image[:, h1w1[0] - patch_size // 2:h1w1[0] - patch_size // 2 +
+                   patch_size, h1w1[1] - patch_size // 2:h1w1[1] -
+                   patch_size // 2 + patch_size]
+    patch2 = image[:, h2w2[0] - patch_size // 2:h2w2[0] - patch_size // 2 +
+                   patch_size, h2w2[1] - patch_size // 2:h2w2[1] -
+                   patch_size // 2 + patch_size]
 
     # Channel first to channel last to accommodate SSIM.
     patch1 = np.moveaxis(patch1, 0, -1)
     patch2 = np.moveaxis(patch2, 0, -1)
-    return ssim(patch1, patch2, channel_axis=-1) >= ssim_thr
+    return ssim(patch1, patch2, channel_axis=-1)
