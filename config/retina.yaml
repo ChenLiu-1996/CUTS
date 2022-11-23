@@ -1,10 +1,10 @@
 dataset_name: 'retina'
 dataset_path: '$CUTS_ROOT/data/retina/'
-model_save_path: '$CUTS_ROOT/checkpoints/baseline_retina.pty'
+model_save_path: '$CUTS_ROOT/checkpoints/retina.pty'
 output_save_path: '$CUTS_ROOT/results/retina/'
 log_folder: '$CUTS_ROOT/logs'
 model_setting: 'full' # 'full', 'no_recon', 'no_contrastive'
-learning_rate: 1e-3
+learning_rate: 5e-3
 weight_decay: 1e-4
 max_epochs: 200
 patience: 10

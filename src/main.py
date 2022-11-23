@@ -4,68 +4,10 @@ import random
 import numpy as np
 import torch
 import yaml
-from data_utils import ExtendedDataset, split_dataset
-from datasets import BerkeleySegmentation, BrainArman, DiabeticMacularEdema, PolyP, Retina
+from data_utils.prepare_dataset import prepare_dataset
 from model import CUTSEncoder
-from torch import optim
-from torch.utils.data import DataLoader
 from tqdm import tqdm
-from utils import AttributeHashmap, EarlyStopping, LatentEvaluator, NTXentLoss, log, parse_settings
-
-
-def prepare_dataset(config: AttributeHashmap, mode: str = 'train'):
-    # Read dataset.
-    if config.dataset_name == 'retina':
-        dataset = Retina(base_path=config.dataset_path)
-    elif config.dataset_name == 'berkeley':
-        dataset = BerkeleySegmentation(base_path=config.dataset_path)
-    elif config.dataset_name == 'polyp':
-        dataset = PolyP(base_path=config.dataset_path)
-    elif config.dataset_name == 'macular_edema':
-        dataset = DiabeticMacularEdema(base_path=config.dataset_path)
-    elif config.dataset_name == 'brain':
-        dataset = BrainArman(base_path=config.dataset_path)
-    else:
-        raise Exception(
-            'Dataset not found. Check `dataset_name` in config yaml file.')
-
-    num_image_channel = dataset.num_image_channel()
-    '''
-    Dataset Split.
-    Something special here.
-    Since the method is unsupervised/self-supervised, we believe it is justifiable to:
-        (1) Split the dataset to a train set and a validation set when training the model.
-        (2) Use the entire dataset as the test set for evaluating the segmentation performance.
-    We believe this is reasonable because ground truth label is NOT used during the training stage.
-    '''
-    # Load into DataLoader
-    if mode == 'train':
-        ratios = [float(c) for c in config.train_val_ratio.split(':')]
-        ratios = tuple([c / sum(ratios) for c in ratios])
-        train_set, val_set = split_dataset(dataset=dataset,
-                                           splits=ratios,
-                                           random_seed=config.random_seed)
-
-        min_batch_per_epoch = 5
-        desired_len = max(len(train_set),
-                          config.batch_size * min_batch_per_epoch)
-        train_set = ExtendedDataset(dataset=train_set, desired_len=desired_len)
-
-        train_set = DataLoader(dataset=train_set,
-                               batch_size=config.batch_size,
-                               shuffle=True,
-                               num_workers=config.num_workers)
-        val_set = DataLoader(dataset=val_set,
-                             batch_size=len(val_set),
-                             shuffle=False,
-                             num_workers=config.num_workers)
-        return train_set, val_set, num_image_channel
-    else:
-        test_set = DataLoader(dataset=dataset,
-                              batch_size=len(dataset),
-                              shuffle=False,
-                              num_workers=config.num_workers)
-        return test_set, num_image_channel
+from utils import AttributeHashmap, EarlyStopping, LatentEvaluator, NTXentLoss, log, parse_settings, seed_everything
 
 
 def train(config: AttributeHashmap):
@@ -79,15 +21,15 @@ def train(config: AttributeHashmap):
         num_kernels=config.num_kernels,
         random_seed=config.random_seed,
         sampled_patches_per_image=config.sampled_patches_per_image).to(device)
-    optimizer = optim.AdamW(model.parameters(),
-                            lr=config.learning_rate,
-                            weight_decay=config.weight_decay)
-
-    loss_fn_recon = torch.nn.MSELoss()
-    loss_fn_contrastive = NTXentLoss()
+    optimizer = torch.optim.AdamW(model.parameters(),
+                                  lr=config.learning_rate,
+                                  weight_decay=config.weight_decay)
     early_stopper = EarlyStopping(mode='min',
                                   patience=config.patience,
                                   percentage=False)
+
+    loss_fn_recon = torch.nn.MSELoss()
+    loss_fn_contrastive = NTXentLoss()
 
     best_val_loss = np.inf
 
@@ -165,7 +107,7 @@ def train(config: AttributeHashmap):
 
 
 def test(config: AttributeHashmap):
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cpu')
     test_set, num_image_channel = prepare_dataset(config=config, mode='test')
 
     # Build the model
@@ -175,9 +117,7 @@ def test(config: AttributeHashmap):
         random_seed=config.random_seed,
         sampled_patches_per_image=config.sampled_patches_per_image).to(device)
     model.load_weights(config.model_save_path)
-    log('CUTSEncoder: Model weights successfully loaded.',
-        filepath=config.log_dir,
-        to_console=False)
+    log('CUTSEncoder: Model weights successfully loaded.', to_console=True)
 
     loss_fn_recon = torch.nn.MSELoss()
     loss_fn_contrastive = NTXentLoss()
@@ -252,8 +192,8 @@ if __name__ == '__main__':
     # Currently supports 2 modes: `train`: Train+Validation+Test & `test`: Test.
     assert args.mode in ['train', 'test']
 
-    random.seed(config.random_seed)
-    torch.manual_seed(config.random_seed)
+    seed_everything(config.random_seed)
+
     if args.mode == 'train':
         train(config=config)
         test(config=config)

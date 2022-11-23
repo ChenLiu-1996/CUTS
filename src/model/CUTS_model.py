@@ -4,7 +4,7 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from data_utils import PatchSampler
+from data_utils.patch_sampler import PatchSampler
 
 
 class CUTSEncoder(nn.Module):
@@ -31,25 +31,28 @@ class CUTSEncoder(nn.Module):
 
         self.conv1 = nn.Conv2d(in_channels,
                                num_kernels,
-                               kernel_size=3,
-                               padding='same')
+                               kernel_size=5,
+                               padding='same',
+                               padding_mode='replicate')
         self.conv2 = nn.Conv2d(num_kernels,
                                num_kernels * 2,
-                               kernel_size=3,
-                               padding='same')
+                               kernel_size=5,
+                               padding='same',
+                               padding_mode='replicate')
         self.conv3 = nn.Conv2d(num_kernels * 2,
                                num_kernels * 4,
-                               kernel_size=3,
-                               padding='same')
+                               kernel_size=5,
+                               padding='same',
+                               padding_mode='replicate')
         self.conv4 = nn.Conv2d(num_kernels * 4,
                                num_kernels * 8,
-                               kernel_size=3,
-                               padding='same')
+                               kernel_size=5,
+                               padding='same',
+                               padding_mode='replicate')
         self.latent_dim = num_kernels * 8
 
-        # Encoder includes 9 x 9 neighbor information
-        # (3x3 kernel, 4 layers, receptive field is 9x9).
-        self.patch_size = 9
+        # Request reconstruction of local patch.
+        self.patch_size = 7
 
         self.inference = inference
 
@@ -124,16 +127,15 @@ class CUTSEncoder(nn.Module):
             assert anchors_hw.shape[0] == B
             for batch_idx in range(B):
                 for sample_idx in range(S):
-                    patch_real[batch_idx, sample_idx,
-                              ...] = x[batch_idx, :,
-                                       anchors_hw[batch_idx, sample_idx, 0] -
-                                       self.patch_size //
-                                       2:anchors_hw[batch_idx, sample_idx, 0] -
-                                       self.patch_size // 2 + self.patch_size,
-                                       anchors_hw[batch_idx, sample_idx, 1] -
-                                       self.patch_size //
-                                       2:anchors_hw[batch_idx, sample_idx, 1] -
-                                       self.patch_size // 2 + self.patch_size]
+                    patch_real[batch_idx, sample_idx, ...] = x[
+                        batch_idx, :, anchors_hw[batch_idx, sample_idx, 0] -
+                        self.patch_size // 2:anchors_hw[batch_idx, sample_idx,
+                                                        0] -
+                        self.patch_size // 2 + self.patch_size,
+                        anchors_hw[batch_idx, sample_idx, 1] -
+                        self.patch_size // 2:anchors_hw[batch_idx, sample_idx,
+                                                        1] -
+                        self.patch_size // 2 + self.patch_size]
                     z_anchors[batch_idx, sample_idx,
                               ...] = z[batch_idx, :, anchors_hw[batch_idx,
                                                                 sample_idx, 0],
