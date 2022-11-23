@@ -43,8 +43,8 @@ if __name__ == '__main__':
         label_true = numpy_array['label']
         latent = numpy_array['latent']
 
-        image = (image - image.min()) / (image.max() - image.min())
-        recon = (recon - recon.min()) / (recon.max() - recon.min())
+        image = (image + 1) / 2
+        recon = (recon + 1) / 2
 
         H, W = label_true.shape[:2]
         X = latent
