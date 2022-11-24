@@ -28,13 +28,13 @@ def generate_diffusion(
     H, W, C = shape
     assert latent.shape == (H * W, C)
 
-    _, (catch_op, levels, _) = \
-        diffusion_condensation(latent,
-                                    height_width=(H, W),
-                                    pos_enc_gamma=config.pos_enc_gamma,
-                                    num_workers=num_workers,
-                                    random_seed=random_seed,
-                                    return_all=True)
+    _, (catch_op,
+        levels) = diffusion_condensation(latent,
+                                         height_width=(H, W),
+                                         pos_enc_gamma=config.pos_enc_gamma,
+                                         num_workers=num_workers,
+                                         random_seed=random_seed,
+                                         return_all=True)
 
     labels_pred = np.array([catch_op.NxTs[lvl] for lvl in levels])
     granularities = [len(catch_op.NxTs) + lvl for lvl in levels]

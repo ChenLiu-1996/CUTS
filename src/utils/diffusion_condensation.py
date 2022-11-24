@@ -143,7 +143,7 @@ def diffusion_condensation(X_orig: np.array,
     clusters = catch_op.NxTs[levels[0]]
 
     if return_all:
-        return clusters, (catch_op, levels, data)
+        return clusters, (catch_op, levels)
     else:
         return clusters
 

@@ -9,11 +9,11 @@ import phate
 import scprep
 import yaml
 from matplotlib import pyplot as plt
+from sklearn.preprocessing import normalize
 from tqdm import tqdm
 
 sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
-from utils.diffusion_condensation import diffusion_condensation
 from utils.parse import parse_settings
 
 warnings.filterwarnings("ignore")
@@ -32,7 +32,8 @@ if __name__ == '__main__':
     config.config_file_name = args.config
     config = parse_settings(config, log_settings=False)
 
-    files_folder = '%s/%s' % (config.output_save_path, 'numpy_files')
+    files_folder = '%s/%s' % (config.output_save_path,
+                              'numpy_files_seg_diffusion')
     figure_folder = '%s/%s' % (config.output_save_path, 'figures')
 
     os.makedirs(figure_folder, exist_ok=True)
@@ -45,26 +46,23 @@ if __name__ == '__main__':
         recon = numpy_array['recon']
         label_true = numpy_array['label']
         latent = numpy_array['latent']
+        granularities = numpy_array['granularities_diffusion']
+        labels_diffusion = numpy_array['labels_diffusion']
 
         image = (image + 1) / 2
         recon = (recon + 1) / 2
 
         H, W = label_true.shape[:2]
 
-        clusters, (catch_op, levels, data) = diffusion_condensation(
-            latent,
-            height_width=(H, W),
-            pos_enc_gamma=config.pos_enc_gamma,
-            num_workers=config.num_workers,
-            return_all=True)
+        data = normalize(latent, axis=1)
 
-        n_rows = (len(levels) + 1) // 2
+        n_rows = (len(granularities) + 1) // 2
 
         # 1. PHATE plot.
         phate_op = phate.PHATE(random_state=random_seed)
         data_phate = phate_op.fit_transform(data)
         fig1 = plt.figure(figsize=(15, 4 * n_rows))
-        for i in range(-1, len(levels)):
+        for i in range(-1, len(granularities)):
             ax = fig1.add_subplot(n_rows + 1, 2, i + 2)
             if i == -1:
                 # Plot the ground truth.
@@ -80,11 +78,11 @@ if __name__ == '__main__':
                                       s=3)
             else:
                 scprep.plot.scatter2d(data_phate,
-                                      c=catch_op.NxTs[levels[i]],
+                                      c=labels_diffusion[i],
                                       legend_anchor=(1, 1),
                                       ax=ax,
                                       title='Granularity ' +
-                                      str(len(catch_op.NxTs) + levels[i]),
+                                      str(granularities[i]),
                                       xticks=False,
                                       yticks=False,
                                       label_prefix="PHATE",
@@ -93,7 +91,7 @@ if __name__ == '__main__':
 
         # 2. Segmentation plot.
         fig2 = plt.figure(figsize=(12, 4 * n_rows))
-        for i in range(-2, len(levels)):
+        for i in range(-2, len(granularities)):
             ax = fig2.add_subplot(n_rows + 1, 2, i + 3)
             if i == -2:
                 ax.imshow(image)
@@ -102,10 +100,8 @@ if __name__ == '__main__':
                 ax.imshow(label_true, cmap='gray')
                 ax.set_axis_off()
             else:
-                ax.imshow(catch_op.NxTs[levels[i]].reshape((H, W)),
-                          cmap='tab20')
-                ax.set_title('Granularity ' +
-                             str(len(catch_op.NxTs) + levels[i]))
+                ax.imshow(labels_diffusion[i].reshape((H, W)), cmap='tab20')
+                ax.set_title('Granularity ' + str(granularities[i]))
                 ax.set_axis_off()
 
         # 3. Reconstruction sanity check plot.

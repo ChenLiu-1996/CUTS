@@ -16,11 +16,49 @@ python -m pip install git+https://github.com/KrishnaswamyLab/CATCH
 
 # See https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md
 conda install numpy scipy -c conda-forge
+
+python -m pip install opencv-python
+python -m pip install sewar
 ```
 
 ## Usage
+Activate environment.
 ```
-cd $CUTS_ROOT/src
 conda activate $OUR_CONDA_ENV
+```
+### Training and Testing
+To train a model.
+```
+## Under $CUTS_ROOT/src
 python main.py --mode train --config ../config/retina.yaml
+```
+To test a model (automatically done during `train` mode).
+```
+## Under $CUTS_ROOT/src
+python main.py --mode test --config ../config/retina.yaml
+```
+
+### Further analysis.
+#### To generate and save the segmentation using spectral k-means.
+This will also create a csv file documenting the dice coefficient. (Do not take the dice coeffcient seriously for non-binary segmentation tasks).
+```
+## Under $CUTS_ROOT/src/scripts_analysis
+python generate_kmeans.py --config ../../config/retina.yaml
+```
+#### To generate and save the segmentation using diffusion condensation.
+```
+## Under $CUTS_ROOT/src/scripts_analysis
+python generate_diffusion.py --config ../../config/retina.yaml
+```
+#### To generate and save the segmentation using baseline methods.
+```
+## Under $CUTS_ROOT/src/scripts_analysis
+python generate_baselines.py
+```
+
+#### To plot the segmentation results using diffusion condensation.
+Assuming segmentation results have already been generated and saved.
+```
+## Under $CUTS_ROOT/src/scripts_analysis
+python plot_diffusion.py --config ../../config/retina.yaml
 ```
