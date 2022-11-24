@@ -3,10 +3,7 @@ from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
-import phate
-import scprep
 from CATCH import catch
-from matplotlib import pyplot as plt
 from scipy import sparse
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import normalize
@@ -110,50 +107,11 @@ def diffusion_condensation_simple(X_orig: np.array,
     return clusters, all_segs
 
 
-# def diffusion_condensation(X_orig: np.array,
-#                            height_width: Tuple[int] = (128, 128),
-#                            pos_enc_gamma: float = 0.0,
-#                            return_figures: bool = False,
-#                            image_recon_label: Tuple[np.array] = None,
-#                            random_seed: int = 0) -> np.array:
-#     '''
-#     `X_orig` : [N, C] feature matrix,
-#         where N := number of feature vectors
-#               C := number of features
-#     `pos_enc_gamma`: weighting for positional encoding.
-
-#     Returns the clusters (distinct connected components in the converged affinity matrix).
-#     `clusters`: [N,] non-negative integers.
-#     '''
-
-#     if return_figures:
-#         assert image_recon_label is not None
-#         image, recon, label = image_recon_label
-#         H, W, C = image.shape
-
-#         fig1 = plt.figure()
-#         # 2. Segmentation plot.
-#         fig2 = plt.figure()
-
-#         # 3. Reconstruction sanity check plot.
-#         fig3 = plt.figure()
-#         ax = fig3.add_subplot(1, 2, 1)
-#         ax.imshow(image.reshape((H, W, -1)))
-#         ax.set_axis_off()
-#         ax.set_title('Image')
-#         ax = fig3.add_subplot(1, 2, 2)
-#         ax.imshow(recon.reshape((H, W, -1)))
-#         ax.set_axis_off()
-#         ax.set_title('Reconstruction')
-
-#     return None, (fig1, fig2, fig3)
-
-
 def diffusion_condensation(X_orig: np.array,
                            height_width: Tuple[int] = (128, 128),
                            pos_enc_gamma: float = 0.0,
-                           return_figures: bool = False,
-                           image_recon_label: Tuple[np.array] = None,
+                           num_workers: int = 1,
+                           return_all: bool = False,
                            random_seed: int = 0) -> np.array:
     '''
     `X_orig` : [N, C] feature matrix,
@@ -178,115 +136,14 @@ def diffusion_condensation(X_orig: np.array,
     catch_op = catch.CATCH(knn=30,
                            random_state=random_seed,
                            n_pca=50,
-                           n_jobs=1)
+                           n_jobs=num_workers)
     catch_op.fit(data)
     levels = catch_op.transform()
 
-    if return_figures:
-        assert image_recon_label is not None
-        image, recon, label = image_recon_label
-        H, W, C = image.shape
-
-        n_rows = (len(levels) + 1) // 2
-        # max_legends_displayed = 12
-        # 1. PHATE plot.
-        phate_op = phate.PHATE(random_state=random_seed)
-        data_phate = phate_op.fit_transform(data)
-        fig1 = plt.figure(figsize=(15, 4 * n_rows))
-        for i in range(-1, len(levels)):
-            ax = fig1.add_subplot(n_rows + 1, 2, i + 2)
-            if i == -1:
-                # Plot the ground truth.
-                scprep.plot.scatter2d(data_phate,
-                                      c=label.reshape((H * W, -1)),
-                                      legend_anchor=(1, 1),
-                                      ax=ax,
-                                      title='Ground truth label',
-                                      xticks=False,
-                                      yticks=False,
-                                      label_prefix="PHATE",
-                                      fontsize=10,
-                                      s=3)
-            else:
-                scprep.plot.scatter2d(data_phate,
-                                      c=catch_op.NxTs[levels[i]],
-                                      legend_anchor=(1, 1),
-                                      ax=ax,
-                                      title='Granularity ' +
-                                      str(len(catch_op.NxTs) + levels[i]),
-                                      xticks=False,
-                                      yticks=False,
-                                      label_prefix="PHATE",
-                                      fontsize=10,
-                                      s=3)
-
-            # if i == -1:
-            #     # Plot the ground truth.
-            #     scatter = ax.scatter(x=data_phate[..., 0],
-            #                          y=data_phate[..., 1],
-            #                          c=label.reshape((H * W, -1)),
-            #                          cmap='tab20',
-            #                          s=3)
-            #     if len(np.unique(label)) <= max_legends_displayed:
-            #         ax.legend(*scatter.legend_elements())
-            #     else:
-            #         plt.colorbar(scatter)
-            #     ax.set_title('Ground truth label', fontsize=10)
-            # else:
-            #     scatter = ax.scatter(x=data_phate[..., 0],
-            #                          y=data_phate[..., 1],
-            #                          c=catch_op.NxTs[levels[i]],
-            #                          cmap='tab20',
-            #                          s=3)
-            #     if len(np.unique(
-            #             catch_op.NxTs[levels[i]])) <= max_legends_displayed:
-            #         ax.legend(*scatter.legend_elements())
-            #     else:
-            #         scatter = ax.scatter(x=data_phate[..., 0],
-            #                              y=data_phate[..., 1],
-            #                              c=catch_op.NxTs[levels[i]],
-            #                              cmap='tab20',
-            #                              s=3)
-            #         plt.colorbar(scatter)
-            #     ax.set_title('Granularity ' +
-            #                  str(len(catch_op.NxTs) + levels[i]),
-            #                  fontsize=10)
-            # ax.set_xticks([])
-            # ax.set_yticks([])
-            # ax.set_axis_off()
-
-        # 2. Segmentation plot.
-        fig2 = plt.figure(figsize=(12, 4 * n_rows))
-        for i in range(-2, len(levels)):
-            ax = fig2.add_subplot(n_rows + 1, 2, i + 3)
-            if i == -2:
-                ax.imshow(image)
-                ax.set_axis_off()
-            elif i == -1:
-                ax.imshow(label, cmap='gray')
-                ax.set_axis_off()
-            else:
-                ax.imshow(catch_op.NxTs[levels[i]].reshape(*height_width),
-                          cmap='tab20')
-                ax.set_title('Granularity ' +
-                             str(len(catch_op.NxTs) + levels[i]))
-                ax.set_axis_off()
-
-        # 3. Reconstruction sanity check plot.
-        fig3 = plt.figure()
-        ax = fig3.add_subplot(1, 2, 1)
-        ax.imshow(image.reshape((H, W, -1)))
-        ax.set_axis_off()
-        ax.set_title('Image')
-        ax = fig3.add_subplot(1, 2, 2)
-        ax.imshow(recon.reshape((H, W, -1)))
-        ax.set_axis_off()
-        ax.set_title('Reconstruction')
-
     clusters = catch_op.NxTs[levels[0]]
 
-    if return_figures:
-        return clusters, (fig1, fig2, fig3)
+    if return_all:
+        return clusters, (catch_op, levels, data)
     else:
         return clusters
 

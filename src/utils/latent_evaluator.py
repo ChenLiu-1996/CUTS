@@ -200,7 +200,8 @@ class LatentEvaluator(object):
                                                  n_landmark=500,
                                                  t=2,
                                                  verbose=False,
-                                                 random_state=self.random_seed)
+                                                 random_state=self.random_seed,
+                                                 n_jobs=1)
                     phate_operator.fit_transform(latent)
                     clusters = phate.cluster.kmeans(
                         phate_operator,
@@ -252,6 +253,7 @@ class LatentEvaluator(object):
                             X_orig=latent,
                             height_width=(H, W),
                             pos_enc_gamma=self.pos_enc_gamma,
+                            num_workers=self.num_workers,
                             random_seed=self.random_seed)
                         label_pred = clusters.reshape((H, W))
 
@@ -292,6 +294,7 @@ class LatentEvaluator(object):
                             X_orig=latent,
                             height_width=(H, W),
                             pos_enc_gamma=self.pos_enc_gamma,
+                            num_workers=self.num_workers,
                             random_seed=self.random_seed)
                         label_pred = clusters.reshape((H, W))
 
@@ -362,6 +365,7 @@ def call_diffusion_condensation(input_arg_tuple: Tuple) -> None:
     clusters = diffusion_condensation(X_orig=latent,
                                       height_width=(H, W),
                                       pos_enc_gamma=pos_enc_gamma,
+                                      num_workers=1,
                                       random_seed=random_seed)
     label_pred = clusters.reshape((H, W))
 

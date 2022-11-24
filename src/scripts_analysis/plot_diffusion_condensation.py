@@ -5,18 +5,22 @@ import warnings
 from glob import glob
 
 import numpy as np
+import phate
+import scprep
 import yaml
+from matplotlib import pyplot as plt
 from tqdm import tqdm
 
 sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
-from utils.diffusion_condensation import cluster_indices_from_mask, diffusion_condensation
-from utils.metrics import dice_coeff
+from utils.diffusion_condensation import diffusion_condensation
 from utils.parse import parse_settings
 
 warnings.filterwarnings("ignore")
 
 if __name__ == '__main__':
+    random_seed = 0
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--config',
                         help='Path to config yaml file.',
@@ -35,7 +39,6 @@ if __name__ == '__main__':
 
     np_files_path = sorted(glob('%s/%s' % (files_folder, '*.npz')))
 
-    # dice_list = []
     for image_idx in tqdm(range(len(np_files_path))):
         numpy_array = np.load(np_files_path[image_idx])
         image = numpy_array['image']
@@ -47,22 +50,74 @@ if __name__ == '__main__':
         recon = (recon + 1) / 2
 
         H, W = label_true.shape[:2]
-        X = latent
 
-        clusters, (fig1, fig2, fig3) = diffusion_condensation(
-            X,
+        clusters, (catch_op, levels, data) = diffusion_condensation(
+            latent,
             height_width=(H, W),
             pos_enc_gamma=config.pos_enc_gamma,
-            image_recon_label=(image, recon, label_true),
-            return_figures=True)
+            num_workers=config.num_workers,
+            return_all=True)
 
-        # seg = clusters.reshape((H, W))
-        # cluster_id = cluster_indices_from_mask(seg, label_true, top1_only=True)
-        # # cluster_indices, dice_map = cluster_indices_from_mask(seg, label_true)
-        # # label_pred = np.logical_or.reduce([seg == i for i in cluster_indices])
-        # # dice_list.append(dice_coeff(label_pred, label_true))
-        # label_pred = seg == cluster_id
-        # print('dice', dice_coeff(label_pred, label_true))
+        n_rows = (len(levels) + 1) // 2
+
+        # 1. PHATE plot.
+        phate_op = phate.PHATE(random_state=random_seed)
+        data_phate = phate_op.fit_transform(data)
+        fig1 = plt.figure(figsize=(15, 4 * n_rows))
+        for i in range(-1, len(levels)):
+            ax = fig1.add_subplot(n_rows + 1, 2, i + 2)
+            if i == -1:
+                # Plot the ground truth.
+                scprep.plot.scatter2d(data_phate,
+                                      c=label_true.reshape((H * W, -1)),
+                                      legend_anchor=(1, 1),
+                                      ax=ax,
+                                      title='Ground truth label',
+                                      xticks=False,
+                                      yticks=False,
+                                      label_prefix="PHATE",
+                                      fontsize=10,
+                                      s=3)
+            else:
+                scprep.plot.scatter2d(data_phate,
+                                      c=catch_op.NxTs[levels[i]],
+                                      legend_anchor=(1, 1),
+                                      ax=ax,
+                                      title='Granularity ' +
+                                      str(len(catch_op.NxTs) + levels[i]),
+                                      xticks=False,
+                                      yticks=False,
+                                      label_prefix="PHATE",
+                                      fontsize=10,
+                                      s=3)
+
+        # 2. Segmentation plot.
+        fig2 = plt.figure(figsize=(12, 4 * n_rows))
+        for i in range(-2, len(levels)):
+            ax = fig2.add_subplot(n_rows + 1, 2, i + 3)
+            if i == -2:
+                ax.imshow(image)
+                ax.set_axis_off()
+            elif i == -1:
+                ax.imshow(label_true, cmap='gray')
+                ax.set_axis_off()
+            else:
+                ax.imshow(catch_op.NxTs[levels[i]].reshape((H, W)),
+                          cmap='tab20')
+                ax.set_title('Granularity ' +
+                             str(len(catch_op.NxTs) + levels[i]))
+                ax.set_axis_off()
+
+        # 3. Reconstruction sanity check plot.
+        fig3 = plt.figure()
+        ax = fig3.add_subplot(1, 2, 1)
+        ax.imshow(image.reshape((H, W, -1)))
+        ax.set_axis_off()
+        ax.set_title('Image')
+        ax = fig3.add_subplot(1, 2, 2)
+        ax.imshow(recon.reshape((H, W, -1)))
+        ax.set_axis_off()
+        ax.set_title('Reconstruction')
 
         fig_path = '%s/sample_%s' % (figure_folder, str(image_idx).zfill(5))
 

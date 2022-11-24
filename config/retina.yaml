@@ -18,4 +18,4 @@ random_seed: 1
 train_val_ratio: '8:1'
 pos_enc_gamma: 0.0
 segmentation_paradigm: 'kmeans_point'
-test_metric: 'dice'
+test_metric: None

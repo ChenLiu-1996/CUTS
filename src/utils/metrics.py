@@ -48,3 +48,5 @@ def recon_ssim(x: torch.Tensor, x_recon: torch.Tensor) -> float:
             img2 = np.moveaxis(img2, 0, -1)
             ssim_list.append(ssim(img1, img2, channel_axis=-1))
     return np.mean(ssim_list)
+
+
