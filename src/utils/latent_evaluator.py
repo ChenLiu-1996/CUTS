@@ -9,6 +9,7 @@ import torch
 from tqdm import tqdm
 from utils.diffusion_condensation import cluster_indices_from_mask, diffusion_condensation
 from utils.metrics import dice_coeff
+from utils.segmentation import point_hint_seg
 
 warnings.filterwarnings("ignore")
 
@@ -211,18 +212,7 @@ class LatentEvaluator(object):
                     # [H x W, C] to [H, W, C]
                     label_pred = clusters.reshape((H, W))
 
-                    # Find the desired cluster id by finding the "middle point" of the foreground,
-                    # defined as the foreground point closest to the foreground centroid.
-                    foreground_xys = np.argwhere(
-                        label_true_batch[image_idx,
-                                         ...])  # shape: [2, num_points]
-                    centroid_xy = np.mean(foreground_xys, axis=0)
-                    distances = ((foreground_xys - centroid_xy)**2).sum(axis=1)
-                    middle_point_xy = foreground_xys[np.argmin(distances)]
-                    cluster_id = label_pred[middle_point_xy[0],
-                                            middle_point_xy[1]]
-
-                    seg_pred = label_pred == cluster_id
+                    seg_pred = point_hint_seg(label_pred=label_pred, label_true=seg_true)
 
                     if metric_fn is not None:
                         metrics.append(metric_fn(seg_pred, seg_true))

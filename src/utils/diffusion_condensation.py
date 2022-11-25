@@ -198,13 +198,14 @@ def cluster_indices_from_mask(
 
 
 def most_persistent_structures(labels: np.array,
-                               min_frame_ratio: float = 0.4,
-                               min_area_ratio: float = 1 / 500) -> np.array:
+                               min_frame_ratio: float = 1 / 2,
+                               min_area_ratio: float = 1 / 200) -> np.array:
     '''
     Given a set of B labels on the same image, with shape [B, H, W]
     Return a label with the most persistent structures, with shape [H, W]
     '''
     B, H, W = labels.shape
+    K = int(min_frame_ratio * B)
     filtered_labels = labels.copy()
     persistent_label = np.zeros((H, W), dtype=np.int16)
 
@@ -215,6 +216,7 @@ def most_persistent_structures(labels: np.array,
     persistence_heap = []
     for label_idx in np.unique(filtered_labels):
         sum_dice, sum_area_ratio, num_frames = 0, 0, 0
+        min_dice_heap = [2 for _ in range(K)] # Use some number > 1 (highest possible dice).
         existent_frames = np.sum(filtered_labels == label_idx, axis=(1, 2)) > 0
         for i in range(B - 1):
             if existent_frames[i] and existent_frames[i + 1]:
@@ -222,14 +224,31 @@ def most_persistent_structures(labels: np.array,
                 sum_dice += dice_coeff(
                     filtered_labels[i, ...] == label_idx,
                     filtered_labels[i + 1, ...] == label_idx)
+                dice = dice_coeff(filtered_labels[i, ...] == label_idx,
+                                  filtered_labels[i + 1, ...] == label_idx)
+                put_back_list = []
+                for _ in range(K-1):
+                    put_back_list.append(heapq.heappop(min_dice_heap))
+                Kth_smallest_dice = heapq.heappop(min_dice_heap)
+                put_back_list.append(min(dice, Kth_smallest_dice))
+                for _ in range(K):
+                    heapq.heappush(min_dice_heap, put_back_list.pop(0))
                 sum_area_ratio += np.sum(
                     filtered_labels[i, ...] == label_idx) / (H * W)
 
-        mean_dice = 0 if num_frames == 0 else sum_dice / num_frames
+        # mean_dice = 0 if num_frames == 0 else sum_dice / num_frames
+        if num_frames < K:
+            Kth_smallest_dice = 0
+        else:
+            assert len(min_dice_heap) == K
+            for _ in range(K-1):
+                _ = heapq.heappop(min_dice_heap)
+            Kth_smallest_dice = heapq.heappop(min_dice_heap)
         mean_area_ratio = 0 if num_frames == 0 else sum_area_ratio / num_frames
-        persistence_score = mean_dice
+        # TODO: Can we do better?
+        persistence_score = Kth_smallest_dice
 
-        if mean_area_ratio < min_area_ratio or num_frames < min_frame_ratio * B:
+        if mean_area_ratio < min_area_ratio or num_frames < K:
             filtered_labels[filtered_labels == label_idx] = 0
         else:
             heapq.heappush(persistence_heap, (persistence_score, label_idx))

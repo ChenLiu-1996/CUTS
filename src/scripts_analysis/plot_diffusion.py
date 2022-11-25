@@ -16,6 +16,7 @@ sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
 from utils.diffusion_condensation import most_persistent_structures
 from utils.parse import parse_settings
+from utils.segmentation import point_hint_seg
 
 warnings.filterwarnings("ignore")
 
@@ -57,21 +58,34 @@ if __name__ == '__main__':
 
         persistent_labels, _ = most_persistent_structures(
             labels_diffusion.reshape((B, H, W)))
+        seg = point_hint_seg(label_pred=persistent_labels, label_true=label_true)
 
         # 1. PHATE plot.
         phate_op = phate.PHATE(random_state=random_seed,
                                n_jobs=config.num_workers)
         data_phate = phate_op.fit_transform(normalize(latent, axis=1))
         fig1 = plt.figure(figsize=(15, 4 * n_rows))
-        for i in range(-2, len(granularities)):
-            ax = fig1.add_subplot(n_rows + 1, 2, i + 3)
-            if i == -2:
+        for i in range(-3, len(granularities)):
+            ax = fig1.add_subplot(n_rows + 1, 2, i + 4)
+            if i == -3:
                 # Plot the ground truth.
                 scprep.plot.scatter2d(data_phate,
                                       c=label_true.reshape((H * W, -1)),
                                       legend_anchor=(1, 1),
                                       ax=ax,
                                       title='Ground truth label',
+                                      xticks=False,
+                                      yticks=False,
+                                      label_prefix="PHATE",
+                                      fontsize=10,
+                                      s=3)
+            elif i == -2:
+                # Plot the segmented persistent structures.
+                scprep.plot.scatter2d(data_phate,
+                                      c=seg.reshape((H * W, -1)),
+                                      legend_anchor=(1, 1),
+                                      ax=ax,
+                                      title='Persistent Structures (Segmented)',
                                       xticks=False,
                                       yticks=False,
                                       label_prefix="PHATE",
@@ -104,13 +118,17 @@ if __name__ == '__main__':
 
         # 2. Segmentation plot.
         fig2 = plt.figure(figsize=(12, 4 * n_rows))
-        for i in range(-3, len(granularities)):
-            ax = fig2.add_subplot(n_rows + 2, 2, i + 4)
-            if i == -3:
+        for i in range(-4, len(granularities)):
+            ax = fig2.add_subplot(n_rows + 2, 2, i + 5)
+            if i == -4:
                 ax.imshow(image)
                 ax.set_axis_off()
-            elif i == -2:
+            elif i == -3:
                 ax.imshow(label_true, cmap='gray')
+                ax.set_axis_off()
+            elif i == -2:
+                ax.imshow(seg, cmap='gray')
+                ax.set_title('Persistent Structures (Segmented)')
                 ax.set_axis_off()
             elif i == -1:
                 ax.imshow(persistent_labels, cmap='tab20')

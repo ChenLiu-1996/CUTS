@@ -9,9 +9,10 @@ from tqdm import tqdm
 
 sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
+from utils.diffusion_condensation import most_persistent_structures
 from utils.metrics import dice_coeff, ergas, rmse, ssim
 from utils.parse import parse_settings
-from utils.diffusion_condensation import most_persistent_structures
+from utils.segmentation import point_hint_seg
 
 warnings.filterwarnings("ignore")
 
@@ -68,19 +69,10 @@ def segment_diffusion(hashmap: dict) -> dict:
     H, W = label_true.shape
     B = labels_diffusion.shape[0]
     labels_diffusion = labels_diffusion.reshape((B, H, W))
-    label =labels_diffusion[B//2, ...]
-    # label, _ = most_persistent_structures(labels_diffusion)
+    # label = labels_diffusion[B // 2, ...]
+    label, _ = most_persistent_structures(labels_diffusion)
 
-    # Use a single point from ground truth as a hint provider.
-    # Find the desired cluster id by finding the "middle point" of the foreground,
-    # defined as the foreground point closest to the foreground centroid.
-    foreground_xys = np.argwhere(label_true)  # shape: [2, num_points]
-    centroid_xy = np.mean(foreground_xys, axis=0)
-    distances = ((foreground_xys - centroid_xy)**2).sum(axis=1)
-    middle_point_xy = foreground_xys[np.argmin(distances)]
-    cluster_id = label[middle_point_xy[0], middle_point_xy[1]]
-    seg = label == cluster_id
-
+    seg = point_hint_seg(label_pred=label, label_true=label_true)
     hashmap['seg_diffusion'] = seg
 
     return hashmap
