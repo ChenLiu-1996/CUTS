@@ -89,7 +89,6 @@ if __name__ == '__main__':
     for image_idx in tqdm(range(13, len(np_files_path))):
         numpy_array = np.load(np_files_path[image_idx])
         image = numpy_array['image']
-        recon = numpy_array['recon']
         label_true = numpy_array['label']
         latent = numpy_array['latent']
 
@@ -109,7 +108,6 @@ if __name__ == '__main__':
                 'wb+') as f:
             np.savez(f,
                      image=image,
-                     recon=recon,
                      label=label_true,
                      latent=latent,
                      label_kmeans=label_pred,

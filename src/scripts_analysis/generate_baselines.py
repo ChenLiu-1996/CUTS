@@ -18,50 +18,40 @@ from utils.attribute_hashmap import AttributeHashmap
 from utils.parse import parse_settings
 
 
-def get_baseline_predictions(image_arr: np.array, method: str):
-    label_pred_list = []
+def get_baseline_predictions(img: np.array, method: str):
+    H, W, C = img.shape
 
-    B, H, W, C = image_arr.shape
-    for i, image_idx in enumerate(range(B)):
-        img = image_arr[image_idx, ...]
+    img = (img + 1) / 2
+    img = (img * 255).astype(np.uint8)
 
-        if (i % 10) == 0: print(i)
+    if method == 'watershed':
+        if img.shape[-1] == 1:
+            img = np.repeat(img, 3, axis=-1)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        gray = cv2.morphologyEx(gray, cv2.MORPH_OPEN, np.ones((3, 3),
+                                                              dtype=int))
 
-        img = (img + 1) / 2
-        img = (img * 255).astype(np.uint8)
+        _, threshed = cv2.threshold(gray, 128, 255,
+                                    cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
-        if method == 'watershed':
-            if img.shape[-1] == 1:
-                img = np.repeat(img, 3, axis=-1)
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            gray = cv2.morphologyEx(gray, cv2.MORPH_OPEN,
-                                    np.ones((3, 3), dtype=int))
+        distance = scipy.ndimage.distance_transform_edt(threshed)
+        coords = skimage.feature.peak_local_max(distance,
+                                                labels=threshed,
+                                                threshold_rel=0.9)
 
-            _, threshed = cv2.threshold(
-                gray, 128, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        mask = np.zeros(distance.shape, dtype=bool)
+        mask[tuple(coords.T)] = True
+        markers, _ = scipy.ndimage.label(mask)
 
-            distance = scipy.ndimage.distance_transform_edt(threshed)
-            coords = skimage.feature.peak_local_max(distance,
-                                                    labels=threshed,
-                                                    threshold_rel=0.9)
-
-            mask = np.zeros(distance.shape, dtype=bool)
-            mask[tuple(coords.T)] = True
-            markers, _ = scipy.ndimage.label(mask)
-
-            labels = skimage.segmentation.watershed(-distance,
+        label_pred = skimage.segmentation.watershed(-distance,
                                                     markers,
                                                     mask=threshed)
-        elif method == 'felzenszwalb':
-            labels = skimage.segmentation.felzenszwalb(img, scale=1500)
-        else:
-            raise Exception('cannot parse METHOD: {}'.format(method))
+    elif method == 'felzenszwalb':
+        label_pred = skimage.segmentation.felzenszwalb(img, scale=1500)
+    else:
+        raise Exception('cannot parse METHOD: {}'.format(method))
 
-        label_pred_list.append(labels)
-
-    labels_pred = np.stack(label_pred_list, axis=0)
-
-    return labels_pred
+    return label_pred
 
 
 if __name__ == '__main__':
@@ -111,6 +101,8 @@ if __name__ == '__main__':
             (save_path_numpy, 'sample_%s.npz' % str(image_idx).zfill(5)),
                 'wb+') as f:
             np.savez(f,
-                     label_pred_random=label_pred_random,
-                     label_pred_watershed=label_pred_watershed,
-                     label_pred_felzenszwalb=label_pred_felzenszwalb)
+                     image=image,
+                     label=label_true,
+                     label_random=label_pred_random,
+                     label_watershed=label_pred_watershed,
+                     label_felzenszwalb=label_pred_felzenszwalb)

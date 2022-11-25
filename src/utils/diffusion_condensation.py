@@ -195,3 +195,109 @@ def cluster_indices_from_mask(
                 best_cluster_indices = cluster_idx_candidate
 
         return best_cluster_indices, dice_map
+
+
+def most_persistent_structures(labels: np.array,
+                               min_frame_ratio: float = 0.4,
+                               min_area_ratio: float = 1 / 500) -> np.array:
+    '''
+    Given a set of B labels on the same image, with shape [B, H, W]
+    Return a label with the most persistent structures, with shape [H, W]
+    '''
+    B, H, W = labels.shape
+    filtered_labels = labels.copy()
+    persistent_label = np.zeros((H, W), dtype=np.int16)
+
+    # Assign persistence score to each label index.
+    #
+    # Use a max heap to track the persistence scores.
+    # By default, heapq maintains a min heap, which is what we want.
+    persistence_heap = []
+    for label_idx in np.unique(filtered_labels):
+        sum_dice, sum_area_ratio, num_frames = 0, 0, 0
+        existent_frames = np.sum(filtered_labels == label_idx, axis=(1, 2)) > 0
+        for i in range(B - 1):
+            if existent_frames[i] and existent_frames[i + 1]:
+                num_frames += 1
+                sum_dice += dice_coeff(
+                    filtered_labels[i, ...] == label_idx,
+                    filtered_labels[i + 1, ...] == label_idx)
+                sum_area_ratio += np.sum(
+                    filtered_labels[i, ...] == label_idx) / (H * W)
+
+        mean_dice = 0 if num_frames == 0 else sum_dice / num_frames
+        mean_area_ratio = 0 if num_frames == 0 else sum_area_ratio / num_frames
+        persistence_score = mean_dice
+
+        if mean_area_ratio < min_area_ratio or num_frames < min_frame_ratio * B:
+            filtered_labels[filtered_labels == label_idx] = 0
+        else:
+            heapq.heappush(persistence_heap, (persistence_score, label_idx))
+
+    # Re-color the label map, with label index with higher persistence score taking priority.
+    for _ in range(len(persistence_heap)):
+        persistence_score, label_idx = heapq.heappop(persistence_heap)
+        # Ignore the background index.
+        if label_idx == 0:
+            continue
+        loc = np.sum(filtered_labels == label_idx, axis=0) > min_frame_ratio
+        persistent_label[loc] = label_idx
+
+    # Re-number as continuous non-neg integers.
+    persistent_label = continuous_renumber(persistent_label)
+    filtered_labels = continuous_renumber(filtered_labels)
+
+    return persistent_label, filtered_labels
+
+
+def continuous_renumber(label: np.array) -> np.array:
+    '''
+    Renumber the entries of a label map as continous non-negative integers.
+    '''
+    label_orig = label.copy()
+    val_before = np.unique(label_orig)
+    val_after = np.arange(len(val_before))
+    for (a, b) in zip(val_before, val_after):
+        label[label_orig == a] = b
+
+    return label
+
+
+def associate_frames(labels: np.array) -> np.array:
+    ordered_labels = labels.copy()
+
+    B, H, W = labels.shape
+
+    # Find the best-matching label indices pairs between adjacent frames.
+    # Update the next frame using the matching label indices from the previous frame.
+    for image_idx in range(B - 1):
+        label_prev = ordered_labels[image_idx, ...]
+        label_next = ordered_labels[image_idx + 1, ...]
+
+        label_vec_prev = np.array(
+            [label_prev.reshape(H * W) == i for i in np.unique(label_prev)],
+            dtype=np.int16)
+        label_vec_next = np.array(
+            [label_next.reshape(H * W) == i for i in np.unique(label_next)],
+            dtype=np.int16)
+
+        # Use matrix multiplication to get intersection matrix.
+        intersection_matrix = np.matmul(label_vec_prev, label_vec_next.T)
+
+        # Use matrix multiplication to get union matrix.
+        union_matrix = H * W - np.matmul(1 - label_vec_prev,
+                                         (1 - label_vec_next).T)
+
+        iou_matrix = intersection_matrix / union_matrix
+
+        for i, label_idx_next in enumerate(np.unique(label_next)):
+            # loc: pixels corresponding to `label_idx_next` in the next frame.
+            loc = ordered_labels[image_idx + 1, ...] == label_idx_next
+            if np.sum(iou_matrix[..., i]) > 0:
+                label_idx_prev = np.unique(label_prev)[np.argmax(
+                    iou_matrix[..., i])]
+                ordered_labels[image_idx + 1, loc] = label_idx_prev
+            else:
+                ordered_labels[image_idx + 1, loc] = 0
+
+    return ordered_labels

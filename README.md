@@ -22,17 +22,17 @@ python -m pip install sewar
 ```
 
 ## Usage
-Activate environment.
+### Activate environment.
 ```
 conda activate $OUR_CONDA_ENV
 ```
 ### Training and Testing
-To train a model.
+#### To train a model.
 ```
 ## Under $CUTS_ROOT/src
 python main.py --mode train --config ../config/retina.yaml
 ```
-To test a model (automatically done during `train` mode).
+#### To test a model (automatically done during `train` mode).
 ```
 ## Under $CUTS_ROOT/src
 python main.py --mode test --config ../config/retina.yaml

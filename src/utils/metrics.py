@@ -1,8 +1,34 @@
 import numpy as np
+import sewar
 import torch
 import torch.nn.functional as F
-from skimage.metrics import structural_similarity as ssim
+from skimage.metrics import structural_similarity
 from sklearn.metrics import accuracy_score
+
+
+def ssim(a: np.array, b: np.array) -> float:
+    '''
+    Please make sure the data are provided in [H, W, C] shape.
+    '''
+    assert a.shape == b.shape
+    H, W = a.shape[:2]
+    if min(H, W) < 7:
+        win_size = min(H, W)
+        return structural_similarity(a,
+                                     b,
+                                     multichannel=True,
+                                     channel_axis=-1,
+                                     win_size=win_size)
+    else:
+        return structural_similarity(a, b, multichannel=True, channel_axis=-1)
+
+
+def ergas(a: np.array, b: np.array) -> float:
+    return sewar.full_ref.ergas(a, b)
+
+
+def rmse(a: np.array, b: np.array) -> float:
+    return sewar.full_ref.rmse(a, b)
 
 
 def dice_coeff(pred: np.array, label: np.array) -> float:
@@ -46,7 +72,5 @@ def recon_ssim(x: torch.Tensor, x_recon: torch.Tensor) -> float:
             # Channel first to channel last to accommodate SSIM.
             img1 = np.moveaxis(img1, 0, -1)
             img2 = np.moveaxis(img2, 0, -1)
-            ssim_list.append(ssim(img1, img2, channel_axis=-1))
+            ssim_list.append(ssim(img1, img2))
     return np.mean(ssim_list)
-
-

@@ -14,6 +14,7 @@ from tqdm import tqdm
 
 sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
+from utils.diffusion_condensation import most_persistent_structures
 from utils.parse import parse_settings
 
 warnings.filterwarnings("ignore")
@@ -49,28 +50,40 @@ if __name__ == '__main__':
         granularities = numpy_array['granularities_diffusion']
         labels_diffusion = numpy_array['labels_diffusion']
 
-        image = (image + 1) / 2
-        recon = (recon + 1) / 2
-
         H, W = label_true.shape[:2]
-
-        data = normalize(latent, axis=1)
+        B = labels_diffusion.shape[0]
 
         n_rows = (len(granularities) + 1) // 2
 
+        persistent_labels, _ = most_persistent_structures(
+            labels_diffusion.reshape((B, H, W)))
+
         # 1. PHATE plot.
-        phate_op = phate.PHATE(random_state=random_seed)
-        data_phate = phate_op.fit_transform(data)
+        phate_op = phate.PHATE(random_state=random_seed,
+                               n_jobs=config.num_workers)
+        data_phate = phate_op.fit_transform(normalize(latent, axis=1))
         fig1 = plt.figure(figsize=(15, 4 * n_rows))
-        for i in range(-1, len(granularities)):
-            ax = fig1.add_subplot(n_rows + 1, 2, i + 2)
-            if i == -1:
+        for i in range(-2, len(granularities)):
+            ax = fig1.add_subplot(n_rows + 1, 2, i + 3)
+            if i == -2:
                 # Plot the ground truth.
                 scprep.plot.scatter2d(data_phate,
                                       c=label_true.reshape((H * W, -1)),
                                       legend_anchor=(1, 1),
                                       ax=ax,
                                       title='Ground truth label',
+                                      xticks=False,
+                                      yticks=False,
+                                      label_prefix="PHATE",
+                                      fontsize=10,
+                                      s=3)
+            elif i == -1:
+                # Plot the persistent structures.
+                scprep.plot.scatter2d(data_phate,
+                                      c=persistent_labels.reshape((H * W, -1)),
+                                      legend_anchor=(1, 1),
+                                      ax=ax,
+                                      title='Persistent Structures',
                                       xticks=False,
                                       yticks=False,
                                       label_prefix="PHATE",
@@ -91,13 +104,17 @@ if __name__ == '__main__':
 
         # 2. Segmentation plot.
         fig2 = plt.figure(figsize=(12, 4 * n_rows))
-        for i in range(-2, len(granularities)):
-            ax = fig2.add_subplot(n_rows + 1, 2, i + 3)
-            if i == -2:
+        for i in range(-3, len(granularities)):
+            ax = fig2.add_subplot(n_rows + 2, 2, i + 4)
+            if i == -3:
                 ax.imshow(image)
                 ax.set_axis_off()
-            elif i == -1:
+            elif i == -2:
                 ax.imshow(label_true, cmap='gray')
+                ax.set_axis_off()
+            elif i == -1:
+                ax.imshow(persistent_labels, cmap='tab20')
+                ax.set_title('Persistent Structures')
                 ax.set_axis_off()
             else:
                 ax.imshow(labels_diffusion[i].reshape((H, W)), cmap='tab20')
