@@ -165,12 +165,12 @@ def test(config: AttributeHashmap):
     test_loss_recon = test_loss_recon / len(test_set)
     test_loss_contrastive = test_loss_contrastive / len(test_set)
     test_loss = test_loss / len(test_set)
-    test_dice_coeffs_mean, test_dice_coeffs_std = \
-        np.mean(test_dice_coeffs), np.std(test_dice_coeffs)
+    test_dice_coeffs_mean, test_dice_coeffs_sem = \
+        np.mean(test_dice_coeffs), np.std(test_dice_coeffs)/np.sqrt(len(test_dice_coeffs))
 
     log('Test recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f. dice coeff: %.3f \u00B1 %.3f'
         % (test_loss_recon, test_loss_contrastive, test_loss,
-           test_dice_coeffs_mean, test_dice_coeffs_std),
+           test_dice_coeffs_mean, test_dice_coeffs_sem),
         filepath=config.log_dir,
         to_console=True)
     return

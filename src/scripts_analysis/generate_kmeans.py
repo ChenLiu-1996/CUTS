@@ -70,7 +70,7 @@ if __name__ == '__main__':
     os.makedirs(save_path_numpy, exist_ok=True)
 
     dice_list = []
-    for image_idx in tqdm(range(len(np_files_path))):
+    for image_idx in tqdm(range(1, len(np_files_path))):
         numpy_array = np.load(np_files_path[image_idx])
         image = numpy_array['image']
         label_true = numpy_array['label']

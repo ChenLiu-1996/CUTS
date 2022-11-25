@@ -47,7 +47,7 @@ if __name__ == '__main__':
         image = numpy_array['image']
         recon = numpy_array['recon']
         label_true = numpy_array['label']
-        latent = numpy_array['latent']
+        latent = numpy_array['latent'].astype(np.int16)
         granularities = numpy_array['granularities_diffusion']
         labels_diffusion = numpy_array['labels_diffusion']
 

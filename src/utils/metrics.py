@@ -6,21 +6,31 @@ from skimage.metrics import structural_similarity
 from sklearn.metrics import accuracy_score
 
 
-def ssim(a: np.array, b: np.array) -> float:
+def ssim(a: np.array, b: np.array, **kwargs) -> float:
     '''
     Please make sure the data are provided in [H, W, C] shape.
     '''
     assert a.shape == b.shape
+
     H, W = a.shape[:2]
+
     if min(H, W) < 7:
         win_size = min(H, W)
-        return structural_similarity(a,
-                                     b,
-                                     multichannel=True,
-                                     channel_axis=-1,
-                                     win_size=win_size)
+        if win_size % 2 == 0:
+            win_size -= 1
     else:
-        return structural_similarity(a, b, multichannel=True, channel_axis=-1)
+        win_size = None
+
+    if len(a.shape) == 3:
+        channel_axis = -1
+    else:
+        channel_axis = None
+
+    return structural_similarity(a,
+                                 b,
+                                 channel_axis=channel_axis,
+                                 win_size=win_size,
+                                 **kwargs)
 
 
 def ergas(a: np.array, b: np.array) -> float:

@@ -43,8 +43,7 @@ if __name__ == '__main__':
     for image_idx in tqdm(range(len(np_files_path))):
         numpy_array = np.load(np_files_path[image_idx])
         image = numpy_array['image']
-        recon = numpy_array['recon']
-        label_true = numpy_array['label']
+        label_true = numpy_array['label'].astype(np.int16)
         latent = numpy_array['latent']
         label_kmeans = numpy_array['label_kmeans']
         seg_kmeans = numpy_array['seg_kmeans']
