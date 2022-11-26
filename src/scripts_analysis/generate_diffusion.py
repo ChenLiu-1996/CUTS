@@ -6,9 +6,7 @@ from glob import glob
 from typing import Tuple
 
 import numpy as np
-import phate
 import yaml
-from sklearn.preprocessing import normalize
 from tqdm import tqdm
 
 sys.path.append('../')

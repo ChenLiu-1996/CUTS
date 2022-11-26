@@ -190,6 +190,12 @@ if __name__ == '__main__':
             'min_frame_ratio': 1 / 2,
             'min_area_ratio': 1 / 500,
         })
+    elif config.dataset_name == 'brain':
+        hparams = AttributeHashmap({
+            'is_binary': True,
+            'min_frame_ratio': 1 / 2,
+            'min_area_ratio': 1 / 200,
+        })
 
     files_folder_baselines = '%s/%s' % (config.output_save_path,
                                         'numpy_files_seg_baselines')

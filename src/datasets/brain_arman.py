@@ -18,8 +18,6 @@ class BrainArman(Dataset):
         self.data_image = np.where(self.data_image > 1., 1., self.data_image)
         self.data_image = np.where(self.data_image == 0, 1., self.data_image)
         self.data_image = (self.data_image * 2) - 1
-        # Somehow the data provided are incorrectly oriented.
-        self.data_image = np.fliplr(np.rot90(self.data_image, axes=(1, 2)))
         # channel last to channel first to comply with Torch.
         self.data_image = np.moveaxis(self.data_image, -1, 1)
 
