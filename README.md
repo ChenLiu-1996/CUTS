@@ -13,13 +13,10 @@ conda activate $OUR_CONDA_ENV
 conda install scikit-image pillow matplotlib seaborn tqdm -c anaconda
 python -m pip install -U phate
 python -m pip install git+https://github.com/KrishnaswamyLab/CATCH
-
-# See https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md
-conda install numpy scipy -c conda-forge
-
 python -m pip install opencv-python
 python -m pip install sewar
 ```
+Also, see https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md if relevant.
 
 ## Usage
 ### Activate environment.
@@ -38,9 +35,8 @@ python main.py --mode train --config ../config/retina.yaml
 python main.py --mode test --config ../config/retina.yaml
 ```
 
-### Further analysis.
+### Results Generation.
 #### To generate and save the segmentation using spectral k-means.
-This will also create a csv file documenting the dice coefficient. (Do not take the dice coeffcient seriously for non-binary segmentation tasks).
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
 python generate_kmeans.py --config ../../config/retina.yaml
@@ -56,9 +52,24 @@ python generate_diffusion.py --config ../../config/retina.yaml
 python generate_baselines.py
 ```
 
+### Results Plotting.
+#### To plot the segmentation results using spectral k-means.
+Assuming segmentation results have already been generated and saved.
+```
+## Under $CUTS_ROOT/src/scripts_analysis
+python plot_kmeans.py --config ../../config/retina.yaml
+```
 #### To plot the segmentation results using diffusion condensation.
 Assuming segmentation results have already been generated and saved.
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
 python plot_diffusion.py --config ../../config/retina.yaml
+```
+
+### Results Analysis.
+#### To compute the quantitative metrics.
+Assuming segmentation results have already been generated and saved.
+```
+## Under $CUTS_ROOT/src/scripts_analysis
+python run_metrics.py --config ../../config/retina.yaml
 ```

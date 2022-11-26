@@ -33,22 +33,22 @@ class CUTSEncoder(nn.Module):
                                num_kernels,
                                kernel_size=5,
                                padding='same',
-                               padding_mode='replicate')
+                               padding_mode='circular')
         self.conv2 = nn.Conv2d(num_kernels,
                                num_kernels * 2,
                                kernel_size=5,
                                padding='same',
-                               padding_mode='replicate')
+                               padding_mode='circular')
         self.conv3 = nn.Conv2d(num_kernels * 2,
                                num_kernels * 4,
                                kernel_size=5,
                                padding='same',
-                               padding_mode='replicate')
+                               padding_mode='circular')
         self.conv4 = nn.Conv2d(num_kernels * 4,
                                num_kernels * 8,
                                kernel_size=5,
                                padding='same',
-                               padding_mode='replicate')
+                               padding_mode='circular')
         self.latent_dim = num_kernels * 8
 
         # Request reconstruction of local patch.

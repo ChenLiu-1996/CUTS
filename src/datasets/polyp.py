@@ -16,7 +16,7 @@ class PolyP(Dataset):
 
         self.data_image = (self.data_image * 2) - 1
         # channel last to channel first to comply with Torch.
-        self.data_image = np.moveaxis(self.data_image, -1, 0)
+        self.data_image = np.moveaxis(self.data_image, -1, 1)
         self.data_label = np.where(self.data_label > .5, 1, 0)
 
         # Sanity check.

@@ -3,7 +3,9 @@ from typing import Tuple
 
 import numpy as np
 import torch
-from skimage.metrics import structural_similarity as ssim
+import sys
+sys.path.append('../')
+from utils.metrics import ssim
 
 
 class PatchSampler(object):
@@ -121,4 +123,4 @@ def compute_ssim(image: np.array, h1w1: Tuple[int, int], h2w2: Tuple[int, int],
     # Channel first to channel last to accommodate SSIM.
     patch1 = np.moveaxis(patch1, 0, -1)
     patch2 = np.moveaxis(patch2, 0, -1)
-    return ssim(patch1, patch2, channel_axis=-1)
+    return ssim(patch1, patch2)

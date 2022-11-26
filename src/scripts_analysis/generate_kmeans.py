@@ -70,7 +70,7 @@ if __name__ == '__main__':
     os.makedirs(save_path_numpy, exist_ok=True)
 
     dice_list = []
-    for image_idx in tqdm(range(1, len(np_files_path))):
+    for image_idx in tqdm(range(len(np_files_path))):
         numpy_array = np.load(np_files_path[image_idx])
         image = numpy_array['image']
         label_true = numpy_array['label']
@@ -100,4 +100,4 @@ if __name__ == '__main__':
         dice_list.append(dice_score)
 
     print('\n\nFinal dice coeff: %.3f \u00B1 %.3f' %
-          (np.mean(dice_list), np.std(dice_list)))
+          (np.mean(dice_list), np.std(dice_list) / np.sqrt(len(dice_list))))
