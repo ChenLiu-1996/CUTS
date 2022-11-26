@@ -18,6 +18,10 @@ class LatentEvaluator(object):
     """
     Evaluate the latent representation of the unsupervised segmentation model.
 
+    NOTE: As of now, a lot of the functionalities of this class is no longer used.
+    It is most often used just as a numpy file saver...
+    We off-sourced most of the segmentation and analysis to other files under `script_analysis`.
+
     Metrics used:
         Dice coefficient.
 
@@ -95,6 +99,10 @@ class LatentEvaluator(object):
         Only relevant to the Diffusion Condensation paradigms.
     `save_path`:
         Path to save numpy files and image files.
+    `multiprocessing`:
+        Whether or not we parallel process the job for speedup.
+        NOTE: Don't use it. The code is correct but it can easily
+        cause memory problems. At least on our server.
     `num_workers`:
         For multiprocessing.
     """
@@ -212,7 +220,8 @@ class LatentEvaluator(object):
                     # [H x W, C] to [H, W, C]
                     label_pred = clusters.reshape((H, W))
 
-                    seg_pred = point_hint_seg(label_pred=label_pred, label_true=seg_true)
+                    seg_pred = point_hint_seg(label_pred=label_pred,
+                                              label_true=seg_true)
 
                     if metric_fn is not None:
                         metrics.append(metric_fn(seg_pred, seg_true))
@@ -228,7 +237,7 @@ class LatentEvaluator(object):
                 producing unsupervised multi-class clusters.
                 2. Estimate which clusters IDs correspond to the desired foreground by
                 cross-comparing against the ground truth segmentation mask.
-                NOTE: Again, this is somewhat cheating. Please accept it.
+                Again, this is somewhat cheating. Please accept it.
                 '''
 
                 for image_idx in tqdm(range(B)):

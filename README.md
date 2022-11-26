@@ -16,7 +16,6 @@ python -m pip install git+https://github.com/KrishnaswamyLab/CATCH
 python -m pip install opencv-python
 python -m pip install sewar
 ```
-Also, see https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md if relevant.
 
 ## Usage
 ### Activate environment.
@@ -73,3 +72,12 @@ Assuming segmentation results have already been generated and saved.
 ## Under $CUTS_ROOT/src/scripts_analysis
 python run_metrics.py --config ../../config/retina.yaml
 ```
+
+### Special NOTE
+On our YCRC server, sometimes we need to run
+```
+export MKL_THREADING_LAYER=GNU
+```
+before running some results generation/plotting/analysis code to avoid dead lock.
+
+For details, see https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md.
