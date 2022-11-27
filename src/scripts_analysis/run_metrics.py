@@ -152,18 +152,20 @@ def guided_relabel(label_pred: np.array, label_true: np.array) -> np.array:
     return renumbered_label_pred
 
 
-def range_aware_ssim(a: np.array, b: np.array) -> float:
+def range_aware_ssim(label_true: np.array, label_pred: np.array) -> float:
     '''
     Surprisingly, skimage ssim infers data range from data type...
     It's okay within our neural network training since the scale is
-    quite cloes to its guess (-1 to 1 for float numbers), but
+    quite close to its guess (-1 to 1 for float numbers), but
     surely not okay here.
     '''
-    data_max = max(a.max(), b.max())
-    data_min = min(a.min(), b.min())
-    data_range = data_max - data_min
+    # data_max = max(a.max(), b.max())
+    # data_min = min(a.min(), b.min())
+    # data_range = data_max - data_min
 
-    return ssim(a=a, b=b, data_range=data_range)
+    data_range = label_true.max() - label_true.min()
+
+    return ssim(a=label_true, b=label_pred, data_range=data_range)
 
 
 if __name__ == '__main__':
@@ -194,7 +196,7 @@ if __name__ == '__main__':
         hparams = AttributeHashmap({
             'is_binary': True,
             'min_frame_ratio': 1 / 2,
-            'min_area_ratio': 1 / 200,
+            'min_area_ratio': 1 / 500,
         })
 
     files_folder_baselines = '%s/%s' % (config.output_save_path,

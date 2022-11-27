@@ -66,7 +66,7 @@ if __name__ == '__main__':
         data_phate = phate_op.fit_transform(normalize(latent, axis=1))
         fig1 = plt.figure(figsize=(15, 4 * n_rows))
         for i in range(-3, len(granularities)):
-            ax = fig1.add_subplot(n_rows + 1, 2, i + 4)
+            ax = fig1.add_subplot(n_rows + 2, 2, i + 4)
             if i == -3:
                 # Plot the ground truth.
                 scprep.plot.scatter2d(data_phate,

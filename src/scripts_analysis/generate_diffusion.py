@@ -87,3 +87,5 @@ if __name__ == '__main__':
                      latent=latent,
                      granularities_diffusion=granularities,
                      labels_diffusion=labels_pred)
+
+    print('All diffusion results generated.')
