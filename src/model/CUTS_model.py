@@ -52,7 +52,7 @@ class CUTSEncoder(nn.Module):
         self.latent_dim = num_kernels * 8
 
         # Request reconstruction of local patch.
-        self.patch_size = 9
+        self.patch_size = 5
 
         self.inference = inference
 

@@ -107,7 +107,7 @@ def diffusion_condensation_simple(X_orig: np.array,
     return clusters, all_segs
 
 
-def diffusion_condensation(X_orig: np.array,
+def diffusion_condensation(X: np.array,
                            height_width: Tuple[int] = (128, 128),
                            pos_enc_gamma: float = 0.0,
                            num_workers: int = 1,
@@ -123,9 +123,9 @@ def diffusion_condensation(X_orig: np.array,
     `clusters`: [N,] non-negative integers.
     '''
 
-    N, C = X_orig.shape
+    N, C = X.shape
 
-    X = normalize(X_orig, axis=1)
+    X = normalize(X, axis=1)
     if pos_enc_gamma > 0:
         pos_enc = pos_enc_sinusoid((*height_width, C))
         pos_enc = pos_enc.reshape((-1, C))
@@ -133,11 +133,20 @@ def diffusion_condensation(X_orig: np.array,
 
     data = pd.DataFrame(X)
 
-    catch_op = catch.CATCH(knn=30,
-                           random_state=random_seed,
-                           n_pca=50,
-                           n_jobs=num_workers)
-    catch_op.fit(data)
+    # Very occasionally, SVD won't converge.
+    try:
+        catch_op = catch.CATCH(knn=30,
+                            random_state=random_seed,
+                            n_pca=50,
+                            n_jobs=num_workers)
+        catch_op.fit(data)
+    except:
+        catch_op = catch.CATCH(knn=30,
+                               random_state=random_seed+1,
+                               n_pca=50,
+                               n_jobs=num_workers)
+        catch_op.fit(data)
+
     levels = catch_op.transform()
 
     clusters = catch_op.NxTs[levels[0]]

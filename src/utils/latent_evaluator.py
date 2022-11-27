@@ -249,7 +249,7 @@ class LatentEvaluator(object):
                         label_pred = label_pred_arr[image_idx, ...]
                     else:
                         clusters = diffusion_condensation(
-                            X_orig=latent,
+                            X=latent,
                             height_width=(H, W),
                             pos_enc_gamma=self.pos_enc_gamma,
                             num_workers=self.num_workers,
@@ -290,7 +290,7 @@ class LatentEvaluator(object):
                         label_pred = label_pred_arr[image_idx, ...]
                     else:
                         clusters = diffusion_condensation(
-                            X_orig=latent,
+                            X=latent,
                             height_width=(H, W),
                             pos_enc_gamma=self.pos_enc_gamma,
                             num_workers=self.num_workers,
@@ -361,7 +361,7 @@ def call_diffusion_condensation(input_arg_tuple: Tuple) -> None:
                                     dtype=np.uint8,
                                     buffer=existing_shm_pointer.buf)
 
-    clusters = diffusion_condensation(X_orig=latent,
+    clusters = diffusion_condensation(X=latent,
                                       height_width=(H, W),
                                       pos_enc_gamma=pos_enc_gamma,
                                       num_workers=1,
