@@ -46,8 +46,8 @@ if __name__ == '__main__':
         numpy_array = np.load(np_files_path[image_idx])
         image = numpy_array['image']
         recon = numpy_array['recon']
-        label_true = numpy_array['label']
-        latent = numpy_array['latent'].astype(np.int16)
+        label_true = numpy_array['label'].astype(np.int16)
+        latent = numpy_array['latent']
         granularities = numpy_array['granularities_diffusion']
         labels_diffusion = numpy_array['labels_diffusion']
 
@@ -58,7 +58,8 @@ if __name__ == '__main__':
 
         persistent_labels, _ = most_persistent_structures(
             labels_diffusion.reshape((B, H, W)))
-        seg = point_hint_seg(label_pred=persistent_labels, label_true=label_true)
+        seg = point_hint_seg(label_pred=persistent_labels,
+                             label_true=label_true)
 
         # 1. PHATE plot.
         phate_op = phate.PHATE(random_state=random_seed,
@@ -81,16 +82,17 @@ if __name__ == '__main__':
                                       s=3)
             elif i == -2:
                 # Plot the segmented persistent structures.
-                scprep.plot.scatter2d(data_phate,
-                                      c=seg.reshape((H * W, -1)),
-                                      legend_anchor=(1, 1),
-                                      ax=ax,
-                                      title='Persistent Structures (Segmented)',
-                                      xticks=False,
-                                      yticks=False,
-                                      label_prefix="PHATE",
-                                      fontsize=10,
-                                      s=3)
+                scprep.plot.scatter2d(
+                    data_phate,
+                    c=seg.reshape((H * W, -1)),
+                    legend_anchor=(1, 1),
+                    ax=ax,
+                    title='Persistent Structures (Segmented)',
+                    xticks=False,
+                    yticks=False,
+                    label_prefix="PHATE",
+                    fontsize=10,
+                    s=3)
             elif i == -1:
                 # Plot the persistent structures.
                 scprep.plot.scatter2d(data_phate,
