@@ -37,7 +37,6 @@ def load_kmeans(path: str) -> dict:
     hashmap['label_true'] = numpy_array['label']
     hashmap['latent'] = numpy_array['latent']
     hashmap['label_kmeans'] = numpy_array['label_kmeans']
-    hashmap['seg_kmeans'] = numpy_array['seg_kmeans']
     return hashmap
 
 
@@ -61,10 +60,20 @@ def combine_hashmaps(*args: dict) -> dict:
     return combined
 
 
-def segment_diffusion(hashmap: dict, hparams: dict) -> dict:
-    '''
-    Produce segmentation from the diffusion condensation results.
-    '''
+def segment(hashmap: dict, label_name: str = 'kmeans') -> dict:
+    label_true = hashmap['label_true']
+    label_pred = hashmap['label_%s' % label_name]
+
+    H, W = label_true.shape
+    label_pred = label_pred.reshape((H, W))
+
+    seg = point_hint_seg(label_pred=label_pred, label_true=label_true)
+    hashmap['seg_%s' % label_name] = seg
+
+    return hashmap
+
+
+def get_persistent_structures(hashmap: dict, hparams: dict) -> dict:
     label_true = hashmap['label_true']
     labels_diffusion = hashmap['labels_diffusion']
 
@@ -77,8 +86,6 @@ def segment_diffusion(hashmap: dict, hparams: dict) -> dict:
         min_frame_ratio=hparams.min_frame_ratio,
         min_area_ratio=hparams.min_area_ratio)
 
-    seg = point_hint_seg(label_pred=persistent_label, label_true=label_true)
-    hashmap['seg_diffusion'] = seg
     hashmap['label_diffusion'] = persistent_label
 
     return hashmap
@@ -190,13 +197,13 @@ if __name__ == '__main__':
         hparams = AttributeHashmap({
             'is_binary': False,
             'min_frame_ratio': 1 / 2,
-            'min_area_ratio': 1 / 500,
+            'min_area_ratio': 1 / 200,
         })
     elif config.dataset_name == 'brain':
         hparams = AttributeHashmap({
             'is_binary': True,
             'min_frame_ratio': 1 / 2,
-            'min_area_ratio': 1 / 500,
+            'min_area_ratio': 1 / 200,
         })
 
     files_folder_baselines = '%s/%s' % (config.output_save_path,
@@ -252,33 +259,24 @@ if __name__ == '__main__':
         hashmap = combine_hashmaps(baselines_hashmap, kmeans_hashmap,
                                    diffusion_hashmap)
 
-        # hashmap['label_true'] = hashmap['label_true'].astype(np.int16)
-        hashmap = segment_diffusion(hashmap, hparams)
+        hashmap = get_persistent_structures(hashmap, hparams)
+        hashmap = segment(hashmap, label_name='kmeans')
+        hashmap = segment(hashmap, label_name='diffusion')
+
+        if not hparams.is_binary:
+            # Re-label the label indices for multi-class labels.
+            for (_, _, p2) in entity_tuples:
+                hashmap[p2] = guided_relabel(label_pred=hashmap[p2],
+                                             label_true=hashmap['label_true'])
 
         for (entry, p1, p2) in entity_tuples:
             if hparams.is_binary:
                 metrics['dice'][entry].append(
                     dice_coeff(hashmap[p1], hashmap[p2]))
-                metrics['ssim'][entry].append(
-                    range_aware_ssim(hashmap[p1], hashmap[p2]))
-                metrics['ergas'][entry].append(ergas(hashmap[p1], hashmap[p2]))
-                metrics['rmse'][entry].append(rmse(hashmap[p1], hashmap[p2]))
-            else:
-                metrics['ssim'][entry].append(
-                    range_aware_ssim(
-                        hashmap[p1],
-                        guided_relabel(label_pred=hashmap[p2],
-                                       label_true=hashmap[p1])))
-                metrics['ergas'][entry].append(
-                    ergas(
-                        hashmap[p1],
-                        guided_relabel(label_pred=hashmap[p2],
-                                       label_true=hashmap[p1])))
-                metrics['rmse'][entry].append(
-                    rmse(
-                        hashmap[p1],
-                        guided_relabel(label_pred=hashmap[p2],
-                                       label_true=hashmap[p1])))
+            metrics['ssim'][entry].append(
+                range_aware_ssim(hashmap[p1], hashmap[p2]))
+            metrics['ergas'][entry].append(ergas(hashmap[p1], hashmap[p2]))
+            metrics['rmse'][entry].append(rmse(hashmap[p1], hashmap[p2]))
 
     if hparams.is_binary:
         print('\n\nDice Coefficient')
