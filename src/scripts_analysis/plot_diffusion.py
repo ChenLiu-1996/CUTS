@@ -37,8 +37,10 @@ if __name__ == '__main__':
     files_folder = '%s/%s' % (config.output_save_path,
                               'numpy_files_seg_diffusion')
     figure_folder = '%s/%s' % (config.output_save_path, 'figures')
+    phate_folder = '%s/%s' % (config.output_save_path, 'numpy_files_phate')
 
     os.makedirs(figure_folder, exist_ok=True)
+    os.makedirs(phate_folder, exist_ok=True)
 
     np_files_path = sorted(glob('%s/%s' % (files_folder, '*.npz')))
 
@@ -62,9 +64,22 @@ if __name__ == '__main__':
                              label_true=label_true)
 
         # 1. PHATE plot.
-        phate_op = phate.PHATE(random_state=random_seed,
-                               n_jobs=config.num_workers)
-        data_phate = phate_op.fit_transform(normalize(latent, axis=1))
+        phate_path = '%s/sample_%s.npz' % (phate_folder,
+                                           str(image_idx).zfill(5))
+        if os.path.exists(phate_path):
+            # Load the phate data if exists.
+            data_phate_numpy = np.load(phate_path)
+            data_phate = data_phate_numpy['data_phate']
+        else:
+            # Otherwise, generate the phate data.
+            phate_op = phate.PHATE(
+                random_state=random_seed,
+                #    n_jobs=config.num_workers)
+                n_jobs=2)
+            data_phate = phate_op.fit_transform(normalize(latent, axis=1))
+            with open(phate_path, 'wb+') as f:
+                np.savez(f, data_phate=data_phate)
+
         fig1 = plt.figure(figsize=(15, 4 * n_rows))
         for i in range(-3, len(granularities)):
             ax = fig1.add_subplot(n_rows + 2, 2, i + 4)

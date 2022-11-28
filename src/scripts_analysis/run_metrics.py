@@ -7,6 +7,7 @@ from typing import List
 
 import numpy as np
 import yaml
+from scipy.optimize import linear_sum_assignment
 from tqdm import tqdm
 
 sys.path.append('../')
@@ -73,7 +74,7 @@ def segment(hashmap: dict, label_name: str = 'kmeans') -> dict:
     return hashmap
 
 
-def get_persistent_structures(hashmap: dict, hparams: dict) -> dict:
+def get_persistent_structures(hashmap: dict) -> dict:
     label_true = hashmap['label_true']
     labels_diffusion = hashmap['labels_diffusion']
 
@@ -81,10 +82,7 @@ def get_persistent_structures(hashmap: dict, hparams: dict) -> dict:
     B = labels_diffusion.shape[0]
     labels_diffusion = labels_diffusion.reshape((B, H, W))
     # persistent_label = continuous_renumber(labels_diffusion[B // 2, ...])
-    persistent_label, _ = most_persistent_structures(
-        labels_diffusion,
-        min_frame_ratio=hparams.min_frame_ratio,
-        min_area_ratio=hparams.min_area_ratio)
+    persistent_label, _ = most_persistent_structures(labels_diffusion)
 
     hashmap['label_diffusion'] = persistent_label
 
@@ -150,6 +148,14 @@ def guided_relabel(label_pred: np.array, label_true: np.array) -> np.array:
 
     iou_matrix = intersection_matrix / union_matrix
 
+    # # Use negative IOU as the cost function to be minimized for association.
+    # label_pred_indices, label_true_indices = linear_sum_assignment(-iou_matrix)
+    # renumbered_label_pred = np.zeros_like(label_pred)
+    # for (label_pred_idx, label_true_idx) in zip(label_pred_indices,
+    #                                             label_true_indices):
+    #     pix_loc = label_pred == label_pred_idx
+    #     renumbered_label_pred[pix_loc] = label_true_idx
+
     renumbered_label_pred = np.zeros_like(label_pred)
     for i, label_pred_idx in enumerate(np.unique(label_pred)):
         pix_loc = label_pred == label_pred_idx
@@ -166,8 +172,8 @@ def range_aware_ssim(label_true: np.array, label_pred: np.array) -> float:
     quite close to its guess (-1 to 1 for float numbers), but
     surely not okay here.
     '''
-    # data_max = max(a.max(), b.max())
-    # data_min = min(a.min(), b.min())
+    # data_max = max(label_true.max(), label_pred.max())
+    # data_min = min(label_true.min(), label_pred.min())
     # data_range = data_max - data_min
 
     data_range = label_true.max() - label_true.min()
@@ -190,20 +196,14 @@ if __name__ == '__main__':
     if config.dataset_name == 'retina':
         hparams = AttributeHashmap({
             'is_binary': True,
-            'min_frame_ratio': 1 / 2,
-            'min_area_ratio': 1 / 200,
         })
     elif config.dataset_name == 'berkeley':
         hparams = AttributeHashmap({
             'is_binary': False,
-            'min_frame_ratio': 1 / 2,
-            'min_area_ratio': 1 / 200,
         })
     elif config.dataset_name == 'brain':
         hparams = AttributeHashmap({
             'is_binary': True,
-            'min_frame_ratio': 1 / 2,
-            'min_area_ratio': 1 / 200,
         })
 
     files_folder_baselines = '%s/%s' % (config.output_save_path,
@@ -259,7 +259,7 @@ if __name__ == '__main__':
         hashmap = combine_hashmaps(baselines_hashmap, kmeans_hashmap,
                                    diffusion_hashmap)
 
-        hashmap = get_persistent_structures(hashmap, hparams)
+        hashmap = get_persistent_structures(hashmap)
         hashmap = segment(hashmap, label_name='kmeans')
         hashmap = segment(hashmap, label_name='diffusion')
 

@@ -35,8 +35,10 @@ if __name__ == '__main__':
     files_folder = '%s/%s' % (config.output_save_path,
                               'numpy_files_seg_kmeans')
     figure_folder = '%s/%s' % (config.output_save_path, 'figures')
+    phate_folder = '%s/%s' % (config.output_save_path, 'numpy_files_phate')
 
     os.makedirs(figure_folder, exist_ok=True)
+    os.makedirs(phate_folder, exist_ok=True)
 
     np_files_path = sorted(glob('%s/%s' % (files_folder, '*.npz')))
 
@@ -51,34 +53,45 @@ if __name__ == '__main__':
         H, W = label_true.shape[:2]
 
         # 1. PHATE plot.
-        phate_op = phate.PHATE(random_state=random_seed,
-                               n_jobs=config.num_workers)
-        data_phate = phate_op.fit_transform(normalize(latent, axis=1))
+        phate_path = '%s/sample_%s.npz' % (phate_folder,
+                                           str(image_idx).zfill(5))
+        if os.path.exists(phate_path):
+            # Load the phate data if exists.
+            data_phate_numpy = np.load(phate_path)
+            data_phate = data_phate_numpy['data_phate']
+        else:
+            # Otherwise, generate the phate data.
+            phate_op = phate.PHATE(random_state=random_seed,
+                                   n_jobs=config.num_workers)
+            data_phate = phate_op.fit_transform(normalize(latent, axis=1))
+            with open(phate_path, 'wb+') as f:
+                np.savez(f, data_phate=data_phate)
+
         fig1 = plt.figure(figsize=(10, 4))
         ax = fig1.add_subplot(1, 2, 1)
         # Plot the ground truth.
         scprep.plot.scatter2d(data_phate,
-                                c=label_true.reshape((H * W, -1)),
-                                legend_anchor=(1, 1),
-                                ax=ax,
-                                title='Ground truth label',
-                                xticks=False,
-                                yticks=False,
-                                label_prefix="PHATE",
-                                fontsize=10,
-                                s=3)
+                              c=label_true.reshape((H * W, -1)),
+                              legend_anchor=(1, 1),
+                              ax=ax,
+                              title='Ground truth label',
+                              xticks=False,
+                              yticks=False,
+                              label_prefix="PHATE",
+                              fontsize=10,
+                              s=3)
         ax = fig1.add_subplot(1, 2, 2)
         # Plot the kmeans.
         scprep.plot.scatter2d(data_phate,
-                                c=label_kmeans.reshape((H * W, -1)),
-                                legend_anchor=(1, 1),
-                                ax=ax,
-                                title='Spectral K-means',
-                                xticks=False,
-                                yticks=False,
-                                label_prefix="PHATE",
-                                fontsize=10,
-                                s=3)
+                              c=label_kmeans.reshape((H * W, -1)),
+                              legend_anchor=(1, 1),
+                              ax=ax,
+                              title='Spectral K-means',
+                              xticks=False,
+                              yticks=False,
+                              label_prefix="PHATE",
+                              fontsize=10,
+                              s=3)
 
         # 2. Segmentation plot.
         fig2 = plt.figure(figsize=(20, 6))
@@ -86,7 +99,8 @@ if __name__ == '__main__':
         ax.imshow(image)
         ax.set_axis_off()
         ax = fig2.add_subplot(1, 4, 2)
-        ax.imshow(label_true, cmap='gray')
+        gt_cmap = 'gray' if len(np.unique(label_true)) <= 2 else 'tab20'
+        ax.imshow(label_true, cmap=gt_cmap)
         ax.set_axis_off()
         ax = fig2.add_subplot(1, 4, 3)
         ax.imshow(seg_kmeans, cmap='gray')
