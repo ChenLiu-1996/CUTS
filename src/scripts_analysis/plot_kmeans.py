@@ -63,12 +63,13 @@ if __name__ == '__main__':
             # Otherwise, generate the phate data.
             phate_op = phate.PHATE(random_state=random_seed,
                                    n_jobs=config.num_workers)
+
             data_phate = phate_op.fit_transform(normalize(latent, axis=1))
             with open(phate_path, 'wb+') as f:
                 np.savez(f, data_phate=data_phate)
 
-        fig1 = plt.figure(figsize=(10, 4))
-        ax = fig1.add_subplot(1, 2, 1)
+        fig1 = plt.figure(figsize=(15, 4))
+        ax = fig1.add_subplot(1, 3, 1)
         # Plot the ground truth.
         scprep.plot.scatter2d(data_phate,
                               c=label_true.reshape((H * W, -1)),
@@ -80,10 +81,22 @@ if __name__ == '__main__':
                               label_prefix="PHATE",
                               fontsize=10,
                               s=3)
-        ax = fig1.add_subplot(1, 2, 2)
+        ax = fig1.add_subplot(1, 3, 2)
         # Plot the kmeans.
         scprep.plot.scatter2d(data_phate,
                               c=label_kmeans.reshape((H * W, -1)),
+                              legend_anchor=(1, 1),
+                              ax=ax,
+                              title='Spectral K-means',
+                              xticks=False,
+                              yticks=False,
+                              label_prefix="PHATE",
+                              fontsize=10,
+                              s=3)
+        ax = fig1.add_subplot(1, 3, 3)
+        # Plot the segmented kmeans.
+        scprep.plot.scatter2d(data_phate,
+                              c=seg_kmeans.reshape((H * W, -1)),
                               legend_anchor=(1, 1),
                               ax=ax,
                               title='Spectral K-means',

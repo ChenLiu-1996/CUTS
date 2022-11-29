@@ -61,14 +61,16 @@ def combine_hashmaps(*args: dict) -> dict:
     return combined
 
 
-def segment(hashmap: dict, label_name: str = 'kmeans') -> dict:
+def segment(hashmap: dict, label_name: str = 'kmeans', dataset_name: str = None) -> dict:
     label_true = hashmap['label_true']
     label_pred = hashmap['label_%s' % label_name]
 
     H, W = label_true.shape
     label_pred = label_pred.reshape((H, W))
 
-    seg = point_hint_seg(label_pred=label_pred, label_true=label_true)
+    seg = point_hint_seg(label_pred=label_pred,
+                         label_true=label_true,
+                         dataset_name=dataset_name)
     hashmap['seg_%s' % label_name] = seg
 
     return hashmap
@@ -260,8 +262,8 @@ if __name__ == '__main__':
                                    diffusion_hashmap)
 
         hashmap = get_persistent_structures(hashmap)
-        hashmap = segment(hashmap, label_name='kmeans')
-        hashmap = segment(hashmap, label_name='diffusion')
+        hashmap = segment(hashmap, label_name='kmeans', dataset_name=config.dataset_name)
+        hashmap = segment(hashmap, label_name='diffusion', dataset_name=config.dataset_name)
 
         if not hparams.is_binary:
             # Re-label the label indices for multi-class labels.

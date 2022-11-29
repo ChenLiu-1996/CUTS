@@ -220,6 +220,8 @@ def most_persistent_structures(labels: np.array,
 
     # Assign persistence score to each label index.
     #
+    # Persistence score:
+    #   K-th smallest dice coefficient.
     # Use a max heap to track the persistence scores.
     # By default, heapq maintains a min heap, which is what we want.
     persistence_heap = []
@@ -245,7 +247,6 @@ def most_persistent_structures(labels: np.array,
                 sum_area_ratio += np.sum(
                     filtered_labels[i, ...] == label_idx) / (H * W)
 
-        # mean_dice = 0 if num_frames == 0 else sum_dice / num_frames
         if num_frames < K:
             Kth_smallest_dice = 0
         else:

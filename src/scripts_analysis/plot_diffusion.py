@@ -61,7 +61,8 @@ if __name__ == '__main__':
         persistent_labels, _ = most_persistent_structures(
             labels_diffusion.reshape((B, H, W)))
         seg = point_hint_seg(label_pred=persistent_labels,
-                             label_true=label_true)
+                             label_true=label_true,
+                             dataset_name=config.dataset_name)
 
         # 1. PHATE plot.
         phate_path = '%s/sample_%s.npz' % (phate_folder,
