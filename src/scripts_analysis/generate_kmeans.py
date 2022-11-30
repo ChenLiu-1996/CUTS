@@ -30,13 +30,16 @@ def generate_kmeans(shape: Tuple[int],
     seg_true = label_true > 0
 
     # Perform PHATE clustering.
-    phate_operator = phate.PHATE(n_components=3,
-                                 knn=100,
-                                 n_landmark=500,
-                                 t=2,
-                                 verbose=False,
-                                 random_state=random_seed,
-                                 n_jobs=config.num_workers)
+    phate_operator = phate.PHATE(
+        n_components=3,
+        knn=100,
+        n_landmark=500,
+        t=2,
+        verbose=False,
+        random_state=random_seed,
+        #  n_jobs=config.num_workers)
+        n_jobs=4)
+
     phate_operator.fit_transform(latent)
     clusters = phate.cluster.kmeans(phate_operator,
                                     n_clusters=10,

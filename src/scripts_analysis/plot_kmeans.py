@@ -14,6 +14,7 @@ from tqdm import tqdm
 
 sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
+from utils.diffusion_condensation import continuous_renumber
 from utils.parse import parse_settings
 
 warnings.filterwarnings("ignore")
@@ -72,7 +73,8 @@ if __name__ == '__main__':
         ax = fig1.add_subplot(1, 3, 1)
         # Plot the ground truth.
         scprep.plot.scatter2d(data_phate,
-                              c=label_true.reshape((H * W, -1)),
+                              c=continuous_renumber(
+                                  label_true.reshape((H * W, -1))),
                               legend_anchor=(1, 1),
                               ax=ax,
                               title='Ground truth label',
@@ -84,7 +86,8 @@ if __name__ == '__main__':
         ax = fig1.add_subplot(1, 3, 2)
         # Plot the kmeans.
         scprep.plot.scatter2d(data_phate,
-                              c=label_kmeans.reshape((H * W, -1)),
+                              c=continuous_renumber(
+                                  label_kmeans.reshape((H * W, -1))),
                               legend_anchor=(1, 1),
                               ax=ax,
                               title='Spectral K-means',
@@ -113,14 +116,14 @@ if __name__ == '__main__':
         ax.set_axis_off()
         ax = fig2.add_subplot(1, 4, 2)
         gt_cmap = 'gray' if len(np.unique(label_true)) <= 2 else 'tab20'
-        ax.imshow(label_true, cmap=gt_cmap)
+        ax.imshow(continuous_renumber(label_true), cmap=gt_cmap)
         ax.set_axis_off()
         ax = fig2.add_subplot(1, 4, 3)
         ax.imshow(seg_kmeans, cmap='gray')
         ax.set_title('Spectral K-means')
         ax.set_axis_off()
         ax = fig2.add_subplot(1, 4, 4)
-        ax.imshow(label_kmeans, cmap='tab20')
+        ax.imshow(continuous_renumber(label_kmeans), cmap='tab20')
         ax.set_title('Spectral K-means')
         ax.set_axis_off()
 

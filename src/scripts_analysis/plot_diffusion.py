@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
-from utils.diffusion_condensation import most_persistent_structures
+from utils.diffusion_condensation import continuous_renumber, most_persistent_structures
 from utils.parse import parse_settings
 from utils.segmentation import point_hint_seg
 
@@ -73,10 +73,8 @@ if __name__ == '__main__':
             data_phate = data_phate_numpy['data_phate']
         else:
             # Otherwise, generate the phate data.
-            phate_op = phate.PHATE(
-                random_state=random_seed,
-                #    n_jobs=config.num_workers)
-                n_jobs=2)
+            phate_op = phate.PHATE(random_state=random_seed,
+                                   n_jobs=config.num_workers)
             data_phate = phate_op.fit_transform(normalize(latent, axis=1))
             with open(phate_path, 'wb+') as f:
                 np.savez(f, data_phate=data_phate)
@@ -87,7 +85,8 @@ if __name__ == '__main__':
             if i == -3:
                 # Plot the ground truth.
                 scprep.plot.scatter2d(data_phate,
-                                      c=label_true.reshape((H * W, -1)),
+                                      c=continuous_renumber(
+                                          label_true.reshape((H * W, -1))),
                                       legend_anchor=(1, 1),
                                       ax=ax,
                                       title='Ground truth label',
@@ -100,7 +99,7 @@ if __name__ == '__main__':
                 # Plot the segmented persistent structures.
                 scprep.plot.scatter2d(
                     data_phate,
-                    c=seg.reshape((H * W, -1)),
+                    c=continuous_renumber(seg.reshape((H * W, -1))),
                     legend_anchor=(1, 1),
                     ax=ax,
                     title='Persistent Structures (Segmented)',
@@ -112,7 +111,9 @@ if __name__ == '__main__':
             elif i == -1:
                 # Plot the persistent structures.
                 scprep.plot.scatter2d(data_phate,
-                                      c=persistent_labels.reshape((H * W, -1)),
+                                      c=continuous_renumber(
+                                          persistent_labels.reshape(
+                                              (H * W, -1))),
                                       legend_anchor=(1, 1),
                                       ax=ax,
                                       title='Persistent Structures',
@@ -122,17 +123,17 @@ if __name__ == '__main__':
                                       fontsize=10,
                                       s=3)
             else:
-                scprep.plot.scatter2d(data_phate,
-                                      c=labels_diffusion[i],
-                                      legend_anchor=(1, 1),
-                                      ax=ax,
-                                      title='Granularity ' +
-                                      str(granularities[i]),
-                                      xticks=False,
-                                      yticks=False,
-                                      label_prefix="PHATE",
-                                      fontsize=10,
-                                      s=3)
+                scprep.plot.scatter2d(
+                    data_phate,
+                    c=continuous_renumber(labels_diffusion[i]),
+                    legend_anchor=(1, 1),
+                    ax=ax,
+                    title='Granularity ' + str(granularities[i]),
+                    xticks=False,
+                    yticks=False,
+                    label_prefix="PHATE",
+                    fontsize=10,
+                    s=3)
 
         # 2. Segmentation plot.
         fig2 = plt.figure(figsize=(12, 4 * n_rows))
@@ -149,11 +150,13 @@ if __name__ == '__main__':
                 ax.set_title('Persistent Structures (Segmented)')
                 ax.set_axis_off()
             elif i == -1:
-                ax.imshow(persistent_labels, cmap='tab20')
+                ax.imshow(continuous_renumber(persistent_labels), cmap='tab20')
                 ax.set_title('Persistent Structures')
                 ax.set_axis_off()
             else:
-                ax.imshow(labels_diffusion[i].reshape((H, W)), cmap='tab20')
+                ax.imshow(continuous_renumber(labels_diffusion[i].reshape(
+                    (H, W))),
+                          cmap='tab20')
                 ax.set_title('Granularity ' + str(granularities[i]))
                 ax.set_axis_off()
 

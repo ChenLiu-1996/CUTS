@@ -61,7 +61,9 @@ def combine_hashmaps(*args: dict) -> dict:
     return combined
 
 
-def segment(hashmap: dict, label_name: str = 'kmeans', dataset_name: str = None) -> dict:
+def segment(hashmap: dict,
+            label_name: str = 'kmeans',
+            dataset_name: str = None) -> dict:
     label_true = hashmap['label_true']
     label_pred = hashmap['label_%s' % label_name]
 
@@ -76,6 +78,27 @@ def segment(hashmap: dict, label_name: str = 'kmeans', dataset_name: str = None)
     return hashmap
 
 
+def segment_every_diffusion(hashmap: dict, dataset_name: str = None) -> dict:
+    label_true = hashmap['label_true']
+    labels_pred = hashmap['labels_diffusion']
+
+    B = labels_pred.shape[0]
+    H, W = label_true.shape
+    segs = np.zeros_like(labels_pred)
+    for i in range(B):
+        label_pred = labels_pred[i, ...].reshape((H, W))
+
+        seg = point_hint_seg(label_pred=label_pred,
+                             label_true=label_true,
+                             dataset_name=dataset_name)
+
+        segs[i, ...] = seg
+
+    hashmap['segs_diffusion'] = segs
+
+    return hashmap
+
+
 def get_persistent_structures(hashmap: dict) -> dict:
     label_true = hashmap['label_true']
     labels_diffusion = hashmap['labels_diffusion']
@@ -86,7 +109,8 @@ def get_persistent_structures(hashmap: dict) -> dict:
     # persistent_label = continuous_renumber(labels_diffusion[B // 2, ...])
     persistent_label, _ = most_persistent_structures(labels_diffusion)
 
-    hashmap['label_diffusion'] = persistent_label
+    hashmap['labels_diffusion'] = labels_diffusion
+    hashmap['label_diffusion-persistent'] = persistent_label
 
     return hashmap
 
@@ -231,8 +255,13 @@ if __name__ == '__main__':
         ('felzenszwalb', 'label_true', 'label_felzenszwalb'),
         ('ours (kmeans, multiclass)', 'label_true', 'label_kmeans'),
         ('ours (kmeans, binary)', 'label_true', 'seg_kmeans'),
-        ('ours (diffusion, multiclass)', 'label_true', 'label_diffusion'),
-        ('ours (diffusion, binary)', 'label_true', 'seg_diffusion'),
+        ('ours (diffusion-persistent, multiclass)', 'label_true',
+         'label_diffusion-persistent'),
+        ('ours (diffusion-persistent, binary)', 'label_true',
+         'seg_diffusion-persistent'),
+        ('ours (diffusion-best, multiclass)', 'label_true',
+         'label_diffusion-best'),
+        ('ours (diffusion-best, binary)', 'label_true', 'seg_diffusion-best'),
     ]
 
     metrics = {
@@ -262,23 +291,91 @@ if __name__ == '__main__':
                                    diffusion_hashmap)
 
         hashmap = get_persistent_structures(hashmap)
-        hashmap = segment(hashmap, label_name='kmeans', dataset_name=config.dataset_name)
-        hashmap = segment(hashmap, label_name='diffusion', dataset_name=config.dataset_name)
+        hashmap = segment(hashmap,
+                          label_name='kmeans',
+                          dataset_name=config.dataset_name)
+        hashmap = segment(hashmap,
+                          label_name='diffusion-persistent',
+                          dataset_name=config.dataset_name)
+        hashmap = segment_every_diffusion(hashmap,
+                                          dataset_name=config.dataset_name)
 
+        # Re-label the label indices for multi-class labels.
         if not hparams.is_binary:
-            # Re-label the label indices for multi-class labels.
+            # Relabel each of the diffusion labels.
+            for i in range(hashmap['labels_diffusion'].shape[0]):
+                hashmap['labels_diffusion'][i, ...] = guided_relabel(
+                    label_pred=hashmap['labels_diffusion'][i, ...],
+                    label_true=hashmap['label_true'])
+
             for (_, _, p2) in entity_tuples:
-                hashmap[p2] = guided_relabel(label_pred=hashmap[p2],
-                                             label_true=hashmap['label_true'])
+                if p2 in ['label_diffusion-best', 'seg_diffusion-best']:
+                    continue
+                else:
+                    hashmap[p2] = guided_relabel(
+                        label_pred=hashmap[p2],
+                        label_true=hashmap['label_true'])
 
         for (entry, p1, p2) in entity_tuples:
-            if hparams.is_binary:
+            if p2 == 'label_diffusion-best':
+                # Get the best among all diffusion labels.
+                metrics['dice'][entry].append(
+                    max([
+                        dice_coeff(hashmap['label_true'],
+                                   hashmap['labels_diffusion'][i, ...])
+                        for i in range(hashmap['labels_diffusion'].shape[0])
+                    ]))
+                metrics['ssim'][entry].append(
+                    max([
+                        range_aware_ssim(hashmap['label_true'],
+                                         hashmap['labels_diffusion'][i, ...])
+                        for i in range(hashmap['labels_diffusion'].shape[0])
+                    ]))
+                metrics['ergas'][entry].append(
+                    min([
+                        ergas(hashmap['label_true'],
+                              hashmap['labels_diffusion'][i, ...])
+                        for i in range(hashmap['labels_diffusion'].shape[0])
+                    ]))
+                metrics['rmse'][entry].append(
+                    min([
+                        rmse(hashmap['label_true'],
+                             hashmap['labels_diffusion'][i, ...])
+                        for i in range(hashmap['labels_diffusion'].shape[0])
+                    ]))
+            elif p2 == 'seg_diffusion-best':
+                # Get the best among all diffusion segmentations.
+                metrics['dice'][entry].append(
+                    max([
+                        dice_coeff(hashmap['label_true'],
+                                   hashmap['segs_diffusion'][i, ...])
+                        for i in range(hashmap['segs_diffusion'].shape[0])
+                    ]))
+                metrics['ssim'][entry].append(
+                    max([
+                        range_aware_ssim(hashmap['label_true'],
+                                         hashmap['segs_diffusion'][i, ...])
+                        for i in range(hashmap['segs_diffusion'].shape[0])
+                    ]))
+                metrics['ergas'][entry].append(
+                    min([
+                        ergas(hashmap['label_true'],
+                              hashmap['segs_diffusion'][i, ...])
+                        for i in range(hashmap['segs_diffusion'].shape[0])
+                    ]))
+                metrics['rmse'][entry].append(
+                    min([
+                        rmse(hashmap['label_true'],
+                             hashmap['segs_diffusion'][i, ...])
+                        for i in range(hashmap['segs_diffusion'].shape[0])
+                    ]))
+            else:
                 metrics['dice'][entry].append(
                     dice_coeff(hashmap[p1], hashmap[p2]))
-            metrics['ssim'][entry].append(
-                range_aware_ssim(hashmap[p1], hashmap[p2]))
-            metrics['ergas'][entry].append(ergas(hashmap[p1], hashmap[p2]))
-            metrics['rmse'][entry].append(rmse(hashmap[p1], hashmap[p2]))
+                metrics['ssim'][entry].append(
+                    range_aware_ssim(hashmap[p1], hashmap[p2]))
+                metrics['ergas'][entry].append(ergas(hashmap[p1], hashmap[p2]))
+                metrics['rmse'][entry].append(rmse(hashmap[p1], hashmap[p2]))
 
     if hparams.is_binary:
         print('\n\nDice Coefficient')
