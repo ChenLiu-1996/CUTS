@@ -16,6 +16,7 @@ sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
 from utils.diffusion_condensation import continuous_renumber
 from utils.parse import parse_settings
+from utils.segmentation import label_hint_seg
 
 warnings.filterwarnings("ignore")
 
@@ -49,7 +50,8 @@ if __name__ == '__main__':
         label_true = numpy_array['label'].astype(np.int16)
         latent = numpy_array['latent']
         label_kmeans = numpy_array['label_kmeans']
-        seg_kmeans = numpy_array['seg_kmeans']
+        seg_kmeans = label_hint_seg(label_true=label_true,
+                                    label_pred=label_kmeans)
 
         H, W = label_true.shape[:2]
 

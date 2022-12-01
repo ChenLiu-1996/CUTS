@@ -16,7 +16,7 @@ sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
 from utils.diffusion_condensation import continuous_renumber, most_persistent_structures
 from utils.parse import parse_settings
-from utils.segmentation import point_hint_seg
+from utils.segmentation import label_hint_seg
 
 warnings.filterwarnings("ignore")
 
@@ -60,9 +60,8 @@ if __name__ == '__main__':
 
         persistent_labels, _ = most_persistent_structures(
             labels_diffusion.reshape((B, H, W)))
-        seg = point_hint_seg(label_pred=persistent_labels,
-                             label_true=label_true,
-                             dataset_name=config.dataset_name)
+        seg = label_hint_seg(label_pred=persistent_labels,
+                             label_true=label_true)
 
         # 1. PHATE plot.
         phate_path = '%s/sample_%s.npz' % (phate_folder,

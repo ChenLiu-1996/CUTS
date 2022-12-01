@@ -2,6 +2,38 @@ import numpy as np
 from skimage import measure, morphology
 
 
+def label_hint_seg(label_pred: np.array, label_true: np.array) -> np.array:
+    '''
+    Use every point from the ground truth as a hint provider.
+    Find the desired label index by finding the most frequent label index
+    corresponding to the foreground.
+
+    This is effectively estimating the most likely sampled label index,
+    if we randomly sample a point from the ground truth label.
+    So it is in fact less arbitrary than point_hint_seg!
+    '''
+
+    foreground_xys = np.argwhere(label_true)
+    label_counts = {}
+    for (x, y) in foreground_xys:
+        label_id = label_pred[x, y]
+        if label_id not in label_counts.keys():
+            label_counts[label_id] = 1
+        else:
+            label_counts[label_id] += 1
+
+    label_id, max_count = 0, 0
+    for i in label_counts.keys():
+        count = label_counts[i]
+        if count > max_count:
+            max_count = count
+            label_id = i
+
+    seg = label_pred == label_id
+
+    return seg
+
+
 def point_hint_seg(label_pred: np.array,
                    label_true: np.array,
                    dataset_name: str = None) -> np.array:

@@ -9,7 +9,7 @@ import torch
 from tqdm import tqdm
 from utils.diffusion_condensation import cluster_indices_from_mask, diffusion_condensation
 from utils.metrics import dice_coeff
-from utils.segmentation import point_hint_seg
+from utils.segmentation import label_hint_seg
 
 warnings.filterwarnings("ignore")
 
@@ -220,7 +220,7 @@ class LatentEvaluator(object):
                     # [H x W, C] to [H, W, C]
                     label_pred = clusters.reshape((H, W))
 
-                    seg_pred = point_hint_seg(label_pred=label_pred,
+                    seg_pred = label_hint_seg(label_pred=label_pred,
                                               label_true=seg_true)
 
                     if metric_fn is not None:

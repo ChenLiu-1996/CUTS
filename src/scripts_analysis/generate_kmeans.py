@@ -14,7 +14,7 @@ sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
 from utils.metrics import dice_coeff
 from utils.parse import parse_settings
-from utils.segmentation import point_hint_seg
+from utils.segmentation import label_hint_seg
 
 warnings.filterwarnings("ignore")
 
@@ -38,7 +38,7 @@ def generate_kmeans(shape: Tuple[int],
         verbose=False,
         random_state=random_seed,
         #  n_jobs=config.num_workers)
-        n_jobs=4)
+        n_jobs=2)
 
     phate_operator.fit_transform(latent)
     clusters = phate.cluster.kmeans(phate_operator,
@@ -48,7 +48,8 @@ def generate_kmeans(shape: Tuple[int],
     # [H x W, C] to [H, W, C]
     label_pred = clusters.reshape((H, W))
 
-    seg_pred = point_hint_seg(label_pred=label_pred, label_true=label_true)
+    seg_pred = label_hint_seg(label_pred=label_pred,
+                              label_true=label_true)
 
     return dice_coeff(seg_pred, seg_true), label_pred, seg_pred
 

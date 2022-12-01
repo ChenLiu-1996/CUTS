@@ -15,7 +15,7 @@ from utils.attribute_hashmap import AttributeHashmap
 from utils.diffusion_condensation import continuous_renumber, most_persistent_structures
 from utils.metrics import dice_coeff, ergas, rmse, ssim
 from utils.parse import parse_settings
-from utils.segmentation import point_hint_seg
+from utils.segmentation import label_hint_seg
 
 warnings.filterwarnings("ignore")
 
@@ -53,6 +53,14 @@ def load_diffusion(path: str) -> dict:
     return hashmap
 
 
+def load_stego(path: str) -> dict:
+    numpy_array = np.load(path)
+    hashmap = {}
+    hashmap['seg_stego'] = numpy_array['seg_stego']
+    hashmap['label_stego'] = numpy_array['label_stego']
+    return hashmap
+
+
 def combine_hashmaps(*args: dict) -> dict:
     combined = {}
     for hashmap in args:
@@ -61,24 +69,20 @@ def combine_hashmaps(*args: dict) -> dict:
     return combined
 
 
-def segment(hashmap: dict,
-            label_name: str = 'kmeans',
-            dataset_name: str = None) -> dict:
+def segment(hashmap: dict, label_name: str = 'kmeans') -> dict:
     label_true = hashmap['label_true']
     label_pred = hashmap['label_%s' % label_name]
 
     H, W = label_true.shape
     label_pred = label_pred.reshape((H, W))
 
-    seg = point_hint_seg(label_pred=label_pred,
-                         label_true=label_true,
-                         dataset_name=dataset_name)
+    seg = label_hint_seg(label_pred=label_pred, label_true=label_true)
     hashmap['seg_%s' % label_name] = seg
 
     return hashmap
 
 
-def segment_every_diffusion(hashmap: dict, dataset_name: str = None) -> dict:
+def segment_every_diffusion(hashmap: dict) -> dict:
     label_true = hashmap['label_true']
     labels_pred = hashmap['labels_diffusion']
 
@@ -88,9 +92,7 @@ def segment_every_diffusion(hashmap: dict, dataset_name: str = None) -> dict:
     for i in range(B):
         label_pred = labels_pred[i, ...].reshape((H, W))
 
-        seg = point_hint_seg(label_pred=label_pred,
-                             label_true=label_true,
-                             dataset_name=dataset_name)
+        seg = label_hint_seg(label_pred=label_pred, label_true=label_true)
 
         segs[i, ...] = seg
 
@@ -238,6 +240,8 @@ if __name__ == '__main__':
                                      'numpy_files_seg_kmeans')
     files_folder_diffusion = '%s/%s' % (config.output_save_path,
                                         'numpy_files_seg_diffusion')
+    files_folder_stego = '%s/%s' % (config.output_save_path,
+                                    'numpy_files_seg_STEGO')
 
     np_files_path_baselines = sorted(
         glob('%s/%s' % (files_folder_baselines, '*.npz')))
@@ -245,14 +249,13 @@ if __name__ == '__main__':
         glob('%s/%s' % (files_folder_kmeans, '*.npz')))
     np_files_path_diffusion = sorted(
         glob('%s/%s' % (files_folder_diffusion, '*.npz')))
-
-    assert len(np_files_path_baselines) == len(np_files_path_kmeans)
-    assert len(np_files_path_baselines) == len(np_files_path_diffusion)
+    np_files_path_stego = sorted(glob('%s/%s' % (files_folder_stego, '*.npz')))
 
     entity_tuples = [
         ('random', 'label_true', 'label_random'),
         ('watershed', 'label_true', 'label_watershed'),
         ('felzenszwalb', 'label_true', 'label_felzenszwalb'),
+        ('STEGO', 'label_true', 'label_stego'),
         ('ours (kmeans, multiclass)', 'label_true', 'label_kmeans'),
         ('ours (kmeans, binary)', 'label_true', 'seg_kmeans'),
         ('ours (diffusion-persistent, multiclass)', 'label_true',
@@ -276,9 +279,25 @@ if __name__ == '__main__':
     }
 
     for image_idx in tqdm(range(len(np_files_path_baselines))):
-        baselines_hashmap = load_baselines(np_files_path_baselines[image_idx])
-        kmeans_hashmap = load_kmeans(np_files_path_kmeans[image_idx])
-        diffusion_hashmap = load_diffusion(np_files_path_diffusion[image_idx])
+        try:
+            baselines_hashmap = load_baselines(np_files_path_baselines[image_idx])
+        except:
+            baselines_hashmap = {}
+
+        try:
+            kmeans_hashmap = load_kmeans(np_files_path_kmeans[image_idx])
+        except:
+            kmeans_hashmap = {}
+
+        try:
+            diffusion_hashmap = load_diffusion(np_files_path_diffusion[image_idx])
+        except:
+            diffusion_hashmap = {}
+
+        try:
+            stego_hashmap = load_stego(np_files_path_stego[image_idx])
+        except:
+            stego_hashmap = {}
 
         assert (baselines_hashmap['image'] == kmeans_hashmap['image']
                 ).all() and (baselines_hashmap['image']
@@ -288,17 +307,12 @@ if __name__ == '__main__':
                              == diffusion_hashmap['label_true']).all()
 
         hashmap = combine_hashmaps(baselines_hashmap, kmeans_hashmap,
-                                   diffusion_hashmap)
+                                   diffusion_hashmap, stego_hashmap)
 
         hashmap = get_persistent_structures(hashmap)
-        hashmap = segment(hashmap,
-                          label_name='kmeans',
-                          dataset_name=config.dataset_name)
-        hashmap = segment(hashmap,
-                          label_name='diffusion-persistent',
-                          dataset_name=config.dataset_name)
-        hashmap = segment_every_diffusion(hashmap,
-                                          dataset_name=config.dataset_name)
+        hashmap = segment(hashmap, label_name='kmeans')
+        hashmap = segment(hashmap, label_name='diffusion-persistent')
+        hashmap = segment_every_diffusion(hashmap)
 
         # Re-label the label indices for multi-class labels.
         if not hparams.is_binary:
@@ -309,7 +323,7 @@ if __name__ == '__main__':
                     label_true=hashmap['label_true'])
 
             for (_, _, p2) in entity_tuples:
-                if p2 in ['label_diffusion-best', 'seg_diffusion-best']:
+                if p2 not in hashmap.keys():
                     continue
                 else:
                     hashmap[p2] = guided_relabel(
@@ -369,6 +383,11 @@ if __name__ == '__main__':
                              hashmap['segs_diffusion'][i, ...])
                         for i in range(hashmap['segs_diffusion'].shape[0])
                     ]))
+            elif p2 not in hashmap.keys():
+                metrics['dice'][entry].append(np.nan)
+                metrics['ssim'][entry].append(np.nan)
+                metrics['ergas'][entry].append(np.nan)
+                metrics['rmse'][entry].append(np.nan)
             else:
                 metrics['dice'][entry].append(
                     dice_coeff(hashmap[p1], hashmap[p2]))
