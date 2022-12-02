@@ -44,7 +44,7 @@ if __name__ == '__main__':
 
     np_files_path = sorted(glob('%s/%s' % (files_folder, '*.npz')))
 
-    for image_idx in tqdm(range(len(np_files_path))):
+    for image_idx in tqdm(range(21,len(np_files_path))):
         numpy_array = np.load(np_files_path[image_idx])
         image = numpy_array['image']
         label_true = numpy_array['label'].astype(np.int16)

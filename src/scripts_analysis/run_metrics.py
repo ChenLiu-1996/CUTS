@@ -251,21 +251,56 @@ if __name__ == '__main__':
         glob('%s/%s' % (files_folder_diffusion, '*.npz')))
     np_files_path_stego = sorted(glob('%s/%s' % (files_folder_stego, '*.npz')))
 
-    entity_tuples = [
-        ('random', 'label_true', 'label_random'),
-        ('watershed', 'label_true', 'label_watershed'),
-        ('felzenszwalb', 'label_true', 'label_felzenszwalb'),
-        ('STEGO', 'label_true', 'label_stego'),
-        ('ours (kmeans, multiclass)', 'label_true', 'label_kmeans'),
-        ('ours (kmeans, binary)', 'label_true', 'seg_kmeans'),
-        ('ours (diffusion-persistent, multiclass)', 'label_true',
-         'label_diffusion-persistent'),
-        ('ours (diffusion-persistent, binary)', 'label_true',
-         'seg_diffusion-persistent'),
-        ('ours (diffusion-best, multiclass)', 'label_true',
-         'label_diffusion-best'),
-        ('ours (diffusion-best, binary)', 'label_true', 'seg_diffusion-best'),
-    ]
+    num_files = max([
+        len(np_files_path_baselines),
+        len(np_files_path_kmeans),
+        len(np_files_path_diffusion),
+        len(np_files_path_stego)
+    ])
+
+    assert len(np_files_path_baselines) == num_files or len(
+        np_files_path_baselines) == 0
+    assert len(np_files_path_kmeans) == num_files or len(
+        np_files_path_kmeans) == 0
+    assert len(np_files_path_diffusion) == num_files or len(
+        np_files_path_diffusion) == 0
+    assert len(np_files_path_stego) == num_files or len(
+        np_files_path_stego) == 0
+
+    has_baselines = True if len(
+        np_files_path_baselines) == num_files else False
+    has_kmeans = True if len(np_files_path_kmeans) == num_files else False
+    has_diffusion = True if len(
+        np_files_path_diffusion) == num_files else False
+    has_stego = True if len(np_files_path_stego) == num_files else False
+
+    entity_tuples = []
+    if has_baselines:
+        entity_tuples.extend([
+            ('random', 'label_true', 'label_random'),
+            ('watershed', 'label_true', 'label_watershed'),
+            ('felzenszwalb', 'label_true', 'label_felzenszwalb'),
+        ])
+    if has_stego:
+        entity_tuples.extend([
+            ('STEGO', 'label_true', 'label_stego'),
+        ])
+    if has_kmeans:
+        entity_tuples.extend([
+            ('ours (kmeans, multiclass)', 'label_true', 'label_kmeans'),
+            ('ours (kmeans, binary)', 'label_true', 'seg_kmeans'),
+        ])
+    if has_diffusion:
+        entity_tuples.extend([
+            ('ours (diffusion-persistent, multiclass)', 'label_true',
+             'label_diffusion-persistent'),
+            ('ours (diffusion-persistent, binary)', 'label_true',
+             'seg_diffusion-persistent'),
+            ('ours (diffusion-best, multiclass)', 'label_true',
+             'label_diffusion-best'),
+            ('ours (diffusion-best, binary)', 'label_true',
+             'seg_diffusion-best'),
+        ])
 
     metrics = {
         'dice': {tup[0]: []
@@ -278,41 +313,28 @@ if __name__ == '__main__':
                  for tup in entity_tuples},
     }
 
-    for image_idx in tqdm(range(len(np_files_path_baselines))):
-        try:
-            baselines_hashmap = load_baselines(np_files_path_baselines[image_idx])
-        except:
-            baselines_hashmap = {}
-
-        try:
+    for image_idx in tqdm(range(num_files)):
+        baselines_hashmap, kmeans_hashmap, diffusion_hashmap, stego_hashmap = {}, {}, {}, {}
+        if has_baselines:
+            baselines_hashmap = load_baselines(
+                np_files_path_baselines[image_idx])
+        if has_kmeans:
             kmeans_hashmap = load_kmeans(np_files_path_kmeans[image_idx])
-        except:
-            kmeans_hashmap = {}
-
-        try:
-            diffusion_hashmap = load_diffusion(np_files_path_diffusion[image_idx])
-        except:
-            diffusion_hashmap = {}
-
-        try:
+        if has_diffusion:
+            diffusion_hashmap = load_diffusion(
+                np_files_path_diffusion[image_idx])
+        if has_stego:
             stego_hashmap = load_stego(np_files_path_stego[image_idx])
-        except:
-            stego_hashmap = {}
-
-        assert (baselines_hashmap['image'] == kmeans_hashmap['image']
-                ).all() and (baselines_hashmap['image']
-                             == diffusion_hashmap['image']).all()
-        assert (baselines_hashmap['label_true'] == kmeans_hashmap['label_true']
-                ).all() and (baselines_hashmap['label_true']
-                             == diffusion_hashmap['label_true']).all()
 
         hashmap = combine_hashmaps(baselines_hashmap, kmeans_hashmap,
                                    diffusion_hashmap, stego_hashmap)
 
-        hashmap = get_persistent_structures(hashmap)
-        hashmap = segment(hashmap, label_name='kmeans')
-        hashmap = segment(hashmap, label_name='diffusion-persistent')
-        hashmap = segment_every_diffusion(hashmap)
+        if has_kmeans:
+            hashmap = segment(hashmap, label_name='kmeans')
+        if has_diffusion:
+            hashmap = get_persistent_structures(hashmap)
+            hashmap = segment(hashmap, label_name='diffusion-persistent')
+            hashmap = segment_every_diffusion(hashmap)
 
         # Re-label the label indices for multi-class labels.
         if not hparams.is_binary:

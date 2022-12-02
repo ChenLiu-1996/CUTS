@@ -43,7 +43,7 @@ def train(config: AttributeHashmap):
             loss_recon = loss_fn_recon(patch_real, patch_recon)
             loss_contrastive = loss_fn_contrastive(z_anchors, z_positives)
             loss = config.lambda_contrastive_loss * \
-                loss_contrastive + config.lambda_recon_loss * loss_recon
+                loss_contrastive + (1 - config.lambda_contrastive_loss) * loss_recon
 
             optimizer.zero_grad()
             loss.backward()
@@ -74,7 +74,7 @@ def train(config: AttributeHashmap):
                 loss_recon = loss_fn_recon(patch_real, patch_recon)
                 loss_contrastive = loss_fn_contrastive(z_anchors, z_positives)
                 loss = config.lambda_contrastive_loss * \
-                    loss_contrastive + config.lambda_recon_loss * loss_recon
+                    loss_contrastive + (1 - config.lambda_contrastive_loss) * loss_recon
 
                 val_loss_recon += loss_recon.item()
                 val_loss_contrastive += loss_contrastive.item()
@@ -138,7 +138,7 @@ def test(config: AttributeHashmap):
             loss_recon = loss_fn_recon(patch_real, patch_recon)
             loss_contrastive = loss_fn_contrastive(z_anchors, z_positives)
             loss = config.lambda_contrastive_loss * \
-                loss_contrastive + config.lambda_recon_loss * loss_recon
+                loss_contrastive + (1 - config.lambda_contrastive_loss) * loss_recon
 
             test_loss_recon += loss_recon.item()
             test_loss_contrastive += loss_contrastive.item()

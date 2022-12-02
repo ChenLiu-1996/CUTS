@@ -22,7 +22,7 @@ def parse_settings(config: AttributeHashmap, log_settings: bool = True):
 
     # for ablation test
     if config.model_setting == 'no_recon':
-        config.lambda_recon_loss = 0
+        config.lambda_contrastive_loss = 1
     if config.model_setting == 'no_contrastive':
         config.lambda_contrastive_loss = 0
 

@@ -1,7 +1,7 @@
-dataset_name: 'brain'
-dataset_path: '$CUTS_ROOT/data/brain_arman/'
-model_save_path: '$CUTS_ROOT/checkpoints/brain.pty'
-output_save_path: '$CUTS_ROOT/results/brain/'
+dataset_name: 'retina'
+dataset_path: '$CUTS_ROOT/data/retina/'
+model_save_path: '$CUTS_ROOT/checkpoints/retina_lambda0p001.pty'
+output_save_path: '$CUTS_ROOT/results/retina_lambda0p001/'
 log_folder: '$CUTS_ROOT/logs'
 model_setting: 'full' # 'full', 'no_recon', 'no_contrastive'
 learning_rate: 1e-3
@@ -12,7 +12,7 @@ batch_size: 16
 num_kernels: 16
 sampled_patches_per_image: 16 # recommend: 4 or above.
 num_workers: 8
-lambda_contrastive_loss: 0.01  # Between 0 and 1. no_recon == 1. no_contrastive == 0.
+lambda_contrastive_loss: 0.001  # Between 0 and 1. no_recon == 1. no_contrastive == 0.
 random_seed: 2022
 train_val_ratio: '7:3'
 pos_enc_gamma: 0.0

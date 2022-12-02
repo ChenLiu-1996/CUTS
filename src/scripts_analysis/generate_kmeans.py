@@ -30,15 +30,13 @@ def generate_kmeans(shape: Tuple[int],
     seg_true = label_true > 0
 
     # Perform PHATE clustering.
-    phate_operator = phate.PHATE(
-        n_components=3,
-        knn=100,
-        n_landmark=500,
-        t=2,
-        verbose=False,
-        random_state=random_seed,
-        #  n_jobs=config.num_workers)
-        n_jobs=2)
+    phate_operator = phate.PHATE(n_components=3,
+                                 knn=100,
+                                 n_landmark=500,
+                                 t=2,
+                                 verbose=False,
+                                 random_state=random_seed,
+                                 n_jobs=config.num_workers)
 
     phate_operator.fit_transform(latent)
     clusters = phate.cluster.kmeans(phate_operator,
@@ -48,8 +46,7 @@ def generate_kmeans(shape: Tuple[int],
     # [H x W, C] to [H, W, C]
     label_pred = clusters.reshape((H, W))
 
-    seg_pred = label_hint_seg(label_pred=label_pred,
-                              label_true=label_true)
+    seg_pred = label_hint_seg(label_pred=label_pred, label_true=label_true)
 
     return dice_coeff(seg_pred, seg_true), label_pred, seg_pred
 
