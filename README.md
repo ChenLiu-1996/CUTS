@@ -26,24 +26,24 @@ conda activate $OUR_CONDA_ENV
 #### To train a model.
 ```
 ## Under $CUTS_ROOT/src
-python main.py --mode train --config ../config/retina.yaml
+python main.py --mode train --config ../config/$YAML_FILE.yaml
 ```
 #### To test a model (automatically done during `train` mode).
 ```
 ## Under $CUTS_ROOT/src
-python main.py --mode test --config ../config/retina.yaml
+python main.py --mode test --config ../config/$YAML_FILE.yaml
 ```
 
 ### Results Generation.
 #### To generate and save the segmentation using spectral k-means.
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
-python generate_kmeans.py --config ../../config/retina.yaml
+python generate_kmeans.py --config ../../config/$YAML_FILE.yaml
 ```
 #### To generate and save the segmentation using diffusion condensation.
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
-python generate_diffusion.py --config ../../config/retina.yaml
+python generate_diffusion.py --config ../../config/$YAML_FILE.yaml
 ```
 #### To generate and save the segmentation using baseline methods.
 ```
@@ -52,17 +52,29 @@ python generate_baselines.py
 ```
 
 ### Results Plotting.
+#### *To reproduce the figures in the paper.*
+```
+## Under $CUTS_ROOT/src/scripts_analysis
+
+## For natural images (berkeley)
+python plot_paper_figure_natural.py --config ../../config/$YAML_FILE.yaml --image-idx $IMAGE_IDX
+python plot_paper_figure_natural.py --config ../../config/$YAML_FILE.yaml --image-idx $IMAGE_IDX --comparison
+
+## For medical images (retina, brain)
+python plot_paper_figure_medical.py --config ../../config/$YAML_FILE.yaml --image-idx $IMAGE_IDX
+python plot_paper_figure_medical.py --config ../../config/$YAML_FILE.yaml --image-idx $IMAGE_IDX --comparison
+```
 #### To plot the segmentation results using spectral k-means.
 Assuming segmentation results have already been generated and saved.
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
-python plot_kmeans.py --config ../../config/retina.yaml
+python plot_kmeans.py --config ../../config/$YAML_FILE.yaml
 ```
 #### To plot the segmentation results using diffusion condensation.
 Assuming segmentation results have already been generated and saved.
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
-python plot_diffusion.py --config ../../config/retina.yaml
+python plot_diffusion.py --config ../../config/$YAML_FILE.yaml
 ```
 
 ### Results Analysis.
@@ -70,7 +82,7 @@ python plot_diffusion.py --config ../../config/retina.yaml
 Assuming segmentation results have already been generated and saved.
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
-python run_metrics.py --config ../../config/retina.yaml
+python run_metrics.py --config ../../config/$YAML_FILE.yaml
 ```
 
 ### Special NOTE
