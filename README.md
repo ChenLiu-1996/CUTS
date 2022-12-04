@@ -1,7 +1,6 @@
 # CUTS: A Fully Unsupervised Framework for Medical Image Segmentation
 ### Krishnaswamy Lab, Yale University
 
-Rewritten and updated code base.
 
 ## Dependencies
 We developed the codebase in a miniconda environment.
