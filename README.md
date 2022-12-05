@@ -61,9 +61,13 @@ python generate_baselines.py
 </details>
 
 <details>
-  <summary>### Results Plotting</summary>
+  <summary>Results Plotting</summary>
 
-#### **To reproduce the figures in the paper.**
+#### To reproduce the figures in the paper.
+Note: This is a newer version for plotting, and it already entails the following versions (spectral k-means, diffusion condensation). You don't need to worry about them if you use this plotting script.
+
+With the ` --comparison` flag, the side-by-side comparison against other methods will be plotted.
+Without the `--comparison` flag, the 
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
 
@@ -75,13 +79,13 @@ python plot_paper_figure_natural.py --config ../../config/$YAML_FILE.yaml --imag
 python plot_paper_figure_medical.py --config ../../config/$YAML_FILE.yaml --image-idx $IMAGE_IDX
 python plot_paper_figure_medical.py --config ../../config/$YAML_FILE.yaml --image-idx $IMAGE_IDX --comparison
 ```
-#### To plot the segmentation results using spectral k-means.
+#### To plot the segmentation results using spectral k-means (optional).
 Assuming segmentation results have already been generated and saved.
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
 python plot_kmeans.py --config ../../config/$YAML_FILE.yaml
 ```
-#### To plot the segmentation results using diffusion condensation.
+#### To plot the segmentation results using diffusion condensation (optional).
 Assuming segmentation results have already been generated and saved.
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
@@ -90,7 +94,7 @@ python plot_diffusion.py --config ../../config/$YAML_FILE.yaml
 </details>
 
 <details>
-  <summary>### Results Analysis</summary>
+  <summary>Results Analysis</summary>
 
 #### To compute the quantitative metrics.
 Assuming segmentation results have already been generated and saved.

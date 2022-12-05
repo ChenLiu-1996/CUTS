@@ -191,7 +191,6 @@ if __name__ == '__main__':
         glob('%s/%s' % (files_folder_diffusion, '*.npz')))
 
     numpy_array_baselines = np.load(files_path_baselines[args.image_idx])
-    numpy_array_stego = np.load(files_path_stego[args.image_idx])
     numpy_array_kmeans = np.load(files_path_kmeans[args.image_idx])
     numpy_array_diffusion = np.load(files_path_diffusion[args.image_idx])
 
@@ -202,10 +201,17 @@ if __name__ == '__main__':
     label_random = numpy_array_baselines['label_random']
     label_watershed = numpy_array_baselines['label_watershed']
     label_felzenszwalb = numpy_array_baselines['label_felzenszwalb']
-    label_stego = numpy_array_stego['label_stego']
     label_kmeans = numpy_array_kmeans['label_kmeans']
     granularities = numpy_array_diffusion['granularities_diffusion']
     labels_diffusion = numpy_array_diffusion['labels_diffusion']
+
+    # We have provided scripts to generate all other results except for STEGO.
+    # In case you have not generated STEGO results, we will skip its plotting.
+    try:
+        numpy_array_stego = np.load(files_path_stego[args.image_idx])
+        label_stego = numpy_array_stego['label_stego']
+    except:
+        label_stego = np.zeros_like(label_true)
 
     H, W = label_true.shape[:2]
     B = labels_diffusion.shape[0]
@@ -240,9 +246,8 @@ if __name__ == '__main__':
         data_phate = data_phate_numpy['data_phate']
     else:
         # Otherwise, generate the phate data.
-        phate_op = phate.PHATE(
-            random_state=random_seed,
-               n_jobs=config.num_workers)
+        phate_op = phate.PHATE(random_state=random_seed,
+                               n_jobs=config.num_workers)
 
         data_phate = phate_op.fit_transform(normalize(latent, axis=1))
         with open(phate_path, 'wb+') as f:
