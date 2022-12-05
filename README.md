@@ -114,7 +114,7 @@ python run_metrics.py --config ../../config/$YAML_FILE.yaml
 </details>
 
 <details>
-  <summary>2. Regarding the `latent_evaluator`.</summary>
+  <summary>2. Regarding `latent_evaluator` and reported dice coeff in `test` mode.</summary>
 
   You may notice something called `latent_evaluator` in `main.py`.
 
