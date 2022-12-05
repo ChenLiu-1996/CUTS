@@ -18,7 +18,7 @@ python -m pip install sewar
 
 ## Usage
 <details>
-  <summary>### Activate environment</summary>
+  <summary>Activate environment</summary>
 
 ```
 conda activate $OUR_CONDA_ENV
@@ -26,32 +26,32 @@ conda activate $OUR_CONDA_ENV
 </details>
 
 <details>
-  <summary>### Training and Testing</summary>
+  <summary>Training and Testing</summary>
 
 #### To train a model.
 ```
 ## Under $CUTS_ROOT/src
-python main.py --mode train --config ../config/$YAML_FILE.yaml
+python main.py --mode train --config ../config/$CONFIG_FILE.yaml
 ```
 #### To test a model (automatically done during `train` mode).
 ```
 ## Under $CUTS_ROOT/src
-python main.py --mode test --config ../config/$YAML_FILE.yaml
+python main.py --mode test --config ../config/$CONFIG_FILE.yaml
 ```
 </details>
 
 <details>
-  <summary>### Results Generation</summary>
+  <summary>Results Generation</summary>
 
 #### To generate and save the segmentation using spectral k-means.
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
-python generate_kmeans.py --config ../../config/$YAML_FILE.yaml
+python generate_kmeans.py --config ../../config/$CONFIG_FILE.yaml
 ```
 #### To generate and save the segmentation using diffusion condensation.
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
-python generate_diffusion.py --config ../../config/$YAML_FILE.yaml
+python generate_diffusion.py --config ../../config/$CONFIG_FILE.yaml
 ```
 #### To generate and save the segmentation using baseline methods.
 ```
@@ -66,30 +66,30 @@ python generate_baselines.py
 #### To reproduce the figures in the paper.
 Note: This is a newer version for plotting, and it already entails the following versions (spectral k-means, diffusion condensation). You don't need to worry about them if you use this plotting script.
 
+Without the `--comparison` flag, the CUTS-only results will be plotted.
 With the ` --comparison` flag, the side-by-side comparison against other methods will be plotted.
-Without the `--comparison` flag, the 
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
 
 ## For natural images (berkeley)
-python plot_paper_figure_natural.py --config ../../config/$YAML_FILE.yaml --image-idx $IMAGE_IDX
-python plot_paper_figure_natural.py --config ../../config/$YAML_FILE.yaml --image-idx $IMAGE_IDX --comparison
+python plot_paper_figure_natural.py --config ../../config/$CONFIG_FILE.yaml --image-idx $IMAGE_IDX
+python plot_paper_figure_natural.py --config ../../config/$CONFIG_FILE.yaml --image-idx $IMAGE_IDX --comparison
 
 ## For medical images (retina, brain)
-python plot_paper_figure_medical.py --config ../../config/$YAML_FILE.yaml --image-idx $IMAGE_IDX
-python plot_paper_figure_medical.py --config ../../config/$YAML_FILE.yaml --image-idx $IMAGE_IDX --comparison
+python plot_paper_figure_medical.py --config ../../config/$CONFIG_FILE.yaml --image-idx $IMAGE_IDX
+python plot_paper_figure_medical.py --config ../../config/$CONFIG_FILE.yaml --image-idx $IMAGE_IDX --comparison
 ```
 #### To plot the segmentation results using spectral k-means (optional).
 Assuming segmentation results have already been generated and saved.
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
-python plot_kmeans.py --config ../../config/$YAML_FILE.yaml
+python plot_kmeans.py --config ../../config/$CONFIG_FILE.yaml
 ```
 #### To plot the segmentation results using diffusion condensation (optional).
 Assuming segmentation results have already been generated and saved.
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
-python plot_diffusion.py --config ../../config/$YAML_FILE.yaml
+python plot_diffusion.py --config ../../config/$CONFIG_FILE.yaml
 ```
 </details>
 
@@ -100,7 +100,7 @@ python plot_diffusion.py --config ../../config/$YAML_FILE.yaml
 Assuming segmentation results have already been generated and saved.
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
-python run_metrics.py --config ../../config/$YAML_FILE.yaml
+python run_metrics.py --config ../../config/$CONFIG_FILE.yaml
 ```
 </details>
 
@@ -108,28 +108,30 @@ python run_metrics.py --config ../../config/$YAML_FILE.yaml
 <details>
   <summary>1. Regarding occasional "deadlock" when generating/plotting results.</summary>
 
-    On our YCRC server, sometimes we need to run
-    ```
-    export MKL_THREADING_LAYER=GNU
-    ```
-    before running some results generation/plotting/analysis code to avoid dead lock.
 
-    For details, see https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md.
+On our YCRC server, sometimes we need to run
+```
+export MKL_THREADING_LAYER=GNU
+```
+before running some results generation/plotting/analysis code to avoid dead lock.
+
+For details, see https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md.
 </details>
 
 <details>
   <summary>2. Regarding `latent_evaluator` and reported dice coeff in `test` mode.</summary>
 
-  You may notice something called `latent_evaluator` in `main.py`.
 
-  At first, I wrote it to evaluate the model during test time. However, eventually I decided to off-source this kind of jobs to separate scripts under the `scripts_analysis` folder, and rather use it as a numpy results saver. As of now, I haven't changed `latent_evaluator` to `results_saver`, but I may do that at some point.
+You may notice something called `latent_evaluator` in `main.py`.
 
-  Along the same lines, you could feel free to not touch the following hyperparameters in your config yaml:
-  ```
-  segmentation_paradigm: 'kmeans_point'
-  test_metric: None
-  ```
-  In this case, the `latent_evaluator` will indeed act as a numpy results saver. Since no evaluation is actually performed, the logging will say: **dice coeff: nan ± nan, which is not a bug and you shall not be scared of it**.
+At first, I wrote it to evaluate the model during test time. However, eventually I decided to off-source this kind of jobs to separate scripts under the `scripts_analysis` folder, and rather use it as a numpy results saver. As of now, I haven't changed `latent_evaluator` to `results_saver`, but I may do that at some point.
+
+Along the same lines, you could feel free to not touch the following hyperparameters in your config yaml:
+```
+segmentation_paradigm: 'kmeans_point'
+test_metric: None
+```
+In this case, the `latent_evaluator` will indeed act as a numpy results saver. Since no evaluation is actually performed, the logging will say: **dice coeff: nan ± nan, which is not a bug and you shall not be scared of it**.
 
 </details>
 
