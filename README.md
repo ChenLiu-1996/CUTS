@@ -108,7 +108,6 @@ python run_metrics.py --config ../../config/$CONFIG_FILE.yaml
 <details>
   <summary>1. Regarding occasional "deadlock" when generating/plotting results.</summary>
 
-
 On our YCRC server, sometimes we need to run
 ```
 export MKL_THREADING_LAYER=GNU
@@ -121,12 +120,11 @@ For details, see https://github.com/joblib/threadpoolctl/blob/master/multiple_op
 <details>
   <summary>2. Regarding `latent_evaluator` and reported dice coeff in `test` mode.</summary>
 
-
 You may notice something called `latent_evaluator` in `main.py`.
 
 At first, I wrote it to evaluate the model during test time. However, eventually I decided to off-source this kind of jobs to separate scripts under the `scripts_analysis` folder, and rather use it as a numpy results saver. As of now, I haven't changed `latent_evaluator` to `results_saver`, but I may do that at some point.
 
-Along the same lines, you could feel free to not touch the following hyperparameters in your config yaml:
+Along the same lines, you could feel free to leave the following hyperparameters as-is in your config yaml:
 ```
 segmentation_paradigm: 'kmeans_point'
 test_metric: None
