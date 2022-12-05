@@ -242,8 +242,7 @@ if __name__ == '__main__':
         # Otherwise, generate the phate data.
         phate_op = phate.PHATE(
             random_state=random_seed,
-            #    n_jobs=config.num_workers)
-            n_jobs=4)
+               n_jobs=config.num_workers)
 
         data_phate = phate_op.fit_transform(normalize(latent, axis=1))
         with open(phate_path, 'wb+') as f:

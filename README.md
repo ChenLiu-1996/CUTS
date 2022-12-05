@@ -17,11 +17,17 @@ python -m pip install sewar
 ```
 
 ## Usage
-### Activate environment.
+<details>
+  <summary>### Activate environment</summary>
+
 ```
 conda activate $OUR_CONDA_ENV
 ```
-### Training and Testing
+</details>
+
+<details>
+  <summary>### Training and Testing</summary>
+
 #### To train a model.
 ```
 ## Under $CUTS_ROOT/src
@@ -32,8 +38,11 @@ python main.py --mode train --config ../config/$YAML_FILE.yaml
 ## Under $CUTS_ROOT/src
 python main.py --mode test --config ../config/$YAML_FILE.yaml
 ```
+</details>
 
-### Results Generation.
+<details>
+  <summary>### Results Generation</summary>
+
 #### To generate and save the segmentation using spectral k-means.
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
@@ -49,9 +58,12 @@ python generate_diffusion.py --config ../../config/$YAML_FILE.yaml
 ## Under $CUTS_ROOT/src/scripts_analysis
 python generate_baselines.py
 ```
+</details>
 
-### Results Plotting.
-#### *To reproduce the figures in the paper.*
+<details>
+  <summary>### Results Plotting</summary>
+
+#### **To reproduce the figures in the paper.**
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
 
@@ -75,20 +87,45 @@ Assuming segmentation results have already been generated and saved.
 ## Under $CUTS_ROOT/src/scripts_analysis
 python plot_diffusion.py --config ../../config/$YAML_FILE.yaml
 ```
+</details>
 
-### Results Analysis.
+<details>
+  <summary>### Results Analysis</summary>
+
 #### To compute the quantitative metrics.
 Assuming segmentation results have already been generated and saved.
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
 python run_metrics.py --config ../../config/$YAML_FILE.yaml
 ```
+</details>
 
-### Special NOTE
-On our YCRC server, sometimes we need to run
-```
-export MKL_THREADING_LAYER=GNU
-```
-before running some results generation/plotting/analysis code to avoid dead lock.
+### Special NOTES
+<details>
+  <summary>1. Regarding occasional "deadlock" when generating/plotting results.</summary>
 
-For details, see https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md.
+    On our YCRC server, sometimes we need to run
+    ```
+    export MKL_THREADING_LAYER=GNU
+    ```
+    before running some results generation/plotting/analysis code to avoid dead lock.
+
+    For details, see https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md.
+</details>
+
+<details>
+  <summary>2. Regarding the `latent_evaluator`.</summary>
+
+  You may notice something called `latent_evaluator` in `main.py`.
+
+  At first, I wrote it to evaluate the model during test time. However, eventually I decided to off-source this kind of jobs to separate scripts under the `scripts_analysis` folder, and rather use it as a numpy results saver. As of now, I haven't changed `latent_evaluator` to `results_saver`, but I may do that at some point.
+
+  Along the same lines, you could feel free to not touch the following hyperparameters in your config yaml:
+  ```
+  segmentation_paradigm: 'kmeans_point'
+  test_metric: None
+  ```
+  In this case, the `latent_evaluator` will indeed act as a numpy results saver. Since no evaluation is actually performed, the logging will say: **dice coeff: nan ± nan, which is not a bug and you shall not be scared of it**.
+
+</details>
+
