@@ -1,10 +1,13 @@
 import heapq
 from typing import List, Tuple
 
+# from skimage.measure import find_contours
+import cv2
 import numpy as np
 import pandas as pd
 from CATCH import catch
 from scipy import sparse
+from scipy.spatial.distance import directed_hausdorff
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import normalize
 from utils.metrics import dice_coeff
@@ -136,13 +139,13 @@ def diffusion_condensation(X: np.array,
     # Very occasionally, SVD won't converge.
     try:
         catch_op = catch.CATCH(knn=30,
-                            random_state=random_seed,
-                            n_pca=50,
-                            n_jobs=num_workers)
+                               random_state=random_seed,
+                               n_pca=50,
+                               n_jobs=num_workers)
         catch_op.fit(data)
     except:
         catch_op = catch.CATCH(knn=30,
-                               random_state=random_seed+1,
+                               random_state=random_seed + 1,
                                n_pca=50,
                                n_jobs=num_workers)
         catch_op.fit(data)
@@ -206,9 +209,9 @@ def cluster_indices_from_mask(
         return best_cluster_indices, dice_map
 
 
-def most_persistent_structures(labels: np.array,
-                               min_frame_ratio: float = 1 / 2,
-                               min_area_ratio: float = 1 / 200) -> np.array:
+def get_persistent_structures(labels: np.array,
+                              min_frame_ratio: float = 1 / 2,
+                              min_area_ratio: float = 1 / 200) -> np.array:
     '''
     Given a set of B labels on the same image, with shape [B, H, W]
     Return a label with the most persistent structures, with shape [H, W]
@@ -219,26 +222,23 @@ def most_persistent_structures(labels: np.array,
     persistent_label = np.zeros((H, W), dtype=np.int16)
 
     # Assign persistence score to each label index.
-    #
     # Persistence score:
     #   K-th smallest dice coefficient.
-    # Use a max heap to track the persistence scores.
-    # By default, heapq maintains a min heap, which is what we want.
+
+    # Use a min heap to track the persistence scores.
     persistence_heap = []
     for label_idx in np.unique(filtered_labels):
-        sum_dice, sum_area_ratio, num_frames = 0, 0, 0
-        min_dice_heap = [2 for _ in range(K)] # Use some number > 1 (highest possible dice).
+        sum_area_ratio, num_frames = 0, 0
+        # Use some number > 1 (highest possible dice) as initialization.
+        min_dice_heap = [2 for _ in range(K)]
         existent_frames = np.sum(filtered_labels == label_idx, axis=(1, 2)) > 0
         for i in range(B - 1):
             if existent_frames[i] and existent_frames[i + 1]:
                 num_frames += 1
-                sum_dice += dice_coeff(
-                    filtered_labels[i, ...] == label_idx,
-                    filtered_labels[i + 1, ...] == label_idx)
                 dice = dice_coeff(filtered_labels[i, ...] == label_idx,
                                   filtered_labels[i + 1, ...] == label_idx)
                 put_back_list = []
-                for _ in range(K-1):
+                for _ in range(K - 1):
                     put_back_list.append(heapq.heappop(min_dice_heap))
                 Kth_smallest_dice = heapq.heappop(min_dice_heap)
                 put_back_list.append(min(dice, Kth_smallest_dice))
@@ -251,7 +251,7 @@ def most_persistent_structures(labels: np.array,
             Kth_smallest_dice = 0
         else:
             assert len(min_dice_heap) == K
-            for _ in range(K-1):
+            for _ in range(K - 1):
                 _ = heapq.heappop(min_dice_heap)
             Kth_smallest_dice = heapq.heappop(min_dice_heap)
         mean_area_ratio = 0 if num_frames == 0 else sum_area_ratio / num_frames
@@ -269,14 +269,81 @@ def most_persistent_structures(labels: np.array,
         # Ignore the background index.
         if label_idx == 0:
             continue
-        loc = np.sum(filtered_labels == label_idx, axis=0) > min_frame_ratio
+        loc = np.sum(filtered_labels == label_idx, axis=0) > 0
         persistent_label[loc] = label_idx
 
     # Re-number as continuous non-neg integers.
     persistent_label = continuous_renumber(persistent_label)
-    filtered_labels = continuous_renumber(filtered_labels)
 
-    return persistent_label, filtered_labels
+    return persistent_label
+
+
+# def get_persistent_structures(
+#     labels: np.array,
+# ) -> np.array:
+#     '''
+#     Given a set of B labels on the same image, with shape [B, H, W]
+#     Return a label with the most persistent structures, with shape [H, W]
+#     '''
+#     B, H, W = labels.shape
+#     # K = int(min_frame_ratio * B)
+#     filtered_labels = labels.copy()
+#     persistent_label = np.zeros((H, W), dtype=np.int16)
+
+#     # Assign persistence score to each label index.
+#     #
+#     # Persistence score:
+#     #   Average Negative Length-Normalized Hausdorff distance of the same label across frames.
+#     # Use a min heap to track the persistence scores.
+#     #
+#     persistence_heap = []
+#     for label_idx in np.unique(labels):
+#         num_frames, sum_normalized_hausdorff = 0, 0
+#         existent_frames = np.sum(labels == label_idx, axis=(1, 2)) > 0
+#         stable_frames = []
+#         for i in range(B - 1):
+#             if existent_frames[i] and existent_frames[i + 1]:
+#                 image1 = ((labels[i, ...] == label_idx) * 255).astype(np.uint8)
+#                 contour1, _ = cv2.findContours(image1, cv2.RETR_TREE,
+#                                                cv2.CHAIN_APPROX_NONE)
+#                 image2 = ((labels[i + 1, ...] == label_idx) * 255).astype(
+#                     np.uint8)
+#                 contour2, _ = cv2.findContours(image2, cv2.RETR_TREE,
+#                                                cv2.CHAIN_APPROX_NONE)
+#                 contour_length = np.sum([
+#                     cv2.arcLength(arc, True) for arc in contour1
+#                 ]) + np.sum([cv2.arcLength(arc, True) for arc in contour2])
+
+#                 hausdorff = 1 + directed_hausdorff(
+#                     np.vstack(contour1).squeeze(1),
+#                     np.vstack(contour2).squeeze(1))[0]
+#                 normalized_hausdorff = hausdorff / contour_length
+#                 if normalized_hausdorff < 1:
+#                     stable_frames.append(i)
+#                     sum_normalized_hausdorff += normalized_hausdorff
+#                     num_frames += 1
+#         mean_normalized_hausdorff = sum_normalized_hausdorff / num_frames if num_frames > 0 else np.inf
+
+#         persistence_score = -mean_normalized_hausdorff
+#         heapq.heappush(persistence_heap,
+#                        (persistence_score, label_idx, stable_frames))
+
+#     # Re-color the label map, with label index with higher persistence score taking priority.
+#     for _ in range(len(persistence_heap)):
+#         persistence_score, label_idx, stable_frames = heapq.heappop(
+#             persistence_heap)
+#         # Ignore the background index.
+#         if label_idx == 0:
+#             continue
+#         # Only consider the stable frames.
+#         loc = np.sum(
+#             ((filtered_labels == label_idx)[stable_frames, ...]), axis=0) > 0
+#         persistent_label[loc] = label_idx
+
+#     # Re-number as continuous non-neg integers.
+#     persistent_label = continuous_renumber(persistent_label)
+
+#     return persistent_label
 
 
 def continuous_renumber(label: np.array) -> np.array:

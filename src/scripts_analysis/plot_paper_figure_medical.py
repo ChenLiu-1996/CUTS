@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
-from utils.diffusion_condensation import continuous_renumber, most_persistent_structures
+from utils.diffusion_condensation import continuous_renumber, get_persistent_structures
 from utils.parse import parse_settings
 from utils.segmentation import label_hint_seg
 
@@ -216,7 +216,7 @@ if __name__ == '__main__':
     H, W = label_true.shape[:2]
     B = labels_diffusion.shape[0]
 
-    persistent_structures, _ = most_persistent_structures(
+    persistent_structures = get_persistent_structures(
         labels_diffusion.reshape((B, H, W)))
     seg_kmeans = label_hint_seg(label_pred=label_kmeans, label_true=label_true)
     seg_persistent = label_hint_seg(label_pred=persistent_structures,

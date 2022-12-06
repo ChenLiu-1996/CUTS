@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
-from utils.diffusion_condensation import continuous_renumber, most_persistent_structures
+from utils.diffusion_condensation import get_persistent_structures
 from utils.metrics import dice_coeff, ergas, rmse, ssim
 from utils.parse import parse_settings
 from utils.segmentation import label_hint_seg
@@ -101,15 +101,14 @@ def segment_every_diffusion(hashmap: dict) -> dict:
     return hashmap
 
 
-def get_persistent_structures(hashmap: dict) -> dict:
+def persistent_structures(hashmap: dict) -> dict:
     label_true = hashmap['label_true']
     labels_diffusion = hashmap['labels_diffusion']
 
     H, W = label_true.shape
     B = labels_diffusion.shape[0]
     labels_diffusion = labels_diffusion.reshape((B, H, W))
-    # persistent_label = continuous_renumber(labels_diffusion[B // 2, ...])
-    persistent_label, _ = most_persistent_structures(labels_diffusion)
+    persistent_label = get_persistent_structures(labels_diffusion)
 
     hashmap['labels_diffusion'] = labels_diffusion
     hashmap['label_diffusion-persistent'] = persistent_label
@@ -332,7 +331,7 @@ if __name__ == '__main__':
         if has_kmeans:
             hashmap = segment(hashmap, label_name='kmeans')
         if has_diffusion:
-            hashmap = get_persistent_structures(hashmap)
+            hashmap = persistent_structures(hashmap)
             hashmap = segment(hashmap, label_name='diffusion-persistent')
             hashmap = segment_every_diffusion(hashmap)
 
