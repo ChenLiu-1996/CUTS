@@ -14,6 +14,7 @@ python -m pip install -U phate
 python -m pip install git+https://github.com/KrishnaswamyLab/CATCH
 python -m pip install opencv-python
 python -m pip install sewar
+python -m pip install monai
 ```
 
 ## Usage
@@ -133,3 +134,8 @@ In this case, the `latent_evaluator` will indeed act as a numpy results saver. S
 
 </details>
 
+#### Comparison: To train a UNet model.
+```
+## Under $CUTS_ROOT/supervised_experiments/
+python main_unet.py --mode train
+```

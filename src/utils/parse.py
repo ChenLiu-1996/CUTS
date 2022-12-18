@@ -21,9 +21,9 @@ def parse_settings(config: AttributeHashmap, log_settings: bool = True):
     config.log_folder = config.log_folder.replace('$CUTS_ROOT', CUTS_ROOT)
 
     # for ablation test
-    if config.model_setting == 'no_recon':
+    if 'model_setting' in config.keys() and config.model_setting == 'no_recon':
         config.lambda_contrastive_loss = 1
-    if config.model_setting == 'no_contrastive':
+    if 'model_setting' in config.keys() and config.model_setting == 'no_contrastive':
         config.lambda_contrastive_loss = 0
 
     # Initialize log file.

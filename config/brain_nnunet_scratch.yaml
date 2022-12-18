@@ -1,0 +1,15 @@
+dataset_name: 'brain'
+dataset_path: '$CUTS_ROOT/data/brain_arman/'
+supervised_network: 'nnunet'
+model_save_path: '$CUTS_ROOT/checkpoints/brain_nnunet_scratch.pty'
+output_save_path: '$CUTS_ROOT/results/brain_nnunet_scratch/'
+log_folder: '$CUTS_ROOT/logs'
+learning_rate: 1e-3
+weight_decay: 1e-4
+max_epochs: 200
+patience: 10
+batch_size: 16
+num_workers: 8
+random_seed: 2022
+train_val_test_ratio: '6:2:2'
+pretrained: False

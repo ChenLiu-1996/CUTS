@@ -1,13 +1,10 @@
 import argparse
-import itertools
 import sys
 import warnings
 from glob import glob
-from typing import List
 
 import numpy as np
 import yaml
-from scipy.optimize import linear_sum_assignment
 from tqdm import tqdm
 
 sys.path.append('../')
@@ -175,14 +172,6 @@ def guided_relabel(label_pred: np.array, label_true: np.array) -> np.array:
 
     iou_matrix = intersection_matrix / union_matrix
 
-    # # Use negative IOU as the cost function to be minimized for association.
-    # label_pred_indices, label_true_indices = linear_sum_assignment(-iou_matrix)
-    # renumbered_label_pred = np.zeros_like(label_pred)
-    # for (label_pred_idx, label_true_idx) in zip(label_pred_indices,
-    #                                             label_true_indices):
-    #     pix_loc = label_pred == label_pred_idx
-    #     renumbered_label_pred[pix_loc] = label_true_idx
-
     renumbered_label_pred = np.zeros_like(label_pred)
     for i, label_pred_idx in enumerate(np.unique(label_pred)):
         pix_loc = label_pred == label_pred_idx
@@ -199,10 +188,6 @@ def range_aware_ssim(label_true: np.array, label_pred: np.array) -> float:
     quite close to its guess (-1 to 1 for float numbers), but
     surely not okay here.
     '''
-    # data_max = max(label_true.max(), label_pred.max())
-    # data_min = min(label_true.min(), label_pred.min())
-    # data_range = data_max - data_min
-
     data_range = label_true.max() - label_true.min()
 
     return ssim(a=label_true, b=label_pred, data_range=data_range)
@@ -353,6 +338,8 @@ if __name__ == '__main__':
 
         for (entry, p1, p2) in entity_tuples:
             if p2 == 'label_diffusion-best':
+                print(np.argmax([dice_coeff(hashmap['label_true'], hashmap['labels_diffusion'][i, ...]) for i in range(hashmap['labels_diffusion'].shape[0])]))
+
                 # Get the best among all diffusion labels.
                 metrics['dice'][entry].append(
                     max([
