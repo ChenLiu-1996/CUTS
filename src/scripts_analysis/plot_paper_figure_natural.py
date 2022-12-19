@@ -267,7 +267,7 @@ if __name__ == '__main__':
         }
 
         phate_path = '%s/sample_%s.npz' % (phate_folder, str(
-            args.image_idx).zfill(5))
+            image_idx).zfill(5))
         if os.path.exists(phate_path):
             # Load the phate data if exists.
             data_phate_numpy = np.load(phate_path)
