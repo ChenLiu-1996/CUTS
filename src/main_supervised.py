@@ -5,7 +5,7 @@ import monai
 import numpy as np
 import torch
 import yaml
-from data_utils.prepare_dataset import prepare_dataset_supervised
+from data_utils.prepare_dataset import prepare_dataset, prepare_dataset_supervised
 from tqdm import tqdm
 from utils import AttributeHashmap, EarlyStopping, log, parse_settings, seed_everything
 from utils.metrics import dice_coeff, ergas, range_aware_ssim, rmse
@@ -32,7 +32,7 @@ def save_numpy(config: AttributeHashmap, image_batch: torch.Tensor,
 
     B = image_batch.shape[0]
 
-    # Save the images, labels, and latent embeddings as numpy files for future reference.
+    # Save the images, labels, and predictions as numpy files for future reference.
     save_path_numpy = '%s/%s/' % (config.output_save_path,
                                   'numpy_files_seg_supervised_%s%s' %
                                   (config.supervised_network,
@@ -52,7 +52,7 @@ def save_numpy(config: AttributeHashmap, image_batch: torch.Tensor,
 
 def train(config: AttributeHashmap):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    train_set, val_set, test_set, num_image_channel, num_classes = \
+    train_set, val_set, _, num_image_channel, num_classes = \
         prepare_dataset_supervised(config=config)
 
     # Build the model
@@ -132,8 +132,8 @@ def train(config: AttributeHashmap):
                         seg_true[batch_idx, ...].cpu().detach().numpy()))
                 train_metrics['ssim'].append(
                     range_aware_ssim(
-                        seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
-                        seg_true[batch_idx, ...].cpu().detach().numpy()))
+                        label_pred=seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
+                        label_true=seg_true[batch_idx, ...].cpu().detach().numpy()))
                 train_metrics['ergas'].append(
                     ergas(
                         seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
@@ -194,9 +194,10 @@ def train(config: AttributeHashmap):
                             seg_true[batch_idx, ...].cpu().detach().numpy()))
                     val_metrics['ssim'].append(
                         range_aware_ssim(
-                            seg_pred_metric[batch_idx,
-                                            ...].cpu().detach().numpy(),
-                            seg_true[batch_idx, ...].cpu().detach().numpy()))
+                            label_pred=seg_pred_metric[
+                                batch_idx, ...].cpu().detach().numpy(),
+                            label_true=seg_true[batch_idx,
+                                                ...].cpu().detach().numpy()))
                     val_metrics['ergas'].append(
                         ergas(
                             seg_pred_metric[batch_idx,
@@ -241,26 +242,28 @@ def train(config: AttributeHashmap):
 
 def test(config: AttributeHashmap):
     device = torch.device('cpu')
-    train_set, val_set, test_set, num_image_channel, num_classes = \
+    _, _, test_set, num_image_channel, num_classes = \
         prepare_dataset_supervised(config=config)
 
     # Build the model
     if config.supervised_network == 'unet':
-        model = torch.hub.load('mateuszbuda/brain-segmentation-pytorch',
-                               'unet',
-                               in_channels=num_image_channel,
-                               out_channels=1,
-                               init_features=config.num_kernels,
-                               pretrained=config.pretrained).to(device)
+        model = torch.hub.load(
+            'mateuszbuda/brain-segmentation-pytorch',
+            'unet',
+            in_channels=num_image_channel,
+            out_channels=1 if num_classes == 1 else num_classes + 1,
+            init_features=config.num_kernels,
+            pretrained=config.pretrained).to(device)
     elif config.supervised_network == 'nnunet':
         model = torch.nn.Sequential(
-            monai.networks.nets.DynUNet(spatial_dims=2,
-                                        in_channels=num_image_channel,
-                                        out_channels=1,
-                                        kernel_size=[5, 5, 5, 5],
-                                        filters=[16, 32, 64, 128],
-                                        strides=[1, 1, 1, 1],
-                                        upsample_kernel_size=[1, 1, 1, 1]),
+            monai.networks.nets.DynUNet(
+                spatial_dims=2,
+                in_channels=num_image_channel,
+                out_channels=1 if num_classes == 1 else num_classes + 1,
+                kernel_size=[5, 5, 5, 5],
+                filters=[16, 32, 64, 128],
+                strides=[1, 1, 1, 1],
+                upsample_kernel_size=[1, 1, 1, 1]),
             torch.nn.Sigmoid()).to(device)
     else:
         raise ValueError(
@@ -287,7 +290,6 @@ def test(config: AttributeHashmap):
     with torch.no_grad():
         for _, (x_test, seg_true) in enumerate(test_set):
             x_test = x_test.type(torch.FloatTensor).to(device)
-            seg_true = seg_true.type(torch.FloatTensor).to(device)
             seg_pred = model(x_test)
             if num_classes == 1:
                 seg_pred = seg_pred.squeeze(1).type(
@@ -300,7 +302,7 @@ def test(config: AttributeHashmap):
                     torch.LongTensor).to(device)
                 seg_true = seg_true.type(torch.LongTensor).to(device)
 
-            loss = loss_fn_supervised(seg_true, seg_pred)
+            loss = loss_fn_supervised(seg_pred, seg_true)
 
             for batch_idx in range(seg_true.shape[0]):
                 test_metrics['dice'].append(
@@ -309,8 +311,8 @@ def test(config: AttributeHashmap):
                         seg_true[batch_idx, ...].cpu().detach().numpy()))
                 test_metrics['ssim'].append(
                     range_aware_ssim(
-                        seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
-                        seg_true[batch_idx, ...].cpu().detach().numpy()))
+                        label_pred=seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
+                        label_true=seg_true[batch_idx, ...].cpu().detach().numpy()))
                 test_metrics['ergas'].append(
                     ergas(
                         seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
@@ -321,21 +323,6 @@ def test(config: AttributeHashmap):
                         seg_true[batch_idx, ...].cpu().detach().numpy()))
 
             test_loss += loss.item()
-
-            # NOTE: Currently not saving the files because
-            #       (1) I haven't implemented anything
-            #       to ensure index matching between the test set here
-            #       and the entire set in the unsupervised setting.
-            #       (2) These test samples won't necessarily cover the
-            #       ones we use for figures.
-            #       Potential solution: infer all images for visualization,
-            #       but this will be cheating for the supervised settings
-            #       because they can easily overfit on the training set.
-            #
-            # save_numpy(config=config,
-            #            image_batch=x_test,
-            #            label_true_batch=seg_true,
-            #            label_pred_batch=seg_pred)
 
     test_loss = test_loss / len(test_set)
 
@@ -352,6 +339,65 @@ def test(config: AttributeHashmap):
     return
 
 
+def infer(config: AttributeHashmap):
+    device = torch.device('cpu')
+    entire_set, _ = \
+        prepare_dataset(config=config, mode='test')
+    _, _, _, num_image_channel, num_classes = prepare_dataset_supervised(config=config)
+
+    # Build the model
+    if config.supervised_network == 'unet':
+        model = torch.hub.load(
+            'mateuszbuda/brain-segmentation-pytorch',
+            'unet',
+            in_channels=num_image_channel,
+            out_channels=1 if num_classes == 1 else num_classes + 1,
+            init_features=config.num_kernels,
+            pretrained=config.pretrained).to(device)
+    elif config.supervised_network == 'nnunet':
+        model = torch.nn.Sequential(
+            monai.networks.nets.DynUNet(
+                spatial_dims=2,
+                in_channels=num_image_channel,
+                out_channels=1 if num_classes == 1 else num_classes + 1,
+                kernel_size=[5, 5, 5, 5],
+                filters=[16, 32, 64, 128],
+                strides=[1, 1, 1, 1],
+                upsample_kernel_size=[1, 1, 1, 1]),
+            torch.nn.Sigmoid()).to(device)
+    else:
+        raise ValueError(
+            '`main_supervised.py: config.supervised_network = %s is not supported.'
+            % config.supervised_network)
+    load_weights(config.model_save_path, model)
+    log('%s: Model weights successfully loaded.' % config.supervised_network,
+        to_console=True)
+
+    model.eval()
+
+    with torch.no_grad():
+        for _, (x, seg_true) in enumerate(entire_set):
+            x = x.type(torch.FloatTensor).to(device)
+            seg_pred = model(x)
+            if num_classes == 1:
+                seg_pred = seg_pred.squeeze(1).type(
+                    torch.FloatTensor).to(device)
+                seg_pred = (seg_pred > 0.5).type(
+                    torch.FloatTensor).to(device)
+                seg_true = seg_true.type(torch.FloatTensor).to(device)
+            else:
+                seg_pred = torch.argmax(seg_pred, dim=1).type(
+                    torch.LongTensor).to(device)
+                seg_true = seg_true.type(torch.LongTensor).to(device)
+
+            save_numpy(config=config,
+                       image_batch=x,
+                       label_true_batch=seg_true,
+                       label_pred_batch=seg_pred)
+
+    return
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Entry point to run CUTS.')
     parser.add_argument('--mode', help='`train` or `test`?', required=True)
@@ -365,15 +411,15 @@ if __name__ == '__main__':
     config.config_file_name = args.config
     config = parse_settings(config, log_settings=args.mode == 'train')
 
-    # Currently supports 2 modes: `train`: Train+Validation+Test & `test`: Test.
-    assert args.mode in ['train', 'test']
+    assert args.mode in ['train', 'test', 'infer']
 
     seed_everything(config.random_seed)
 
     if args.mode == 'train':
         train(config=config)
         test(config=config)
+        infer(config=config)
     elif args.mode == 'test':
         test(config=config)
-    elif args.mode == 'test':
-        test(config=config)
+    elif args.mode == 'infer':
+        infer(config=config)

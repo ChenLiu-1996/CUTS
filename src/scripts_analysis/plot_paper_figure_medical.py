@@ -26,33 +26,20 @@ def find_nearest_idx(arr: np.array, num: float) -> int:
 
 
 def plot_comparison(data_hashmap: dict, data_phate: np.array):
-    # 2 rows, 8 columns.
+    # 2 rows, 10 columns.
     # 1-st row are the images, labels, segmentations.
     # 2-nd row are the PHATE plots if applicable.
 
     H, W = data_hashmap['label_true'].shape[:2]
 
-    fig = plt.figure(figsize=(16, 4))
+    fig = plt.figure(figsize=(20, 4))
 
     ##### 1-st row!
-    ax = fig.add_subplot(2, 8, 1)
+    ax = fig.add_subplot(2, 10, 1)
     ax.imshow(data_hashmap['image'])
     ax.set_axis_off()
 
-    for (figure_idx, key) in zip(range(2, 2 + 7), [
-            'label_true', 'seg_kmeans', 'seg_persistent', 'label_random',
-            'label_watershed', 'label_felzenszwalb', 'label_stego'
-    ]):
-        ax = fig.add_subplot(2, 8, figure_idx)
-        ax.imshow(data_hashmap[key], cmap='gray')
-        ax.set_axis_off()
-
-    ##### 2-nd row!
-    ax = fig.add_subplot(2, 8, 9)
-    ax.imshow(data_hashmap['recon'])
-    ax.set_axis_off()
-
-    for (figure_idx, key) in zip(range(10, 10 + 7), [
+    for (figure_idx, key) in zip(range(2, 2 + 9), [
             'label_true',
             'seg_kmeans',
             'seg_persistent',
@@ -60,8 +47,30 @@ def plot_comparison(data_hashmap: dict, data_phate: np.array):
             'label_watershed',
             'label_felzenszwalb',
             'label_stego',
+            'label_supervised_unet',
+            'label_supervised_nnunet',
     ]):
-        ax = fig.add_subplot(2, 8, figure_idx)
+        ax = fig.add_subplot(2, 10, figure_idx)
+        ax.imshow(data_hashmap[key], cmap='gray')
+        ax.set_axis_off()
+
+    ##### 2-nd row!
+    ax = fig.add_subplot(2, 10, 11)
+    ax.imshow(data_hashmap['recon'])
+    ax.set_axis_off()
+
+    for (figure_idx, key) in zip(range(12, 12 + 9), [
+            'label_true',
+            'seg_kmeans',
+            'seg_persistent',
+            'label_random',
+            'label_watershed',
+            'label_felzenszwalb',
+            'label_stego',
+            'label_supervised_unet',
+            'label_supervised_nnunet',
+    ]):
+        ax = fig.add_subplot(2, 10, figure_idx)
         scprep.plot.scatter2d(data_phate,
                               c=continuous_renumber(data_hashmap[key].reshape(
                                   (H * W, -1))),
@@ -173,6 +182,10 @@ if __name__ == '__main__':
                                         'numpy_files_seg_baselines')
     files_folder_stego = '%s/%s' % (config.output_save_path,
                                     'numpy_files_seg_STEGO')
+    files_folder_supervised_unet = '%s/%s' % (config.output_save_path,
+                                   'numpy_files_seg_supervised_unet')
+    files_folder_supervised_nnunet = '%s/%s' % (config.output_save_path,
+                                     'numpy_files_seg_supervised_nnunet')
     files_folder_kmeans = '%s/%s' % (config.output_save_path,
                                      'numpy_files_seg_kmeans')
     files_folder_diffusion = '%s/%s' % (config.output_save_path,
@@ -186,6 +199,8 @@ if __name__ == '__main__':
     files_path_baselines = sorted(
         glob('%s/%s' % (files_folder_baselines, '*.npz')))
     files_path_stego = sorted(glob('%s/%s' % (files_folder_stego, '*.npz')))
+    files_path_supervised_unet = sorted(glob('%s/%s' % (files_folder_supervised_unet, '*.npz')))
+    files_path_supervised_nnunet = sorted(glob('%s/%s' % (files_folder_supervised_nnunet, '*.npz')))
     files_path_kmeans = sorted(glob('%s/%s' % (files_folder_kmeans, '*.npz')))
     files_path_diffusion = sorted(
         glob('%s/%s' % (files_folder_diffusion, '*.npz')))
@@ -213,6 +228,18 @@ if __name__ == '__main__':
     except:
         label_stego = np.zeros_like(label_true)
 
+    try:
+        numpy_array_unet = np.load(files_path_supervised_unet[args.image_idx])
+        label_supervised_unet = numpy_array_unet['label_pred']
+    except:
+        label_supervised_unet = np.zeros_like(label_true)
+
+    try:
+        numpy_array_nnunet = np.load(files_path_supervised_nnunet[args.image_idx])
+        label_supervised_nnunet = numpy_array_nnunet['label_pred']
+    except:
+        label_supervised_nnunet = np.zeros_like(label_true)
+
     H, W = label_true.shape[:2]
     B = labels_diffusion.shape[0]
 
@@ -230,6 +257,8 @@ if __name__ == '__main__':
         'label_watershed': label_watershed,
         'label_felzenszwalb': label_felzenszwalb,
         'label_stego': label_stego,
+        'label_supervised_unet': label_supervised_unet,
+        'label_supervised_nnunet': label_supervised_nnunet,
         'label_kmeans': label_kmeans,
         'seg_kmeans': seg_kmeans,
         'granularities': granularities,
