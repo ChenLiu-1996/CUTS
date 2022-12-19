@@ -10,7 +10,7 @@ from tqdm import tqdm
 sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
 from utils.diffusion_condensation import get_persistent_structures
-from utils.metrics import dice_coeff, ergas, rmse, ssim
+from utils.metrics import dice_coeff, ergas, rmse, range_aware_ssim
 from utils.parse import parse_settings
 from utils.segmentation import label_hint_seg
 
@@ -179,18 +179,6 @@ def guided_relabel(label_pred: np.array, label_true: np.array) -> np.array:
         renumbered_label_pred[pix_loc] = label_true_idx
 
     return renumbered_label_pred
-
-
-def range_aware_ssim(label_true: np.array, label_pred: np.array) -> float:
-    '''
-    Surprisingly, skimage ssim infers data range from data type...
-    It's okay within our neural network training since the scale is
-    quite close to its guess (-1 to 1 for float numbers), but
-    surely not okay here.
-    '''
-    data_range = label_true.max() - label_true.min()
-
-    return ssim(a=label_true, b=label_pred, data_range=data_range)
 
 
 if __name__ == '__main__':

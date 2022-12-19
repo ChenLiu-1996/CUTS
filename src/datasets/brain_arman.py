@@ -37,3 +37,6 @@ class BrainArman(Dataset):
     def num_image_channel(self) -> int:
         # [B, C, H, W]
         return self.data_image.shape[1]
+
+    def num_classes(self) -> int:
+        return len(np.unique(self.data_label)) - 1

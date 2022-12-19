@@ -77,6 +77,7 @@ def prepare_dataset_supervised(config: AttributeHashmap):
             'Dataset not found. Check `dataset_name` in config yaml file.')
 
     num_image_channel = dataset.num_image_channel()
+    num_classes = dataset.num_classes()
 
     # Load into DataLoader
     ratios = [float(c) for c in config.train_val_test_ratio.split(':')]
@@ -100,4 +101,4 @@ def prepare_dataset_supervised(config: AttributeHashmap):
                           batch_size=len(test_set),
                           shuffle=False,
                           num_workers=config.num_workers)
-    return train_set, val_set, test_set, num_image_channel
+    return train_set, val_set, test_set, num_image_channel, num_classes

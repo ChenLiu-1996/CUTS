@@ -8,7 +8,7 @@ import yaml
 from data_utils.prepare_dataset import prepare_dataset_supervised
 from tqdm import tqdm
 from utils import AttributeHashmap, EarlyStopping, log, parse_settings, seed_everything
-from utils.metrics import dice_coeff
+from utils.metrics import dice_coeff, ergas, range_aware_ssim, rmse
 
 
 def save_weights(model_save_path: str, model):
@@ -33,7 +33,10 @@ def save_numpy(config: AttributeHashmap, image_batch: torch.Tensor,
     B = image_batch.shape[0]
 
     # Save the images, labels, and latent embeddings as numpy files for future reference.
-    save_path_numpy = '%s/%s/' % (config.output_save_path, 'numpy_files')
+    save_path_numpy = '%s/%s/' % (config.output_save_path,
+                                  'numpy_files_seg_supervised_%s%s' %
+                                  (config.supervised_network,
+                                   '_pretrained' if config.pretrained else ''))
     os.makedirs(save_path_numpy, exist_ok=True)
     for image_idx in tqdm(range(B)):
         with open(
@@ -49,28 +52,29 @@ def save_numpy(config: AttributeHashmap, image_batch: torch.Tensor,
 
 def train(config: AttributeHashmap):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    train_set, val_set, test_set, num_image_channel = \
+    train_set, val_set, test_set, num_image_channel, num_classes = \
         prepare_dataset_supervised(config=config)
 
     # Build the model
     if config.supervised_network == 'unet':
-        model = torch.hub.load('mateuszbuda/brain-segmentation-pytorch',
-                               'unet',
-                               in_channels=num_image_channel,
-                               out_channels=1,
-                               init_features=config.num_kernels,
-                               pretrained=config.pretrained).to(device)
+        model = torch.hub.load(
+            'mateuszbuda/brain-segmentation-pytorch',
+            'unet',
+            in_channels=num_image_channel,
+            out_channels=1 if num_classes == 1 else num_classes + 1,
+            init_features=config.num_kernels,
+            pretrained=config.pretrained).to(device)
     elif config.supervised_network == 'nnunet':
         model = torch.nn.Sequential(
-            monai.networks.nets.DynUNet(spatial_dims=2,
-                                        in_channels=num_image_channel,
-                                        out_channels=1,
-                                        kernel_size=[5, 5, 5, 5],
-                                        filters=[16, 32, 64, 128],
-                                        strides=[1, 1, 1, 1],
-                                        upsample_kernel_size=[1, 1, 1, 1]),
-            torch.nn.Sigmoid()
-        ).to(device)
+            monai.networks.nets.DynUNet(
+                spatial_dims=2,
+                in_channels=num_image_channel,
+                out_channels=1 if num_classes == 1 else num_classes + 1,
+                kernel_size=[5, 5, 5, 5],
+                filters=[16, 32, 64, 128],
+                strides=[1, 1, 1, 1],
+                upsample_kernel_size=[1, 1, 1, 1]),
+            torch.nn.Sigmoid()).to(device)
     else:
         raise ValueError(
             '`main_supervised.py: config.supervised_network = %s is not supported.'
@@ -82,20 +86,36 @@ def train(config: AttributeHashmap):
                                   patience=config.patience,
                                   percentage=False)
 
-    loss_fn_supervised = torch.nn.BCELoss()
+    if num_classes == 1:
+        loss_fn_supervised = torch.nn.BCELoss()
+    else:
+        loss_fn_supervised = torch.nn.CrossEntropyLoss()
 
     best_val_loss = np.inf
 
     for epoch_idx in tqdm(range(config.max_epochs)):
-        train_loss, train_dice = 0, []
+        train_loss = 0
+        train_metrics = {
+            'dice': [],
+            'ssim': [],
+            'ergas': [],
+            'rmse': [],
+        }
 
         model.train()
         for _, (x_train, seg_true) in enumerate(train_set):
             x_train = x_train.type(torch.FloatTensor).to(device)
-            seg_true = seg_true.type(torch.FloatTensor).to(device)
-            seg_pred = model(x_train).squeeze(1)
-            seg_pred_binary = (seg_pred > 0.5).type(
-                torch.FloatTensor).to(device)
+            seg_pred = model(x_train)
+            if num_classes == 1:
+                seg_pred = seg_pred.squeeze(1).type(
+                    torch.FloatTensor).to(device)
+                seg_pred_metric = (seg_pred > 0.5).type(
+                    torch.FloatTensor).to(device)
+                seg_true = seg_true.type(torch.FloatTensor).to(device)
+            else:
+                seg_pred_metric = torch.argmax(seg_pred, dim=1).type(
+                    torch.LongTensor).to(device)
+                seg_true = seg_true.type(torch.LongTensor).to(device)
 
             loss = loss_fn_supervised(seg_pred, seg_true)
 
@@ -104,45 +124,101 @@ def train(config: AttributeHashmap):
             optimizer.step()
 
             train_loss += loss.item()
+
             for batch_idx in range(seg_true.shape[0]):
-                train_dice.append(
+                train_metrics['dice'].append(
                     dice_coeff(
-                        seg_pred_binary[batch_idx, ...].cpu().detach().numpy(),
+                        seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
+                        seg_true[batch_idx, ...].cpu().detach().numpy()))
+                train_metrics['ssim'].append(
+                    range_aware_ssim(
+                        seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
+                        seg_true[batch_idx, ...].cpu().detach().numpy()))
+                train_metrics['ergas'].append(
+                    ergas(
+                        seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
+                        seg_true[batch_idx, ...].cpu().detach().numpy()))
+                train_metrics['rmse'].append(
+                    rmse(
+                        seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
                         seg_true[batch_idx, ...].cpu().detach().numpy()))
 
         train_loss = train_loss / len(train_set)
 
-        log('Train [%s/%s] loss: %.3f, dice: %.3f \u00B1 %.3f' %
-            (epoch_idx + 1, config.max_epochs, train_loss, np.mean(train_dice),
-             np.std(train_dice) / np.sqrt(len(train_dice))),
+        log('Train [%s/%s] loss: %.3f, dice: %.3f \u00B1 %.3f, SSIM: %.3f \u00B1 %.3f, ERGAS: %.3f \u00B1 %.3f, RMSE: %.3f \u00B1 %.3f.'
+            %
+            (epoch_idx, config.max_epochs, train_loss,
+             np.mean(train_metrics['dice']), np.std(train_metrics['dice']) /
+             np.sqrt(len(train_metrics['dice'])), np.mean(
+                 train_metrics['ssim']), np.std(train_metrics['ssim']) /
+             np.sqrt(len(train_metrics['ssim'])),
+             np.mean(train_metrics['ergas']), np.std(train_metrics['ergas']) /
+             np.sqrt(len(train_metrics['ergas'])),
+             np.mean(train_metrics['rmse']), np.std(train_metrics['rmse']) /
+             np.sqrt(len(train_metrics['rmse']))),
             filepath=config.log_dir,
             to_console=False)
 
-        val_loss, val_dice = 0, []
+        val_loss = 0
         model.eval()
+        val_metrics = {
+            'dice': [],
+            'ssim': [],
+            'ergas': [],
+            'rmse': [],
+        }
         with torch.no_grad():
             for _, (x_val, seg_true) in enumerate(val_set):
                 x_val = x_val.type(torch.FloatTensor).to(device)
-                seg_true = seg_true.type(torch.FloatTensor).to(device)
-                seg_pred = model(x_val).squeeze(1)
-                seg_pred_binary = (seg_pred > 0.5).type(
-                    torch.FloatTensor).to(device)
+                seg_pred = model(x_val)
+                if num_classes == 1:
+                    seg_pred = seg_pred.squeeze(1).type(
+                        torch.FloatTensor).to(device)
+                    seg_pred_metric = (seg_pred > 0.5).type(
+                        torch.FloatTensor).to(device)
+                    seg_true = seg_true.type(torch.FloatTensor).to(device)
+                else:
+                    seg_pred_metric = torch.argmax(seg_pred, dim=1).type(
+                        torch.LongTensor).to(device)
+                    seg_true = seg_true.type(torch.LongTensor).to(device)
 
                 loss = loss_fn_supervised(seg_pred, seg_true)
 
                 val_loss += loss.item()
+
                 for batch_idx in range(seg_true.shape[0]):
-                    val_dice.append(
+                    val_metrics['dice'].append(
                         dice_coeff(
-                            seg_pred_binary[batch_idx,
+                            seg_pred_metric[batch_idx,
+                                            ...].cpu().detach().numpy(),
+                            seg_true[batch_idx, ...].cpu().detach().numpy()))
+                    val_metrics['ssim'].append(
+                        range_aware_ssim(
+                            seg_pred_metric[batch_idx,
+                                            ...].cpu().detach().numpy(),
+                            seg_true[batch_idx, ...].cpu().detach().numpy()))
+                    val_metrics['ergas'].append(
+                        ergas(
+                            seg_pred_metric[batch_idx,
+                                            ...].cpu().detach().numpy(),
+                            seg_true[batch_idx, ...].cpu().detach().numpy()))
+                    val_metrics['rmse'].append(
+                        rmse(
+                            seg_pred_metric[batch_idx,
                                             ...].cpu().detach().numpy(),
                             seg_true[batch_idx, ...].cpu().detach().numpy()))
 
         val_loss = val_loss / len(val_set)
 
-        log('Validation [%s/%s] loss: %.3f, dice: %.3f \u00B1 %.3f' %
-            (epoch_idx + 1, config.max_epochs, val_loss, np.mean(val_dice),
-             np.std(val_dice) / np.sqrt(len(val_dice))),
+        log('Validation [%s/%s] loss: %.3f, dice: %.3f \u00B1 %.3f, SSIM: %.3f \u00B1 %.3f, ERGAS: %.3f \u00B1 %.3f, RMSE: %.3f \u00B1 %.3f.'
+            %
+            (epoch_idx, config.max_epochs, val_loss,
+             np.mean(val_metrics['dice']), np.std(val_metrics['dice']) /
+             np.sqrt(len(val_metrics['dice'])), np.mean(val_metrics['ssim']),
+             np.std(val_metrics['ssim']) / np.sqrt(len(val_metrics['ssim'])),
+             np.mean(val_metrics['ergas']), np.std(val_metrics['ergas']) /
+             np.sqrt(len(val_metrics['ergas'])), np.mean(val_metrics['rmse']),
+             np.std(val_metrics['rmse']) / np.sqrt(len(val_metrics['rmse']))),
             filepath=config.log_dir,
             to_console=False)
 
@@ -165,7 +241,7 @@ def train(config: AttributeHashmap):
 
 def test(config: AttributeHashmap):
     device = torch.device('cpu')
-    train_set, val_set, test_set, num_image_channel = \
+    train_set, val_set, test_set, num_image_channel, num_classes = \
         prepare_dataset_supervised(config=config)
 
     # Build the model
@@ -185,8 +261,7 @@ def test(config: AttributeHashmap):
                                         filters=[16, 32, 64, 128],
                                         strides=[1, 1, 1, 1],
                                         upsample_kernel_size=[1, 1, 1, 1]),
-            torch.nn.Sigmoid()
-        ).to(device)
+            torch.nn.Sigmoid()).to(device)
     else:
         raise ValueError(
             '`main_supervised.py: config.supervised_network = %s is not supported.'
@@ -195,38 +270,83 @@ def test(config: AttributeHashmap):
     log('%s: Model weights successfully loaded.' % config.supervised_network,
         to_console=True)
 
-    loss_fn_supervised = torch.nn.CrossEntropyLoss()
+    if num_classes == 1:
+        loss_fn_supervised = torch.nn.BCELoss()
+    else:
+        loss_fn_supervised = torch.nn.CrossEntropyLoss()
 
-    test_loss, test_dice = 0, []
+    test_loss = 0
+    test_metrics = {
+        'dice': [],
+        'ssim': [],
+        'ergas': [],
+        'rmse': [],
+    }
     model.eval()
 
     with torch.no_grad():
         for _, (x_test, seg_true) in enumerate(test_set):
             x_test = x_test.type(torch.FloatTensor).to(device)
             seg_true = seg_true.type(torch.FloatTensor).to(device)
-            seg_pred = model(x_test).squeeze(1)
-            seg_pred_binary = (seg_pred > 0.5).type(
-                torch.FloatTensor).to(device)
+            seg_pred = model(x_test)
+            if num_classes == 1:
+                seg_pred = seg_pred.squeeze(1).type(
+                    torch.FloatTensor).to(device)
+                seg_pred_metric = (seg_pred > 0.5).type(
+                    torch.FloatTensor).to(device)
+                seg_true = seg_true.type(torch.FloatTensor).to(device)
+            else:
+                seg_pred_metric = torch.argmax(seg_pred, dim=1).type(
+                    torch.LongTensor).to(device)
+                seg_true = seg_true.type(torch.LongTensor).to(device)
 
             loss = loss_fn_supervised(seg_true, seg_pred)
+
             for batch_idx in range(seg_true.shape[0]):
-                test_dice.append(
+                test_metrics['dice'].append(
                     dice_coeff(
-                        seg_pred_binary[batch_idx, ...].cpu().detach().numpy(),
+                        seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
+                        seg_true[batch_idx, ...].cpu().detach().numpy()))
+                test_metrics['ssim'].append(
+                    range_aware_ssim(
+                        seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
+                        seg_true[batch_idx, ...].cpu().detach().numpy()))
+                test_metrics['ergas'].append(
+                    ergas(
+                        seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
+                        seg_true[batch_idx, ...].cpu().detach().numpy()))
+                test_metrics['rmse'].append(
+                    rmse(
+                        seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
                         seg_true[batch_idx, ...].cpu().detach().numpy()))
 
             test_loss += loss.item()
 
-            save_numpy(config=config,
-                       image_batch=x_test,
-                       label_true_batch=seg_true,
-                       label_pred_batch=seg_pred)
+            # NOTE: Currently not saving the files because
+            #       (1) I haven't implemented anything
+            #       to ensure index matching between the test set here
+            #       and the entire set in the unsupervised setting.
+            #       (2) These test samples won't necessarily cover the
+            #       ones we use for figures.
+            #       Potential solution: infer all images for visualization,
+            #       but this will be cheating for the supervised settings
+            #       because they can easily overfit on the training set.
+            #
+            # save_numpy(config=config,
+            #            image_batch=x_test,
+            #            label_true_batch=seg_true,
+            #            label_pred_batch=seg_pred)
 
     test_loss = test_loss / len(test_set)
 
-    log('Test loss: %.3f, dice: %.3f \u00B1 %.3f.' %
-        (test_loss, np.mean(test_dice),
-         np.std(test_dice) / np.sqrt(len(test_dice))),
+    log('Test loss: %.3f, dice: %.3f \u00B1 %.3f, SSIM: %.3f \u00B1 %.3f, ERGAS: %.3f \u00B1 %.3f, RMSE: %.3f \u00B1 %.3f.'
+        % (test_loss, np.mean(test_metrics['dice']),
+           np.std(test_metrics['dice']) / np.sqrt(len(test_metrics['dice'])),
+           np.mean(test_metrics['ssim']), np.std(test_metrics['ssim']) /
+           np.sqrt(len(test_metrics['ssim'])), np.mean(test_metrics['ergas']),
+           np.std(test_metrics['ergas']) / np.sqrt(len(test_metrics['ergas'])),
+           np.mean(test_metrics['rmse']),
+           np.std(test_metrics['rmse']) / np.sqrt(len(test_metrics['rmse']))),
         filepath=config.log_dir,
         to_console=True)
     return
@@ -252,6 +372,8 @@ if __name__ == '__main__':
 
     if args.mode == 'train':
         train(config=config)
+        test(config=config)
+    elif args.mode == 'test':
         test(config=config)
     elif args.mode == 'test':
         test(config=config)
