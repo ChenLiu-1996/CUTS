@@ -382,11 +382,11 @@ def get_persistent_structures(labels: np.array) -> np.array:
 #     return persistent_label
 
 
-def continuous_renumber(label: np.array) -> np.array:
+def continuous_renumber(label_orig: np.array) -> np.array:
     '''
     Renumber the entries of a label map as continous non-negative integers.
     '''
-    label_orig = label.copy()
+    label = label_orig.copy()
     val_before = np.unique(label_orig)
     val_after = np.arange(len(val_before))
     for (a, b) in zip(val_before, val_after):
