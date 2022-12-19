@@ -207,9 +207,9 @@ if __name__ == '__main__':
 
     for sample_idx, image_idx in enumerate(args.image_idx):
 
-        numpy_array_baselines = np.load(files_path_baselines[args.image_idx])
-        numpy_array_kmeans = np.load(files_path_kmeans[args.image_idx])
-        numpy_array_diffusion = np.load(files_path_diffusion[args.image_idx])
+        numpy_array_baselines = np.load(files_path_baselines[image_idx])
+        numpy_array_kmeans = np.load(files_path_kmeans[image_idx])
+        numpy_array_diffusion = np.load(files_path_diffusion[image_idx])
 
         image = numpy_array_diffusion['image']
         recon = numpy_array_diffusion['recon']
@@ -225,19 +225,19 @@ if __name__ == '__main__':
         # We have provided scripts to generate all other results except for STEGO.
         # In case you have not generated STEGO results, we will skip its plotting.
         try:
-            numpy_array_stego = np.load(files_path_stego[args.image_idx])
+            numpy_array_stego = np.load(files_path_stego[image_idx])
             label_stego = numpy_array_stego['label_stego']
         except:
             label_stego = np.zeros_like(label_true)
 
         try:
-            numpy_array_unet = np.load(files_path_supervised_unet[args.image_idx])
+            numpy_array_unet = np.load(files_path_supervised_unet[image_idx])
             label_supervised_unet = numpy_array_unet['label_pred']
         except:
             label_supervised_unet = np.zeros_like(label_true)
 
         try:
-            numpy_array_nnunet = np.load(files_path_supervised_nnunet[args.image_idx])
+            numpy_array_nnunet = np.load(files_path_supervised_nnunet[image_idx])
             label_supervised_nnunet = numpy_array_nnunet['label_pred']
         except:
             label_supervised_nnunet = np.zeros_like(label_true)
