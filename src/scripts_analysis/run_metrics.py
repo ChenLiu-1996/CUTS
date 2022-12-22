@@ -326,8 +326,6 @@ if __name__ == '__main__':
 
         for (entry, p1, p2) in entity_tuples:
             if p2 == 'label_diffusion-best':
-                print(np.argmax([dice_coeff(hashmap['label_true'], hashmap['labels_diffusion'][i, ...]) for i in range(hashmap['labels_diffusion'].shape[0])]))
-
                 # Get the best among all diffusion labels.
                 metrics['dice'][entry].append(
                     max([
