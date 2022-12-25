@@ -8,7 +8,7 @@ import yaml
 from data_utils.prepare_dataset import prepare_dataset, prepare_dataset_supervised
 from tqdm import tqdm
 from utils import AttributeHashmap, EarlyStopping, log, parse_settings, seed_everything
-from utils.metrics import dice_coeff, ergas, range_aware_ssim, rmse
+from utils.metrics import dice_coeff, ergas, guided_relabel, range_aware_ssim, rmse
 
 
 def save_weights(model_save_path: str, model):
@@ -17,8 +17,8 @@ def save_weights(model_save_path: str, model):
     return
 
 
-def load_weights(model_save_path: str, model):
-    model.load_state_dict(torch.load(model_save_path))
+def load_weights(model_save_path: str, model, device: torch.device):
+    model.load_state_dict(torch.load(model_save_path, map_location=device))
     return
 
 
@@ -132,8 +132,10 @@ def train(config: AttributeHashmap):
                         seg_true[batch_idx, ...].cpu().detach().numpy()))
                 train_metrics['ssim'].append(
                     range_aware_ssim(
-                        label_pred=seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
-                        label_true=seg_true[batch_idx, ...].cpu().detach().numpy()))
+                        label_pred=seg_pred_metric[batch_idx,
+                                                   ...].cpu().detach().numpy(),
+                        label_true=seg_true[batch_idx,
+                                            ...].cpu().detach().numpy()))
                 train_metrics['ergas'].append(
                     ergas(
                         seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
@@ -269,7 +271,7 @@ def test(config: AttributeHashmap):
         raise ValueError(
             '`main_supervised.py: config.supervised_network = %s is not supported.'
             % config.supervised_network)
-    load_weights(config.model_save_path, model)
+    load_weights(config.model_save_path, model, device=device)
     log('%s: Model weights successfully loaded.' % config.supervised_network,
         to_console=True)
 
@@ -304,23 +306,35 @@ def test(config: AttributeHashmap):
 
             loss = loss_fn_supervised(seg_pred, seg_true)
 
+            # NOTE: Stictly speaking, we shall not do the guided relabel here
+            # because this is a supervised segmentation task. However, we do
+            # it to make it a "fair comparison" with our unsupervised counterparts.
+            # This DOES NOT CHANGE the binary segmentation results.
+            # This ONLY AFFECTS (improves) the multi-class segmentation results.
+            seg_pred_relabeled = np.zeros_like(
+                seg_pred_metric.cpu().detach().numpy())
+            for batch_idx in range(seg_true.shape[0]):
+                seg_pred_relabeled[batch_idx, ...] = guided_relabel(
+                    label_pred=seg_pred_metric[batch_idx,
+                                               ...].cpu().detach().numpy(),
+                    label_true=seg_true[batch_idx, ...].cpu().detach().numpy())
+
             for batch_idx in range(seg_true.shape[0]):
                 test_metrics['dice'].append(
-                    dice_coeff(
-                        seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
-                        seg_true[batch_idx, ...].cpu().detach().numpy()))
+                    dice_coeff(seg_pred_relabeled[batch_idx, ...],
+                               seg_true[batch_idx,
+                                        ...].cpu().detach().numpy()))
                 test_metrics['ssim'].append(
                     range_aware_ssim(
-                        label_pred=seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
-                        label_true=seg_true[batch_idx, ...].cpu().detach().numpy()))
+                        label_pred=seg_pred_relabeled[batch_idx, ...],
+                        label_true=seg_true[batch_idx,
+                                            ...].cpu().detach().numpy()))
                 test_metrics['ergas'].append(
-                    ergas(
-                        seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
-                        seg_true[batch_idx, ...].cpu().detach().numpy()))
+                    ergas(seg_pred_relabeled[batch_idx, ...],
+                          seg_true[batch_idx, ...].cpu().detach().numpy()))
                 test_metrics['rmse'].append(
-                    rmse(
-                        seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
-                        seg_true[batch_idx, ...].cpu().detach().numpy()))
+                    rmse(seg_pred_relabeled[batch_idx, ...],
+                         seg_true[batch_idx, ...].cpu().detach().numpy()))
 
             test_loss += loss.item()
 
@@ -343,7 +357,8 @@ def infer(config: AttributeHashmap):
     device = torch.device('cpu')
     entire_set, _ = \
         prepare_dataset(config=config, mode='test')
-    _, _, _, num_image_channel, num_classes = prepare_dataset_supervised(config=config)
+    _, _, _, num_image_channel, num_classes = prepare_dataset_supervised(
+        config=config)
 
     # Build the model
     if config.supervised_network == 'unet':
@@ -369,7 +384,7 @@ def infer(config: AttributeHashmap):
         raise ValueError(
             '`main_supervised.py: config.supervised_network = %s is not supported.'
             % config.supervised_network)
-    load_weights(config.model_save_path, model)
+    load_weights(config.model_save_path, model, device=device)
     log('%s: Model weights successfully loaded.' % config.supervised_network,
         to_console=True)
 
@@ -382,8 +397,7 @@ def infer(config: AttributeHashmap):
             if num_classes == 1:
                 seg_pred = seg_pred.squeeze(1).type(
                     torch.FloatTensor).to(device)
-                seg_pred = (seg_pred > 0.5).type(
-                    torch.FloatTensor).to(device)
+                seg_pred = (seg_pred > 0.5).type(torch.FloatTensor).to(device)
                 seg_true = seg_true.type(torch.FloatTensor).to(device)
             else:
                 seg_pred = torch.argmax(seg_pred, dim=1).type(

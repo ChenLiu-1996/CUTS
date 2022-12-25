@@ -239,8 +239,7 @@ if __name__ == '__main__':
             label_stego = np.zeros_like(label_true)
 
         try:
-            numpy_array_unet = np.load(
-                files_path_supervised_unet[image_idx])
+            numpy_array_unet = np.load(files_path_supervised_unet[image_idx])
             label_supervised_unet = numpy_array_unet['label_pred']
         except:
             label_supervised_unet = np.zeros_like(label_true)

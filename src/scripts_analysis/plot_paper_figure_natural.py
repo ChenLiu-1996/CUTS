@@ -175,10 +175,10 @@ if __name__ == '__main__':
                                         'numpy_files_seg_baselines')
     files_folder_stego = '%s/%s' % (config.output_save_path,
                                     'numpy_files_seg_STEGO')
-    files_folder_supervised_unet = '%s/%s' % (config.output_save_path,
-                                   'numpy_files_seg_supervised_unet')
-    files_folder_supervised_nnunet = '%s/%s' % (config.output_save_path,
-                                     'numpy_files_seg_supervised_nnunet')
+    files_folder_supervised_unet = '%s/%s' % (
+        config.output_save_path, 'numpy_files_seg_supervised_unet')
+    files_folder_supervised_nnunet = '%s/%s' % (
+        config.output_save_path, 'numpy_files_seg_supervised_nnunet')
     files_folder_kmeans = '%s/%s' % (config.output_save_path,
                                      'numpy_files_seg_kmeans')
     files_folder_diffusion = '%s/%s' % (config.output_save_path,
@@ -192,8 +192,10 @@ if __name__ == '__main__':
     files_path_baselines = sorted(
         glob('%s/%s' % (files_folder_baselines, '*.npz')))
     files_path_stego = sorted(glob('%s/%s' % (files_folder_stego, '*.npz')))
-    files_path_supervised_unet = sorted(glob('%s/%s' % (files_folder_supervised_unet, '*.npz')))
-    files_path_supervised_nnunet = sorted(glob('%s/%s' % (files_folder_supervised_nnunet, '*.npz')))
+    files_path_supervised_unet = sorted(
+        glob('%s/%s' % (files_folder_supervised_unet, '*.npz')))
+    files_path_supervised_nnunet = sorted(
+        glob('%s/%s' % (files_folder_supervised_nnunet, '*.npz')))
     files_path_kmeans = sorted(glob('%s/%s' % (files_folder_kmeans, '*.npz')))
     files_path_diffusion = sorted(
         glob('%s/%s' % (files_folder_diffusion, '*.npz')))
@@ -237,7 +239,8 @@ if __name__ == '__main__':
             label_supervised_unet = np.zeros_like(label_true)
 
         try:
-            numpy_array_nnunet = np.load(files_path_supervised_nnunet[image_idx])
+            numpy_array_nnunet = np.load(
+                files_path_supervised_nnunet[image_idx])
             label_supervised_nnunet = numpy_array_nnunet['label_pred']
         except:
             label_supervised_nnunet = np.zeros_like(label_true)
@@ -247,7 +250,8 @@ if __name__ == '__main__':
 
         persistent_structures = get_persistent_structures(
             labels_diffusion.reshape((B, H, W)))
-        seg_kmeans = label_hint_seg(label_pred=label_kmeans, label_true=label_true)
+        seg_kmeans = label_hint_seg(label_pred=label_kmeans,
+                                    label_true=label_true)
 
         data_hashmap = {
             'image': image,
@@ -266,8 +270,8 @@ if __name__ == '__main__':
             'persistent_structures': persistent_structures,
         }
 
-        phate_path = '%s/sample_%s.npz' % (phate_folder, str(
-            image_idx).zfill(5))
+        phate_path = '%s/sample_%s.npz' % (phate_folder,
+                                           str(image_idx).zfill(5))
         if os.path.exists(phate_path):
             # Load the phate data if exists.
             data_phate_numpy = np.load(phate_path)
@@ -275,7 +279,7 @@ if __name__ == '__main__':
         else:
             # Otherwise, generate the phate data.
             phate_op = phate.PHATE(random_state=random_seed,
-                                n_jobs=config.num_workers)
+                                   n_jobs=config.num_workers)
 
             data_phate = phate_op.fit_transform(normalize(latent, axis=1))
             with open(phate_path, 'wb+') as f:
@@ -285,13 +289,15 @@ if __name__ == '__main__':
             fig = plot_comparison(fig=fig,
                                   num_samples=num_samples,
                                   sample_idx=sample_idx,
-                                  data_hashmap=data_hashmap, data_phate=data_phate)
+                                  data_hashmap=data_hashmap,
+                                  data_phate=data_phate)
         else:
             fig = plot_results(fig=fig,
                                num_samples=num_samples,
-                               sample_idx=sample_idx,data_hashmap=data_hashmap,
-                            data_phate=data_phate,
-                            granularities=granularities)
+                               sample_idx=sample_idx,
+                               data_hashmap=data_hashmap,
+                               data_phate=data_phate,
+                               granularities=granularities)
 
     figure_str = ''
     for image_idx in args.image_idx:

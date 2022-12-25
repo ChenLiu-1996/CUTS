@@ -10,7 +10,7 @@ from tqdm import tqdm
 sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
 from utils.diffusion_condensation import get_persistent_structures
-from utils.metrics import dice_coeff, ergas, rmse, range_aware_ssim
+from utils.metrics import dice_coeff, ergas, rmse, range_aware_ssim, guided_relabel
 from utils.parse import parse_settings
 from utils.segmentation import label_hint_seg
 
@@ -145,40 +145,6 @@ def persistent_structures(hashmap: dict) -> dict:
 
 #     return best_metric
 
-
-def guided_relabel(label_pred: np.array, label_true: np.array) -> np.array:
-    '''
-    Relabel (i.e., update label index) `label_pred` such that it best matches `label_true`.
-
-    For each label index, assign an one-hot vector (flattened pixel values),
-    and compute the IOU among each pair of such one-hot vectors b/w `label_pred` and `label_true`.
-    '''
-    assert label_pred.shape == label_true.shape
-    H, W = label_pred.shape
-
-    label_pred_vec = np.array(
-        [label_pred.reshape(H * W) == i for i in np.unique(label_pred)],
-        dtype=np.int16)
-    label_true_vec = np.array(
-        [label_true.reshape(H * W) == i for i in np.unique(label_true)],
-        dtype=np.int16)
-
-    # Use matrix multiplication to get intersection matrix.
-    intersection_matrix = np.matmul(label_pred_vec, label_true_vec.T)
-
-    # Use matrix multiplication to get union matrix.
-    union_matrix = H * W - np.matmul(1 - label_pred_vec,
-                                     (1 - label_true_vec).T)
-
-    iou_matrix = intersection_matrix / union_matrix
-
-    renumbered_label_pred = np.zeros_like(label_pred)
-    for i, label_pred_idx in enumerate(np.unique(label_pred)):
-        pix_loc = label_pred == label_pred_idx
-        label_true_idx = np.unique(label_true)[np.argmax(iou_matrix[i, :])]
-        renumbered_label_pred[pix_loc] = label_true_idx
-
-    return renumbered_label_pred
 
 
 if __name__ == '__main__':

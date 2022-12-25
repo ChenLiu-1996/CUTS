@@ -134,8 +134,8 @@ In this case, the `latent_evaluator` will indeed act as a numpy results saver. S
 
 </details>
 
-#### Comparison: To train a UNet model.
+#### Comparison: To train a supervised model.
 ```
 ## Under $CUTS_ROOT/supervised_experiments/
-python main_unet.py --mode train
+python main_supervised.py --mode train --config ../$CONFIG_FILE.yaml
 ```
