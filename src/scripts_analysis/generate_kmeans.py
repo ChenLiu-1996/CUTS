@@ -36,9 +36,8 @@ if __name__ == '__main__':
 
     for image_idx in tqdm(range(32, len(np_files_path))):
         '''
-        Because of the frequent deadlock problem, I decided to
-        use the following solution:
-        kill process and restart whenever a process is taking too long.
+        Because of the frequent deadlock problem, I decided to use the following solution:
+        kill and restart whenever a process is taking too long (likely due to deadlock).
         '''
 
         load_path = np_files_path[image_idx]
@@ -47,12 +46,6 @@ if __name__ == '__main__':
 
         folder = '/'.join(
             os.path.dirname(os.path.abspath(__file__)).split('/'))
-        # proc = subprocess.Popen([
-        #     'python3', folder + '/helper_generate_kmeans.py', '--load_path',
-        #     load_path, '--save_path', save_path
-        # ],
-        #                         stdout=subprocess.PIPE,
-        #                         stderr=subprocess.PIPE)
 
         max_wait_sec = 60
         file_success = False
