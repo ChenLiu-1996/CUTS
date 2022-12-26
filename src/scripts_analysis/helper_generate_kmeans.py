@@ -17,6 +17,7 @@ warnings.filterwarnings("ignore")
 def generate_kmeans(shape: Tuple[int],
                     latent: np.array,
                     label_true: np.array,
+                    num_workers: int = 1,
                     random_seed: int = 1) -> Tuple[float, np.array, np.array]:
 
     H, W, C = shape
@@ -31,7 +32,7 @@ def generate_kmeans(shape: Tuple[int],
                                  t=2,
                                  verbose=False,
                                  random_state=random_seed,
-                                 n_jobs=4)
+                                 n_jobs=num_workers)
 
     phate_operator.fit_transform(latent)
     clusters = phate.cluster.kmeans(phate_operator,
@@ -50,6 +51,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--load_path', type=str, required=True)
     parser.add_argument('--save_path', type=str, required=True)
+    parser.add_argument('--num_workers', type=int, required=True)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
@@ -64,8 +66,8 @@ if __name__ == '__main__':
     C = latent.shape[-1]
     X = latent
 
-    dice_score, label_pred, seg_pred = generate_kmeans((H, W, C), latent,
-                                                       label_true)
+    dice_score, label_pred, seg_pred = generate_kmeans(
+        (H, W, C), latent, label_true, num_workers=args.num_workers)
 
     with open(args.save_path, 'wb+') as f:
         np.savez(f,
