@@ -6,7 +6,13 @@ import yaml
 from data_utils.prepare_dataset import prepare_dataset
 from model import CUTSEncoder
 from tqdm import tqdm
-from utils import AttributeHashmap, EarlyStopping, LatentEvaluator, NTXentLoss, log, parse_settings, seed_everything
+from utils.attribute_hashmap import AttributeHashmap
+from utils.early_stop import EarlyStopping
+from utils.log_util import log
+from utils.losses import NTXentLoss
+from utils.output_saver import OutputSaver
+from utils.parse import parse_settings
+from utils.seed import seed_everything
 
 
 def train(config: AttributeHashmap):
@@ -120,7 +126,7 @@ def test(config: AttributeHashmap):
 
     loss_fn_recon = torch.nn.MSELoss()
     loss_fn_contrastive = NTXentLoss()
-    latent_evaluator = LatentEvaluator(
+    output_saver = OutputSaver(
         segmentation_paradigm=config.segmentation_paradigm,
         pos_enc_gamma=config.pos_enc_gamma,
         save_path=config.output_save_path,
@@ -154,22 +160,17 @@ def test(config: AttributeHashmap):
             patch_recon = patch_recon[:, :, :, P // 2, P // 2]
             patch_recon = patch_recon.permute((0, 2, 1)).reshape(B, C, H, W)
 
-            dice_coeffs = latent_evaluator.eval(image_batch=x_test,
-                                                recon_batch=patch_recon,
-                                                label_true_batch=y_test,
-                                                latent_batch=z,
-                                                metric=config.test_metric)
-            test_dice_coeffs.extend(dice_coeffs)
+            output_saver.save(image_batch=x_test,
+                              recon_batch=patch_recon,
+                              label_true_batch=y_test,
+                              latent_batch=z)
 
     test_loss_recon = test_loss_recon / len(test_set)
     test_loss_contrastive = test_loss_contrastive / len(test_set)
     test_loss = test_loss / len(test_set)
-    test_dice_coeffs_mean, test_dice_coeffs_sem = \
-        np.mean(test_dice_coeffs), np.std(test_dice_coeffs)/np.sqrt(len(test_dice_coeffs))
 
-    log('Test recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f. dice coeff: %.3f \u00B1 %.3f'
-        % (test_loss_recon, test_loss_contrastive, test_loss,
-           test_dice_coeffs_mean, test_dice_coeffs_sem),
+    log('Test recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f.' %
+        (test_loss_recon, test_loss_contrastive, test_loss),
         filepath=config.log_dir,
         to_console=True)
     return

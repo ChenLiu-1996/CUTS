@@ -12,13 +12,9 @@ def parse_settings(config: AttributeHashmap, log_settings: bool = True):
     # fix path issues
     CUTS_ROOT = '/'.join(
         os.path.dirname(os.path.abspath(__file__)).split('/')[:-2])
-
-    config.dataset_path = config.dataset_path.replace('$CUTS_ROOT', CUTS_ROOT)
-    config.model_save_path = config.model_save_path.replace(
-        '$CUTS_ROOT', CUTS_ROOT)
-    config.output_save_path = config.output_save_path.replace(
-        '$CUTS_ROOT', CUTS_ROOT)
-    config.log_folder = config.log_folder.replace('$CUTS_ROOT', CUTS_ROOT)
+    for key in config.keys():
+        if type(config[key]) == str and '$CUTS_ROOT' in config[key]:
+            config[key] = config[key].replace('$CUTS_ROOT', CUTS_ROOT)
 
     # for ablation test
     if 'model_setting' in config.keys() and config.model_setting == 'no_recon':
