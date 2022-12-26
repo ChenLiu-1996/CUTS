@@ -36,7 +36,7 @@ if __name__ == '__main__':
     os.makedirs(save_path_numpy, exist_ok=True)
 
     dice_list = []
-    for image_idx in tqdm(range(52,len(np_files_path))):
+    for image_idx in tqdm(range(len(np_files_path))):
         '''
         Because of the frequent deadlock problem, I decided to use the following solution:
         kill and restart whenever a process is taking too long (likely due to deadlock).
@@ -59,7 +59,8 @@ if __name__ == '__main__':
                     proc = subprocess.Popen([
                         'python3', folder + '/helper_generate_kmeans.py',
                         '--load_path', load_path, '--save_path', save_path,
-                        '--num_workers', str(num_workers)
+                        '--num_workers',
+                        str(num_workers)
                     ],
                                             stdout=subprocess.PIPE,
                                             stderr=subprocess.PIPE)
