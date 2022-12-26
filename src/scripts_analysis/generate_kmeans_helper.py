@@ -75,3 +75,5 @@ if __name__ == '__main__':
                  latent=latent,
                  label_kmeans=label_pred,
                  seg_kmeans=seg_pred)
+
+    print('1')

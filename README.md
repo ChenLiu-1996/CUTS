@@ -115,8 +115,6 @@ export MKL_THREADING_LAYER=GNU
 ```
 before running some of the code code to avoid dead lock.
 
-**UPDATE Dec 2022**: I found a better way to solve this issue. Now it's following a try-and-retry approach and the problem is circumvented.
-
 For details, see https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md.
 </details>
 

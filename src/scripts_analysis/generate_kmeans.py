@@ -34,7 +34,7 @@ if __name__ == '__main__':
                                  'numpy_files_seg_kmeans')
     os.makedirs(save_path_numpy, exist_ok=True)
 
-    for image_idx in tqdm(range(30, len(np_files_path))):
+    for image_idx in tqdm(range(31, len(np_files_path))):
         '''
         Because of the frequent deadlock problem, I decided to
         use the following solution:
@@ -50,20 +50,29 @@ if __name__ == '__main__':
         proc = subprocess.Popen([
             'python3', folder + '/generate_kmeans_helper.py', '--load_path',
             load_path, '--save_path', save_path
-        ])
+        ], stdout=subprocess.PIPE)
 
-        max_wait_sec = 60
+        max_wait_sec = 30
         interval_sec = 1
         file_success = False
         while not file_success:
             start = time.time()
-            result = proc.poll()
             while True:
+                # result = proc.poll()
+                # result = proc.wait(max_wait_sec)
+                result, stderr = proc.communicate()
+                print('here', result)
                 if result is not None:
                     file_success = True
                     break
                 if time.time() - start >= max_wait_sec:
                     file_success = False
+                    proc.terminate()
+                    proc = subprocess.Popen([
+                        'python3', folder + '/generate_kmeans_helper.py',
+                        '--load_path', load_path, '--save_path', save_path
+                    ],
+                                            stdout=subprocess.PIPE)
                     print('Time out! Restart subprocess.')
                     break
                 time.sleep(interval_sec)
