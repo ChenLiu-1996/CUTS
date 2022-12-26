@@ -34,7 +34,7 @@ if __name__ == '__main__':
                                  'numpy_files_seg_kmeans')
     os.makedirs(save_path_numpy, exist_ok=True)
 
-    for image_idx in tqdm(range(32, len(np_files_path))):
+    for image_idx in tqdm(range(len(np_files_path))):
         '''
         Because of the frequent deadlock problem, I decided to use the following solution:
         kill and restart whenever a process is taking too long (likely due to deadlock).
