@@ -31,7 +31,7 @@ def generate_kmeans(shape: Tuple[int],
                                  t=2,
                                  verbose=False,
                                  random_state=random_seed,
-                                 n_jobs=2)
+                                 n_jobs=4)
 
     phate_operator.fit_transform(latent)
     clusters = phate.cluster.kmeans(phate_operator,
@@ -67,7 +67,6 @@ if __name__ == '__main__':
     dice_score, label_pred, seg_pred = generate_kmeans((H, W, C), latent,
                                                        label_true)
 
-    print(args.load_path.split('/')[-1], 'dice:', dice_score)
     with open(args.save_path, 'wb+') as f:
         np.savez(f,
                  image=image,
@@ -76,4 +75,5 @@ if __name__ == '__main__':
                  label_kmeans=label_pred,
                  seg_kmeans=seg_pred)
 
-    print('1')
+    sys.stdout.write('SUCCESS! %s, dice: %s' %
+                     (args.load_path.split('/')[-1], dice_score))

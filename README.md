@@ -107,13 +107,15 @@ python run_metrics.py --config ../../config/$CONFIG_FILE.yaml
 
 ### Special NOTES
 <details>
-  <summary>1. Regarding occasional "deadlock" when generating results (`generate_kmeans.py` and `generate_diffusion.py`).</summary>
+  <summary>1. Regarding occasional "deadlock" when generating results (especially `generate_kmeans.py`).</summary>
 
 On our YCRC server, sometimes we need to run
 ```
 export MKL_THREADING_LAYER=GNU
 ```
-before running some of the code code to avoid dead lock.
+before running some of the code code to minimize the risk of dead lock.
+
+UPDATE Dec 26, 2022: I finally succeeded in writing a workaround to avoid running the script over and over again from the first incomplete file whenever a deadlock is hit! The method is simple: in `generate_kmeans.py` we now outsource the kmeans computation and numpy saving to a helper file `helper_generate_kmeans.py`, and we kill and restart the helper whenever a deadlock causes the process to timeout.
 
 For details, see https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md.
 </details>

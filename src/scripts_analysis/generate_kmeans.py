@@ -34,7 +34,7 @@ if __name__ == '__main__':
                                  'numpy_files_seg_kmeans')
     os.makedirs(save_path_numpy, exist_ok=True)
 
-    for image_idx in tqdm(range(31, len(np_files_path))):
+    for image_idx in tqdm(range(32, len(np_files_path))):
         '''
         Because of the frequent deadlock problem, I decided to
         use the following solution:
@@ -47,34 +47,39 @@ if __name__ == '__main__':
 
         folder = '/'.join(
             os.path.dirname(os.path.abspath(__file__)).split('/'))
-        proc = subprocess.Popen([
-            'python3', folder + '/generate_kmeans_helper.py', '--load_path',
-            load_path, '--save_path', save_path
-        ], stdout=subprocess.PIPE)
+        # proc = subprocess.Popen([
+        #     'python3', folder + '/helper_generate_kmeans.py', '--load_path',
+        #     load_path, '--save_path', save_path
+        # ],
+        #                         stdout=subprocess.PIPE,
+        #                         stderr=subprocess.PIPE)
 
-        max_wait_sec = 30
-        interval_sec = 1
+        max_wait_sec = 60
         file_success = False
         while not file_success:
             start = time.time()
             while True:
-                # result = proc.poll()
-                # result = proc.wait(max_wait_sec)
-                result, stderr = proc.communicate()
-                print('here', result)
-                if result is not None:
-                    file_success = True
-                    break
-                if time.time() - start >= max_wait_sec:
-                    file_success = False
-                    proc.terminate()
+                try:
                     proc = subprocess.Popen([
-                        'python3', folder + '/generate_kmeans_helper.py',
+                        'python3', folder + '/helper_generate_kmeans.py',
                         '--load_path', load_path, '--save_path', save_path
                     ],
-                                            stdout=subprocess.PIPE)
-                    print('Time out! Restart subprocess.')
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE)
+                    stdout, stderr = proc.communicate(timeout=max_wait_sec)
+                    stdout, stderr = str(stdout), str(stderr)
+                    stdout = stdout.lstrip('b\'').rstrip('\'')
+                    stderr = stderr.lstrip('b\'').rstrip('\'')
+                    print(image_idx, stdout, stderr)
+
+                    proc.kill()
+                    # This is determined by the sys.stdout in `helper_generate_kmeans.py`
+                    if stdout[:8] == 'SUCCESS!':
+                        file_success = True
                     break
-                time.sleep(interval_sec)
+
+                except subprocess.TimeoutExpired:
+                    print('Time out! Restart subprocess.')
+                    proc.kill()
 
     print('All kmeans results generated.')

@@ -74,7 +74,7 @@ if __name__ == '__main__':
         X = latent
 
         labels_pred, granularities, levels, gradients = generate_diffusion(
-            (H, W, C), latent)
+            (H, W, C), latent, num_workers=config.num_workers)
 
         with open(
                 '%s/%s' %
