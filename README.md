@@ -107,35 +107,21 @@ python run_metrics.py --config ../../config/$CONFIG_FILE.yaml
 
 ### Special NOTES
 <details>
-  <summary>1. Regarding occasional "deadlock" when generating/plotting results.</summary>
+  <summary>1. Regarding occasional "deadlock" when generating results (`generate_kmeans.py` and `generate_diffusion.py`).</summary>
 
 On our YCRC server, sometimes we need to run
 ```
 export MKL_THREADING_LAYER=GNU
 ```
-before running some results generation/plotting/analysis code to avoid dead lock.
+before running some of the code code to avoid dead lock.
+
+**UPDATE Dec 2022**: I found a better way to solve this issue. Now it's following a try-and-retry approach and the problem is circumvented.
 
 For details, see https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md.
 </details>
 
-<details>
-  <summary>2. Regarding `latent_evaluator` and reported dice coeff in `test` mode.</summary>
-
-You may notice something called `latent_evaluator` in `main.py`.
-
-At first, I wrote it to evaluate the model during test time. However, eventually I decided to off-source this kind of jobs to separate scripts under the `scripts_analysis` folder, and rather use it as a numpy results saver. As of now, I haven't changed `latent_evaluator` to `results_saver`, but I may do that at some point.
-
-Along the same lines, you could feel free to leave the following hyperparameters as-is in your config yaml:
-```
-segmentation_paradigm: 'kmeans_point'
-test_metric: None
-```
-In this case, the `latent_evaluator` will indeed act as a numpy results saver. Since no evaluation is actually performed, the logging will say: **dice coeff: nan ± nan, which is not a bug and you shall not be scared of it**.
-
-</details>
-
 #### Comparison: To train a supervised model.
 ```
-## Under $CUTS_ROOT/supervised_experiments/
+## Under $CUTS_ROOT/src/
 python main_supervised.py --mode train --config ../$CONFIG_FILE.yaml
 ```

@@ -1,6 +1,8 @@
 import argparse
 import os
+import subprocess
 import sys
+import time
 import warnings
 from glob import glob
 from typing import Tuple
@@ -37,7 +39,7 @@ def generate_diffusion(
     labels_pred = np.array([catch_op.NxTs[lvl] for lvl in levels])
     granularities = [len(catch_op.NxTs) + lvl for lvl in levels]
 
-    return granularities, labels_pred
+    return labels_pred, granularities, levels, catch_op.gradient
 
 
 if __name__ == '__main__':
@@ -60,32 +62,37 @@ if __name__ == '__main__':
     os.makedirs(save_path_numpy, exist_ok=True)
 
     for image_idx in tqdm(range(len(np_files_path))):
-        numpy_array = np.load(np_files_path[image_idx])
-        image = numpy_array['image']
-        recon = numpy_array['recon']
-        label_true = numpy_array['label']
-        latent = numpy_array['latent']
+        '''
+        Because of the frequent deadlock problem, I decided to
+        use the following solution:
+        kill process and restart whenever a process is taking too long.
+        '''
 
-        image = (image + 1) / 2
-        recon = (recon + 1) / 2
+        load_path = np_files_path[image_idx]
+        save_path = '%s/%s' % (save_path_numpy,
+                               'sample_%s.npz' % str(image_idx).zfill(5))
 
-        H, W = label_true.shape[:2]
-        C = latent.shape[-1]
-        X = latent
+        folder = '/'.join(
+            os.path.dirname(os.path.abspath(__file__)).split('/'))
+        proc = subprocess.Popen([
+            'python3', folder + '/generate_diffusion_helper.py', '--load_path',
+            load_path, '--save_path', save_path
+        ])
 
-        granularities, labels_pred = generate_diffusion(
-            (H, W, C), latent, num_workers=config.num_workers)
-
-        with open(
-                '%s/%s' %
-            (save_path_numpy, 'sample_%s.npz' % str(image_idx).zfill(5)),
-                'wb+') as f:
-            np.savez(f,
-                     image=image,
-                     recon=recon,
-                     label=label_true,
-                     latent=latent,
-                     granularities_diffusion=granularities,
-                     labels_diffusion=labels_pred)
+        max_wait_sec = 300
+        interval_sec = 1
+        file_success = False
+        while not file_success:
+            start = time.time()
+            result = proc.poll()
+            while True:
+                if result is not None:
+                    file_success = True
+                    break
+                if time.time() - start >= max_wait_sec:
+                    file_success = False
+                    print('Time out! Restart subprocess.')
+                    break
+                time.sleep(interval_sec)
 
     print('All diffusion results generated.')

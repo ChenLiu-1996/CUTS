@@ -25,7 +25,7 @@ class OutputSaver(object):
         self.save_path_numpy = '%s/%s/' % (save_path, 'numpy_files')
         os.makedirs(self.save_path_numpy, exist_ok=True)
 
-    def eval(
+    def save(
         self,
         image_batch: torch.Tensor,
         recon_batch: torch.Tensor,

@@ -127,13 +127,10 @@ def test(config: AttributeHashmap):
     loss_fn_recon = torch.nn.MSELoss()
     loss_fn_contrastive = NTXentLoss()
     output_saver = OutputSaver(
-        segmentation_paradigm=config.segmentation_paradigm,
-        pos_enc_gamma=config.pos_enc_gamma,
         save_path=config.output_save_path,
-        num_workers=config.num_workers,
         random_seed=config.random_seed)
 
-    test_loss_recon, test_loss_contrastive, test_loss, test_dice_coeffs = 0, 0, 0, []
+    test_loss_recon, test_loss_contrastive, test_loss = 0, 0, 0
     model.eval()
 
     with torch.no_grad():
