@@ -10,17 +10,15 @@ import scipy.ndimage
 import skimage.feature
 import skimage.segmentation
 import yaml
-from skimage.metrics import structural_similarity as ssim
 from tqdm import tqdm
 
 sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
 from utils.parse import parse_settings
+from utils.seed import seed_everything
 
 
 def get_baseline_predictions(img: np.array, method: str):
-    H, W, C = img.shape
-
     img = (img + 1) / 2
     img = (img * 255).astype(np.uint8)
 
@@ -73,6 +71,8 @@ if __name__ == '__main__':
     os.makedirs(save_path_numpy, exist_ok=True)
 
     methods = ['random', 'watershed', 'felzenszwalb']
+
+    seed_everything(config.random_seed)
 
     for image_idx in tqdm(range(len(np_files_path))):
         numpy_array = np.load(np_files_path[image_idx])
