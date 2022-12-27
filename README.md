@@ -1,7 +1,7 @@
 # CUTS: A Fully Unsupervised Framework for Medical Image Segmentation
 ### Krishnaswamy Lab, Yale University
 [![Twitter](https://img.shields.io/twitter/follow/KrishnaswamyLab.svg?style=social&label=Follow)](https://twitter.com/KrishnaswamyLab)
-[![License](https://anaconda.org/bioconda/phate/badges/version.svg)](https://anaconda.org/bioconda/phate/)
+[![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/UnsupervisedMedicalSeg.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/UnsupervisedMedicalSeg/)
 
 
 ## Dependencies
