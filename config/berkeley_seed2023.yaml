@@ -1,0 +1,17 @@
+dataset_name: 'berkeley'
+dataset_path: '$CUTS_ROOT/data/berkeley_image_segmentation/'
+model_save_path: '$CUTS_ROOT/checkpoints/berkeley_seed2023.pty'
+output_save_path: '$CUTS_ROOT/results/berkeley_seed2023/'
+log_folder: '$CUTS_ROOT/logs'
+model_setting: 'full' # 'full', 'no_recon', 'no_contrastive'
+learning_rate: 1e-3
+weight_decay: 1e-4
+max_epochs: 200
+patience: 10
+batch_size: 16
+num_kernels: 16
+sampled_patches_per_image: 16 # recommend: 4 or above.
+num_workers: 8
+lambda_contrastive_loss: 0.01  # Between 0 and 1. no_recon == 1. no_contrastive == 0.
+random_seed: 2023
+train_val_ratio: '7:3'
