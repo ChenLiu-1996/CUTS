@@ -10,7 +10,7 @@ from tqdm import tqdm
 sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
 from utils.diffusion_condensation import get_persistent_structures
-from utils.metrics import dice_coeff, ergas, rmse, range_aware_ssim, guided_relabel
+from utils.metrics import dice_coeff, ergas, guided_relabel, range_aware_ssim, rmse
 from utils.parse import parse_settings
 from utils.segmentation import label_hint_seg
 
@@ -62,7 +62,8 @@ def combine_hashmaps(*args: dict) -> dict:
     combined = {}
     for hashmap in args:
         for k in hashmap.keys():
-            combined[k] = hashmap[k]
+            if k not in combined.keys():
+                combined[k] = hashmap[k]
     return combined
 
 
@@ -144,8 +145,6 @@ def persistent_structures(hashmap: dict) -> dict:
 #             best_metric = max(best_metric, metric)
 
 #     return best_metric
-
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -277,10 +276,11 @@ if __name__ == '__main__':
         # Re-label the label indices for multi-class labels.
         if not hparams.is_binary:
             # Relabel each of the diffusion labels.
-            for i in range(hashmap['labels_diffusion'].shape[0]):
-                hashmap['labels_diffusion'][i, ...] = guided_relabel(
-                    label_pred=hashmap['labels_diffusion'][i, ...],
-                    label_true=hashmap['label_true'])
+            if has_diffusion:
+                for i in range(hashmap['labels_diffusion'].shape[0]):
+                    hashmap['labels_diffusion'][i, ...] = guided_relabel(
+                        label_pred=hashmap['labels_diffusion'][i, ...],
+                        label_true=hashmap['label_true'])
 
             for (_, _, p2) in entity_tuples:
                 if p2 not in hashmap.keys():

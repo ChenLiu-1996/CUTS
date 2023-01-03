@@ -21,6 +21,13 @@ if __name__ == '__main__':
     parser.add_argument('--config',
                         help='Path to config yaml file.',
                         required=True)
+    parser.add_argument(
+        '-t',
+        '--max-wait-sec',
+        help='Max wait time in seconds for each process.' + \
+            'Consider increasing if you hit too many TimeOuts.',
+        type=int,
+        default=60)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
@@ -50,7 +57,6 @@ if __name__ == '__main__':
         folder = '/'.join(
             os.path.dirname(os.path.abspath(__file__)).split('/'))
 
-        max_wait_sec = 60
         file_success = False
         while not file_success:
             start = time.time()
@@ -64,7 +70,8 @@ if __name__ == '__main__':
                     ],
                                             stdout=subprocess.PIPE,
                                             stderr=subprocess.PIPE)
-                    stdout, stderr = proc.communicate(timeout=max_wait_sec)
+                    stdout, stderr = proc.communicate(
+                        timeout=args.max_wait_sec)
                     stdout, stderr = str(stdout), str(stderr)
                     stdout = stdout.lstrip('b\'').rstrip('\'')
                     stderr = stderr.lstrip('b\'').rstrip('\'')
