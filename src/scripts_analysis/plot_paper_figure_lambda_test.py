@@ -5,9 +5,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 if __name__ == '__main__':
-    num_files = 56
-    sem_to_std = np.sqrt(num_files)
-
     lambda_contrastive = [0, 0.001, 0.01, 0.03, 0.1, 0.5, 0.9, 1]
     dice_mean = [0.682, 0.682, 0.690, 0.634, 0.550, 0.546, 0.502, 0.471]
     dice_sem = [0.028, 0.029, 0.028, 0.030, 0.028, 0.031, 0.028, 0.047]
@@ -41,24 +38,38 @@ if __name__ == '__main__':
 
     fig = plt.figure(figsize=(22, 5))
     ax = fig.add_subplot(1, 4, 1)
-    ax.plot(log_x, dice_mean, c='firebrick', linewidth=2)
+    ax.plot(log_x, dice_mean, c='darkblue', linewidth=2)
     ax.fill_between(log_x,
                     np.array(dice_mean) - np.array(dice_sem),
                     np.array(dice_mean) + np.array(dice_sem),
-                    color='firebrick',
+                    color='darkblue',
                     alpha=0.5)
+    ymin, ymax = ax.get_ylim()
+    ax.vlines(x=log_x[np.argmax(dice_mean)],
+              ymin=ymin,
+              ymax=dice_mean[np.argmax(dice_mean)],
+              colors='k',
+              linestyles='dashed')
+    ax.set_ylim(ymin, ymax)
     ax.set_xticks(log_x)
     ax.set_xticklabels(xticklabels)
     ax.set_xlabel('\nWeighting Coefficient \u03BB (Log Scale)', fontsize=12)
     ax.set_ylabel('Dice\n(HIGHER is better)', fontsize=12)
 
     ax = fig.add_subplot(1, 4, 2)
-    ax.plot(log_x, ssim_mean, c='firebrick', linewidth=2)
+    ax.plot(log_x, ssim_mean, c='darkblue', linewidth=2)
     ax.fill_between(log_x,
                     np.array(ssim_mean) - np.array(ssim_sem),
                     np.array(ssim_mean) + np.array(ssim_sem),
-                    color='firebrick',
+                    color='darkblue',
                     alpha=0.5)
+    ymin, ymax = ax.get_ylim()
+    ax.vlines(x=log_x[np.argmax(ssim_mean)],
+              ymin=ymin,
+              ymax=ssim_mean[np.argmax(ssim_mean)],
+              colors='k',
+              linestyles='dashed')
+    ax.set_ylim(ymin, ymax)
     ax.set_xticks(log_x)
     ax.set_xticklabels(xticklabels)
     ax.set_xlabel('\nWeighting Coefficient \u03BB (Log Scale)', fontsize=12)
@@ -71,6 +82,13 @@ if __name__ == '__main__':
                     np.array(ergas_mean) + np.array(ergas_sem),
                     color='firebrick',
                     alpha=0.5)
+    ymin, ymax = ax.get_ylim()
+    ax.vlines(x=log_x[np.argmin(ergas_mean)],
+              ymin=ymin,
+              ymax=ergas_mean[np.argmin(ergas_mean)],
+              colors='k',
+              linestyles='dashed')
+    ax.set_ylim(ymin, ymax)
     ax.set_xticks(log_x)
     ax.set_xticklabels(xticklabels)
     ax.set_xlabel('\nWeighting Coefficient \u03BB (Log Scale)', fontsize=12)
@@ -83,6 +101,13 @@ if __name__ == '__main__':
                     np.array(rmse_mean) + np.array(rmse_sem),
                     color='firebrick',
                     alpha=0.5)
+    ymin, ymax = ax.get_ylim()
+    ax.vlines(x=log_x[np.argmin(rmse_mean)],
+              ymin=ymin,
+              ymax=rmse_mean[np.argmin(rmse_mean)],
+              colors='k',
+              linestyles='dashed')
+    ax.set_ylim(ymin, ymax)
     ax.set_xticks(log_x)
     ax.set_xticklabels(xticklabels)
     ax.set_xlabel('\nWeighting Coefficient \u03BB (Log Scale)', fontsize=12)
