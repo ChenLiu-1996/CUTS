@@ -6,7 +6,7 @@
 
 ### The repository is structured in the following manner.
 ```
-CUTS
+UnsupervisedMedicalSeg (CUTS)
     ├── checkpoints: model weights are saved here.
     ├── config: configuration yaml files.
     ├── data: folders containing data used.
