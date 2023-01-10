@@ -10,7 +10,7 @@ UnsupervisedMedicalSeg (CUTS)
     ├── checkpoints: model weights are saved here.
     ├── config: configuration yaml files.
     ├── data: folders containing data used.
-    |   ├── berkeley_image_segmentation
+    |   ├── berkeley_natural_images
     |   ├── brain_ventricles
     |   └── retina
     ├── logs: training log files.
@@ -18,7 +18,7 @@ UnsupervisedMedicalSeg (CUTS)
     └── src
         ├── data_utils
         ├── datasets: defines how to access and process the data in `CUTS/data/`.
-        |   ├── `berkeley_segmentation.py`
+        |   ├── `berkeley_natural_images.py`
         |   ├── `brain_ventricles.py`
         |   └── `retina.py`
         ├── model

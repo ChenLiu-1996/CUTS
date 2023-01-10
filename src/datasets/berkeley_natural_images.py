@@ -4,9 +4,9 @@ import numpy as np
 from torch.utils.data import Dataset
 
 
-class BerkeleySegmentation(Dataset):
-    def __init__(self,
-                 base_path: str = '../../data/berkeley_image_segmentation/'):
+class BerkeleyNaturalImages(Dataset):
+
+    def __init__(self, base_path: str = '../../data/berkeley_natural_images/'):
 
         # Pre-load all the data to CPU. Saves time.
         with open('%s/prepared_data.npz' % base_path, 'rb') as f:
@@ -21,7 +21,7 @@ class BerkeleySegmentation(Dataset):
 
         # Sanity check.
         assert self.data_image.shape[0] == self.data_label.shape[0], \
-            'BerkeleySegmentation Dataset have non-matching number of images (%s) and labels (%s)' \
+            'BerkeleyNaturalImages Dataset have non-matching number of images (%s) and labels (%s)' \
             % (self.data_image.shape[0], self.data_label.shape[0])
 
     def __len__(self) -> int:

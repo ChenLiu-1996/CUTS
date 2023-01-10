@@ -1,6 +1,6 @@
 from data_utils.extend import ExtendedDataset
 from data_utils.split import split_dataset
-from datasets import BerkeleySegmentation, BrainVentricles, DiabeticMacularEdema, PolyP, Retina
+from datasets import BerkeleyNaturalImages, BrainVentricles, DiabeticMacularEdema, PolyP, Retina
 from torch.utils.data import DataLoader
 from utils.attribute_hashmap import AttributeHashmap
 
@@ -10,7 +10,7 @@ def prepare_dataset(config: AttributeHashmap, mode: str = 'train'):
     if config.dataset_name == 'retina':
         dataset = Retina(base_path=config.dataset_path)
     elif config.dataset_name == 'berkeley':
-        dataset = BerkeleySegmentation(base_path=config.dataset_path)
+        dataset = BerkeleyNaturalImages(base_path=config.dataset_path)
     elif config.dataset_name == 'polyp':
         dataset = PolyP(base_path=config.dataset_path)
     elif config.dataset_name == 'macular_edema':
@@ -65,7 +65,7 @@ def prepare_dataset_supervised(config: AttributeHashmap):
     if config.dataset_name == 'retina':
         dataset = Retina(base_path=config.dataset_path)
     elif config.dataset_name == 'berkeley':
-        dataset = BerkeleySegmentation(base_path=config.dataset_path)
+        dataset = BerkeleyNaturalImages(base_path=config.dataset_path)
     elif config.dataset_name == 'polyp':
         dataset = PolyP(base_path=config.dataset_path)
     elif config.dataset_name == 'macular_edema':

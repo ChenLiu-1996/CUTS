@@ -1,5 +1,5 @@
 dataset_name: 'berkeley'
-dataset_path: '$CUTS_ROOT/data/berkeley_image_segmentation/'
+dataset_path: '$CUTS_ROOT/data/berkeley_natural_images/'
 model_save_path: '$CUTS_ROOT/checkpoints/berkeley_seed2022.pty'
 output_save_path: '$CUTS_ROOT/results/berkeley_seed2022/'
 log_folder: '$CUTS_ROOT/logs'

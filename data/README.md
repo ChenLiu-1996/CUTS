@@ -2,7 +2,7 @@
 
 The following data directories belong here:
 ```
-├── berkeley_image_segmentation
+├── berkeley_natural_images
 ├── brain_aramn
 ├── diabetic_macular_edema
 ├── polyp
