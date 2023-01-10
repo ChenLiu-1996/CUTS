@@ -4,9 +4,9 @@ import numpy as np
 from torch.utils.data import Dataset
 
 
-class BrainArman(Dataset):
+class BrainVentricles(Dataset):
 
-    def __init__(self, base_path: str = '../../data/brain_arman/'):
+    def __init__(self, base_path: str = '../../data/brain_ventricles/'):
 
         # Pre-load all the data to CPU. Saves time.
         with open('%s/prepared_data.npz' % base_path, 'rb') as f:
@@ -23,7 +23,7 @@ class BrainArman(Dataset):
 
         # Sanity check.
         assert self.data_image.shape[0] == self.data_label.shape[0], \
-            'BrainArman Dataset have non-matching number of images (%s) and labels (%s)' \
+            'BrainVentricles Dataset have non-matching number of images (%s) and labels (%s)' \
             % (self.data_image.shape[0], self.data_label.shape[0])
 
     def __len__(self) -> int:

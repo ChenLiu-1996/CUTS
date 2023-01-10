@@ -4,6 +4,30 @@
 [![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/UnsupervisedMedicalSeg.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/UnsupervisedMedicalSeg/)
 
 
+### The repository is structured in the following manner.
+```
+CUTS
+    ├── checkpoints: model weights are saved here.
+    ├── config: configuration yaml files.
+    ├── data: folders containing data used.
+    |   ├── berkeley_image_segmentation
+    |   ├── brain_ventricles
+    |   └── retina
+    ├── logs: training log files.
+    ├── results: generated results (images, labels, segmentations, etc.).
+    └── src
+        ├── data_utils
+        ├── datasets: defines how to access and process the data in `CUTS/data/`.
+        |   ├── `berkeley_segmentation.py`
+        |   ├── `brain_ventricles.py`
+        |   └── `retina.py`
+        ├── model
+        ├── scripts_analysis: scripts for analysis and plotting.
+        ├── utils
+        ├── `main_supervised.py`: supervised training of UNet/nnUNet for comparison.
+        └── `main.py`: unsupervised training of the CUTS encoder.
+```
+
 ## Dependencies
 We developed the codebase in a miniconda environment.
 Tested on Python 3.9.13 + PyTorch 1.12.1.

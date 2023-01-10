@@ -436,7 +436,7 @@ if __name__ == '__main__':
     if args.mode == 'train':
         train(config=config)
         test(config=config)
-        infer(config=config)
+        # infer(config=config)
     elif args.mode == 'test':
         test(config=config)
     elif args.mode == 'infer':

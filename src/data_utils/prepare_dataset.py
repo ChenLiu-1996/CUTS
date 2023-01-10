@@ -1,6 +1,6 @@
 from data_utils.extend import ExtendedDataset
 from data_utils.split import split_dataset
-from datasets import BerkeleySegmentation, BrainArman, DiabeticMacularEdema, PolyP, Retina
+from datasets import BerkeleySegmentation, BrainVentricles, DiabeticMacularEdema, PolyP, Retina
 from torch.utils.data import DataLoader
 from utils.attribute_hashmap import AttributeHashmap
 
@@ -15,8 +15,8 @@ def prepare_dataset(config: AttributeHashmap, mode: str = 'train'):
         dataset = PolyP(base_path=config.dataset_path)
     elif config.dataset_name == 'macular_edema':
         dataset = DiabeticMacularEdema(base_path=config.dataset_path)
-    elif config.dataset_name == 'brain':
-        dataset = BrainArman(base_path=config.dataset_path)
+    elif config.dataset_name == 'brain_ventricles':
+        dataset = BrainVentricles(base_path=config.dataset_path)
     else:
         raise Exception(
             'Dataset not found. Check `dataset_name` in config yaml file.')
@@ -70,8 +70,8 @@ def prepare_dataset_supervised(config: AttributeHashmap):
         dataset = PolyP(base_path=config.dataset_path)
     elif config.dataset_name == 'macular_edema':
         dataset = DiabeticMacularEdema(base_path=config.dataset_path)
-    elif config.dataset_name == 'brain':
-        dataset = BrainArman(base_path=config.dataset_path)
+    elif config.dataset_name == 'brain_ventricles':
+        dataset = BrainVentricles(base_path=config.dataset_path)
     else:
         raise Exception(
             'Dataset not found. Check `dataset_name` in config yaml file.')

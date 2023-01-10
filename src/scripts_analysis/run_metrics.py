@@ -166,7 +166,7 @@ if __name__ == '__main__':
         hparams = AttributeHashmap({
             'is_binary': False,
         })
-    elif config.dataset_name == 'brain':
+    elif config.dataset_name == 'brain_ventricles':
         hparams = AttributeHashmap({
             'is_binary': True,
         })

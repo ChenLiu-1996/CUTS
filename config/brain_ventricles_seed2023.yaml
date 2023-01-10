@@ -1,7 +1,7 @@
-dataset_name: 'brain'
-dataset_path: '$CUTS_ROOT/data/brain_arman/'
-model_save_path: '$CUTS_ROOT/checkpoints/brain_seed2023.pty'
-output_save_path: '$CUTS_ROOT/results/brain_seed2023/'
+dataset_name: 'brain_ventricles'
+dataset_path: '$CUTS_ROOT/data/brain_ventricles/'
+model_save_path: '$CUTS_ROOT/checkpoints/brain_ventricles_seed2023.pty'
+output_save_path: '$CUTS_ROOT/results/brain_ventricles_seed2023/'
 log_folder: '$CUTS_ROOT/logs'
 model_setting: 'full' # 'full', 'no_recon', 'no_contrastive'
 learning_rate: 1e-3
