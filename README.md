@@ -14,7 +14,7 @@ UnsupervisedMedicalSeg (CUTS)
     |   ├── brain_ventricles
     |   └── retina
     ├── logs: training log files.
-    ├── results: generated results (images, labels, segmentations, etc.).
+    ├── results: generated results (images, labels, segmentations, figures, etc.).
     └── src
         ├── data_utils
         ├── datasets: defines how to access and process the data in `CUTS/data/`.
