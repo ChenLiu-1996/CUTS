@@ -28,7 +28,8 @@ UnsupervisedMedicalSeg (CUTS)
         |   ├── `generate_kmeans.py`
         |   ├── `helper_generate_kmeans.py`
         |   ├── `plot_paper_figure_medical.py`
-        |   └── `plot_paper_figure_natural.py`
+        |   ├── `plot_paper_figure_natural.py`
+        |   └── `run_metrics.py`
         ├── utils
         ├── `main_supervised.py`: supervised training of UNet/nnUNet for comparison.
         └── `main.py`: unsupervised training of the CUTS encoder.
