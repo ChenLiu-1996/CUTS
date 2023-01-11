@@ -10,7 +10,8 @@ from tqdm import tqdm
 sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
 from utils.diffusion_condensation import get_persistent_structures
-from utils.metrics import dice_coeff, ergas, guided_relabel, range_aware_ssim, rmse
+from utils.metrics import dice_coeff, ergas, guided_relabel, hausdorff, per_class_dice_coeff, per_class_hausdorff, \
+    range_aware_ssim, rmse
 from utils.parse import parse_settings
 from utils.segmentation import label_hint_seg
 
@@ -223,25 +224,35 @@ if __name__ == '__main__':
             ('STEGO', 'label_true', 'label_stego'),
         ])
     if has_kmeans:
-        entity_tuples.extend([
-            ('ours (kmeans, multiclass)', 'label_true', 'label_kmeans'),
-            ('ours (kmeans, binary)', 'label_true', 'seg_kmeans'),
-        ])
+        if hparams.is_binary:
+            entity_tuples.extend([
+                ('ours (kmeans, binary)', 'label_true', 'seg_kmeans'),
+            ])
+        else:
+            entity_tuples.extend([
+                ('ours (kmeans, multiclass)', 'label_true', 'label_kmeans'),
+            ])
     if has_diffusion:
-        entity_tuples.extend([
-            ('ours (diffusion-persistent, multiclass)', 'label_true',
-             'label_diffusion-persistent'),
-            ('ours (diffusion-persistent, binary)', 'label_true',
-             'seg_diffusion-persistent'),
-            ('ours (diffusion-best, multiclass)', 'label_true',
-             'label_diffusion-best'),
-            ('ours (diffusion-best, binary)', 'label_true',
-             'seg_diffusion-best'),
-        ])
+        if hparams.is_binary:
+            entity_tuples.extend([
+                ('ours (diffusion-persistent, binary)', 'label_true',
+                 'seg_diffusion-persistent'),
+                ('ours (diffusion-best, binary)', 'label_true',
+                 'seg_diffusion-best'),
+            ])
+        else:
+            entity_tuples.extend([
+                ('ours (diffusion-persistent, multiclass)', 'label_true',
+                 'label_diffusion-persistent'),
+                ('ours (diffusion-best, multiclass)', 'label_true',
+                 'label_diffusion-best'),
+            ])
 
     metrics = {
         'dice': {tup[0]: []
                  for tup in entity_tuples},
+        'hausdorff': {tup[0]: []
+                      for tup in entity_tuples},
         'ssim': {tup[0]: []
                  for tup in entity_tuples},
         'ergas': {tup[0]: []
@@ -281,7 +292,7 @@ if __name__ == '__main__':
                     hashmap['labels_diffusion'][i, ...] = guided_relabel(
                         label_pred=hashmap['labels_diffusion'][i, ...],
                         label_true=hashmap['label_true'])
-
+            # Relabel all the other predicted labels.
             for (_, _, p2) in entity_tuples:
                 if p2 not in hashmap.keys():
                     continue
@@ -293,16 +304,26 @@ if __name__ == '__main__':
         for (entry, p1, p2) in entity_tuples:
             if p2 == 'label_diffusion-best':
                 # Get the best among all diffusion labels.
+                assert not hparams.is_binary
                 metrics['dice'][entry].append(
                     max([
-                        dice_coeff(hashmap['label_true'],
-                                   hashmap['labels_diffusion'][i, ...])
+                        per_class_dice_coeff(
+                            label_true=hashmap['label_true'],
+                            label_pred=hashmap['labels_diffusion'][i, ...])
+                        for i in range(hashmap['labels_diffusion'].shape[0])
+                    ]))
+                metrics['hausdorff'][entry].append(
+                    min([
+                        per_class_hausdorff(
+                            label_true=hashmap['label_true'],
+                            label_pred=hashmap['labels_diffusion'][i, ...])
                         for i in range(hashmap['labels_diffusion'].shape[0])
                     ]))
                 metrics['ssim'][entry].append(
                     max([
-                        range_aware_ssim(hashmap['label_true'],
-                                         hashmap['labels_diffusion'][i, ...])
+                        range_aware_ssim(
+                            label_true=hashmap['label_true'],
+                            label_pred=hashmap['labels_diffusion'][i, ...])
                         for i in range(hashmap['labels_diffusion'].shape[0])
                     ]))
                 metrics['ergas'][entry].append(
@@ -319,16 +340,25 @@ if __name__ == '__main__':
                     ]))
             elif p2 == 'seg_diffusion-best':
                 # Get the best among all diffusion segmentations.
+                assert hparams.is_binary
                 metrics['dice'][entry].append(
                     max([
-                        dice_coeff(hashmap['label_true'],
-                                   hashmap['segs_diffusion'][i, ...])
+                        dice_coeff(label_true=hashmap['label_true'],
+                                   label_pred=hashmap['segs_diffusion'][i,
+                                                                        ...])
+                        for i in range(hashmap['segs_diffusion'].shape[0])
+                    ]))
+                metrics['hausdorff'][entry].append(
+                    min([
+                        hausdorff(label_true=hashmap['label_true'],
+                                  label_pred=hashmap['segs_diffusion'][i, ...])
                         for i in range(hashmap['segs_diffusion'].shape[0])
                     ]))
                 metrics['ssim'][entry].append(
                     max([
-                        range_aware_ssim(hashmap['label_true'],
-                                         hashmap['segs_diffusion'][i, ...])
+                        range_aware_ssim(
+                            label_true=hashmap['label_true'],
+                            label_pred=hashmap['segs_diffusion'][i, ...])
                         for i in range(hashmap['segs_diffusion'].shape[0])
                     ]))
                 metrics['ergas'][entry].append(
@@ -344,25 +374,45 @@ if __name__ == '__main__':
                         for i in range(hashmap['segs_diffusion'].shape[0])
                     ]))
             elif p2 not in hashmap.keys():
+                # nan-padding for unavailable measurements.
                 metrics['dice'][entry].append(np.nan)
+                metrics['hausdorff'][entry].append(np.nan)
                 metrics['ssim'][entry].append(np.nan)
                 metrics['ergas'][entry].append(np.nan)
                 metrics['rmse'][entry].append(np.nan)
             else:
-                metrics['dice'][entry].append(
-                    dice_coeff(hashmap[p1], hashmap[p2]))
+                if hparams.is_binary:
+                    metrics['dice'][entry].append(
+                        dice_coeff(label_true=hashmap[p1],
+                                   label_pred=hashmap[p2]))
+                    metrics['hausdorff'][entry].append(
+                        hausdorff(label_true=hashmap[p1],
+                                  label_pred=hashmap[p2]))
+                else:
+                    metrics['dice'][entry].append(
+                        per_class_dice_coeff(label_true=hashmap[p1],
+                                             label_pred=hashmap[p2]))
+                    metrics['hausdorff'][entry].append(
+                        per_class_hausdorff(label_true=hashmap[p1],
+                                            label_pred=hashmap[p2]))
                 metrics['ssim'][entry].append(
-                    range_aware_ssim(hashmap[p1], hashmap[p2]))
+                    range_aware_ssim(label_true=hashmap[p1],
+                                     label_pred=hashmap[p2]))
                 metrics['ergas'][entry].append(ergas(hashmap[p1], hashmap[p2]))
                 metrics['rmse'][entry].append(rmse(hashmap[p1], hashmap[p2]))
 
-    if hparams.is_binary:
-        print('\n\nDice Coefficient')
-        for (entry, _, _) in entity_tuples:
-            print('%s: %.3f \u00B1 %.3f' %
-                  (entry, np.mean(
-                      metrics['dice'][entry]), np.std(metrics['dice'][entry]) /
-                   np.sqrt(len(metrics['dice'][entry]))))
+    print('\n\nDice Coefficient')
+    for (entry, _, _) in entity_tuples:
+        print('%s: %.3f \u00B1 %.3f' % (entry, np.mean(
+            metrics['dice'][entry]), np.std(metrics['dice'][entry]) /
+                                        np.sqrt(len(metrics['dice'][entry]))))
+
+    print('\n\nHausdorff Distance')
+    for (entry, _, _) in entity_tuples:
+        print('%s: %.3f \u00B1 %.3f' %
+              (entry, np.mean(metrics['hausdorff'][entry]),
+               np.std(metrics['hausdorff'][entry]) /
+               np.sqrt(len(metrics['hausdorff'][entry]))))
 
     print('\n\nSSIM')
     for (entry, _, _) in entity_tuples:

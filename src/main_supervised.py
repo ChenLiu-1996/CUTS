@@ -10,7 +10,7 @@ from tqdm import tqdm
 from utils.attribute_hashmap import AttributeHashmap
 from utils.early_stop import EarlyStopping
 from utils.log_util import log
-from utils.metrics import dice_coeff, ergas, guided_relabel, range_aware_ssim, rmse
+from utils.metrics import dice_coeff, ergas, guided_relabel, hausdorff, range_aware_ssim, rmse
 from utils.parse import parse_settings
 from utils.seed import seed_everything
 
@@ -101,6 +101,7 @@ def train(config: AttributeHashmap):
         train_loss = 0
         train_metrics = {
             'dice': [],
+            'hausdorff': [],
             'ssim': [],
             'ergas': [],
             'rmse': [],
@@ -132,8 +133,16 @@ def train(config: AttributeHashmap):
             for batch_idx in range(seg_true.shape[0]):
                 train_metrics['dice'].append(
                     dice_coeff(
-                        seg_pred_metric[batch_idx, ...].cpu().detach().numpy(),
-                        seg_true[batch_idx, ...].cpu().detach().numpy()))
+                        label_pred=seg_pred_metric[batch_idx,
+                                                   ...].cpu().detach().numpy(),
+                        label_true=seg_true[batch_idx,
+                                            ...].cpu().detach().numpy()))
+                train_metrics['hausdorff'].append(
+                    hausdorff(
+                        label_pred=seg_pred_metric[batch_idx,
+                                                   ...].cpu().detach().numpy(),
+                        label_true=seg_true[batch_idx,
+                                            ...].cpu().detach().numpy()))
                 train_metrics['ssim'].append(
                     range_aware_ssim(
                         label_pred=seg_pred_metric[batch_idx,
@@ -151,12 +160,15 @@ def train(config: AttributeHashmap):
 
         train_loss = train_loss / len(train_set)
 
-        log('Train [%s/%s] loss: %.3f, dice: %.3f \u00B1 %.3f, SSIM: %.3f \u00B1 %.3f, ERGAS: %.3f \u00B1 %.3f, RMSE: %.3f \u00B1 %.3f.'
+        log('Train [%s/%s] loss: %.3f, dice: %.3f \u00B1 %.3f, hausdorff:  %.3f \u00B1 %.3f, SSIM: %.3f \u00B1 %.3f, ERGAS: %.3f \u00B1 %.3f, RMSE: %.3f \u00B1 %.3f.'
             %
             (epoch_idx, config.max_epochs, train_loss,
              np.mean(train_metrics['dice']), np.std(train_metrics['dice']) /
-             np.sqrt(len(train_metrics['dice'])), np.mean(
-                 train_metrics['ssim']), np.std(train_metrics['ssim']) /
+             np.sqrt(len(train_metrics['dice'])),
+             np.mean(train_metrics['hausdorff']),
+             np.std(train_metrics['hausdorff']) /
+             np.sqrt(len(train_metrics['hausdorff'])),
+             np.mean(train_metrics['ssim']), np.std(train_metrics['ssim']) /
              np.sqrt(len(train_metrics['ssim'])),
              np.mean(train_metrics['ergas']), np.std(train_metrics['ergas']) /
              np.sqrt(len(train_metrics['ergas'])),
@@ -169,6 +181,7 @@ def train(config: AttributeHashmap):
         model.eval()
         val_metrics = {
             'dice': [],
+            'hausdorff': [],
             'ssim': [],
             'ergas': [],
             'rmse': [],
@@ -195,9 +208,16 @@ def train(config: AttributeHashmap):
                 for batch_idx in range(seg_true.shape[0]):
                     val_metrics['dice'].append(
                         dice_coeff(
-                            seg_pred_metric[batch_idx,
-                                            ...].cpu().detach().numpy(),
-                            seg_true[batch_idx, ...].cpu().detach().numpy()))
+                            label_pred=seg_pred_metric[
+                                batch_idx, ...].cpu().detach().numpy(),
+                            label_true=seg_true[batch_idx,
+                                                ...].cpu().detach().numpy()))
+                    val_metrics['hausdorff'].append(
+                        hausdorff(
+                            label_pred=seg_pred_metric[
+                                batch_idx, ...].cpu().detach().numpy(),
+                            label_true=seg_true[batch_idx,
+                                                ...].cpu().detach().numpy()))
                     val_metrics['ssim'].append(
                         range_aware_ssim(
                             label_pred=seg_pred_metric[
@@ -217,11 +237,14 @@ def train(config: AttributeHashmap):
 
         val_loss = val_loss / len(val_set)
 
-        log('Validation [%s/%s] loss: %.3f, dice: %.3f \u00B1 %.3f, SSIM: %.3f \u00B1 %.3f, ERGAS: %.3f \u00B1 %.3f, RMSE: %.3f \u00B1 %.3f.'
+        log('Validation [%s/%s] loss: %.3f, dice: %.3f \u00B1 %.3f, hausdorff:  %.3f \u00B1 %.3f, SSIM: %.3f \u00B1 %.3f, ERGAS: %.3f \u00B1 %.3f, RMSE: %.3f \u00B1 %.3f.'
             %
             (epoch_idx, config.max_epochs, val_loss,
-             np.mean(val_metrics['dice']), np.std(val_metrics['dice']) /
-             np.sqrt(len(val_metrics['dice'])), np.mean(val_metrics['ssim']),
+             np.mean(val_metrics['dice']),
+             np.std(val_metrics['dice']) / np.sqrt(len(val_metrics['dice'])),
+             np.mean(val_metrics['hausdorff']),
+             np.std(val_metrics['hausdorff']) / np.sqrt(
+                 len(val_metrics['hausdorff'])), np.mean(val_metrics['ssim']),
              np.std(val_metrics['ssim']) / np.sqrt(len(val_metrics['ssim'])),
              np.mean(val_metrics['ergas']), np.std(val_metrics['ergas']) /
              np.sqrt(len(val_metrics['ergas'])), np.mean(val_metrics['rmse']),
@@ -287,6 +310,7 @@ def test(config: AttributeHashmap):
     test_loss = 0
     test_metrics = {
         'dice': [],
+        'hausdorff': [],
         'ssim': [],
         'ergas': [],
         'rmse': [],
@@ -325,9 +349,12 @@ def test(config: AttributeHashmap):
 
             for batch_idx in range(seg_true.shape[0]):
                 test_metrics['dice'].append(
-                    dice_coeff(seg_pred_relabeled[batch_idx, ...],
-                               seg_true[batch_idx,
+                    dice_coeff(label_pred=seg_pred_relabeled[batch_idx, ...],
+                               label_true=seg_true[batch_idx,
                                         ...].cpu().detach().numpy()))
+                test_metrics['hausdorff'].append(
+                    hausdorff(label_pred=seg_pred_relabeled[batch_idx, ...],
+                              label_true=seg_true[batch_idx, ...].cpu().detach().numpy()))
                 test_metrics['ssim'].append(
                     range_aware_ssim(
                         label_pred=seg_pred_relabeled[batch_idx, ...],
@@ -344,13 +371,15 @@ def test(config: AttributeHashmap):
 
     test_loss = test_loss / len(test_set)
 
-    log('Test loss: %.3f, dice: %.3f \u00B1 %.3f, SSIM: %.3f \u00B1 %.3f, ERGAS: %.3f \u00B1 %.3f, RMSE: %.3f \u00B1 %.3f.'
+    log('Test loss: %.3f, dice: %.3f \u00B1 %.3f, hausdorff:  %.3f \u00B1 %.3f, SSIM: %.3f \u00B1 %.3f, ERGAS: %.3f \u00B1 %.3f, RMSE: %.3f \u00B1 %.3f.'
         % (test_loss, np.mean(test_metrics['dice']),
            np.std(test_metrics['dice']) / np.sqrt(len(test_metrics['dice'])),
-           np.mean(test_metrics['ssim']), np.std(test_metrics['ssim']) /
-           np.sqrt(len(test_metrics['ssim'])), np.mean(test_metrics['ergas']),
-           np.std(test_metrics['ergas']) / np.sqrt(len(test_metrics['ergas'])),
-           np.mean(test_metrics['rmse']),
+           np.mean(test_metrics['hausdorff']),
+           np.std(test_metrics['hausdorff']) / np.sqrt(
+               len(test_metrics['hausdorff'])), np.mean(test_metrics['ssim']),
+           np.std(test_metrics['ssim']) / np.sqrt(len(test_metrics['ssim'])),
+           np.mean(test_metrics['ergas']), np.std(test_metrics['ergas']) /
+           np.sqrt(len(test_metrics['ergas'])), np.mean(test_metrics['rmse']),
            np.std(test_metrics['rmse']) / np.sqrt(len(test_metrics['rmse']))),
         filepath=config.log_dir,
         to_console=True)

@@ -2,7 +2,7 @@ import numpy as np
 import sewar
 import torch
 import torch.nn.functional as F
-from skimage.metrics import structural_similarity
+from skimage.metrics import hausdorff_distance, structural_similarity
 from sklearn.metrics import accuracy_score
 
 
@@ -32,6 +32,7 @@ def ssim(a: np.array, b: np.array, **kwargs) -> float:
                                  win_size=win_size,
                                  **kwargs)
 
+
 def range_aware_ssim(label_true: np.array, label_pred: np.array) -> float:
     '''
     Surprisingly, skimage ssim infers data range from data type...
@@ -52,10 +53,33 @@ def rmse(a: np.array, b: np.array) -> float:
     return sewar.full_ref.rmse(a, b)
 
 
-def dice_coeff(pred: np.array, label: np.array) -> float:
-    intersection = np.logical_and(pred, label).sum()
-    dice = (2 * intersection) / (pred.sum() + label.sum())
+def dice_coeff(label_pred: np.array, label_true: np.array) -> float:
+    intersection = np.logical_and(label_pred, label_true).sum()
+    dice = (2 * intersection) / (label_pred.sum() + label_true.sum())
     return dice
+
+
+def per_class_dice_coeff(label_pred: np.array, label_true: np.array) -> float:
+    dice_list = []
+    for class_id in np.unique(label_pred):
+        intersection = np.logical_and(label_pred == class_id,
+                                      label_true == class_id).sum()
+        dice = (2 * intersection) / ((label_pred == class_id).sum() +
+                                     (label_true == class_id).sum())
+        dice_list.append(dice)
+    return np.mean(dice_list)
+
+
+def hausdorff(label_pred: np.array, label_true: np.array) -> float:
+    return hausdorff_distance(label_pred, label_true)
+
+
+def per_class_hausdorff(label_pred: np.array, label_true: np.array) -> float:
+    hausdorff_list = []
+    for class_id in np.unique(label_pred):
+        hausdorff_list.append(
+            hausdorff_distance(label_pred == class_id, label_true == class_id))
+    return np.mean(hausdorff_list)
 
 
 def contrastive_acc(z_anchor: torch.Tensor,
