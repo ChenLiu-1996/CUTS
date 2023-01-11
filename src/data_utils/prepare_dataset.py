@@ -1,6 +1,10 @@
 from data_utils.extend import ExtendedDataset
 from data_utils.split import split_dataset
-from datasets import BerkeleyNaturalImages, BrainVentricles, DiabeticMacularEdema, PolyP, Retina
+from datasets.berkeley_natural_images import BerkeleyNaturalImages
+from datasets.brain_ventricles import BrainVentricles
+from datasets.diabetic_macular_edema import DiabeticMacularEdema
+from datasets.polyp import PolyP
+from datasets.retina import Retina
 from torch.utils.data import DataLoader
 from utils.attribute_hashmap import AttributeHashmap
 

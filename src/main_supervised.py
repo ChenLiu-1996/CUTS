@@ -10,7 +10,8 @@ from tqdm import tqdm
 from utils.attribute_hashmap import AttributeHashmap
 from utils.early_stop import EarlyStopping
 from utils.log_util import log
-from utils.metrics import dice_coeff, ergas, guided_relabel, hausdorff, range_aware_ssim, rmse
+from utils.metrics import dice_coeff, ergas, guided_relabel, hausdorff, per_class_dice_coeff, per_class_hausdorff, \
+    range_aware_ssim, rmse
 from utils.parse import parse_settings
 from utils.seed import seed_everything
 
@@ -131,18 +132,32 @@ def train(config: AttributeHashmap):
             train_loss += loss.item()
 
             for batch_idx in range(seg_true.shape[0]):
-                train_metrics['dice'].append(
-                    dice_coeff(
-                        label_pred=seg_pred_metric[batch_idx,
-                                                   ...].cpu().detach().numpy(),
-                        label_true=seg_true[batch_idx,
-                                            ...].cpu().detach().numpy()))
-                train_metrics['hausdorff'].append(
-                    hausdorff(
-                        label_pred=seg_pred_metric[batch_idx,
-                                                   ...].cpu().detach().numpy(),
-                        label_true=seg_true[batch_idx,
-                                            ...].cpu().detach().numpy()))
+                if num_classes == 1:
+                    train_metrics['dice'].append(
+                        dice_coeff(
+                            label_pred=seg_pred_metric[
+                                batch_idx, ...].cpu().detach().numpy(),
+                            label_true=seg_true[batch_idx,
+                                                ...].cpu().detach().numpy()))
+                    train_metrics['hausdorff'].append(
+                        hausdorff(
+                            label_pred=seg_pred_metric[
+                                batch_idx, ...].cpu().detach().numpy(),
+                            label_true=seg_true[batch_idx,
+                                                ...].cpu().detach().numpy()))
+                else:
+                    train_metrics['dice'].append(
+                        per_class_dice_coeff(
+                            label_pred=seg_pred_metric[
+                                batch_idx, ...].cpu().detach().numpy(),
+                            label_true=seg_true[batch_idx,
+                                                ...].cpu().detach().numpy()))
+                    train_metrics['hausdorff'].append(
+                        per_class_hausdorff(
+                            label_pred=seg_pred_metric[
+                                batch_idx, ...].cpu().detach().numpy(),
+                            label_true=seg_true[batch_idx,
+                                                ...].cpu().detach().numpy()))
                 train_metrics['ssim'].append(
                     range_aware_ssim(
                         label_pred=seg_pred_metric[batch_idx,
@@ -206,18 +221,33 @@ def train(config: AttributeHashmap):
                 val_loss += loss.item()
 
                 for batch_idx in range(seg_true.shape[0]):
-                    val_metrics['dice'].append(
-                        dice_coeff(
-                            label_pred=seg_pred_metric[
+                    if num_classes == 1:
+                        val_metrics['dice'].append(
+                            dice_coeff(label_pred=seg_pred_metric[
                                 batch_idx, ...].cpu().detach().numpy(),
-                            label_true=seg_true[batch_idx,
-                                                ...].cpu().detach().numpy()))
-                    val_metrics['hausdorff'].append(
-                        hausdorff(
-                            label_pred=seg_pred_metric[
+                                       label_true=seg_true[
+                                           batch_idx,
+                                           ...].cpu().detach().numpy()))
+                        val_metrics['hausdorff'].append(
+                            hausdorff(label_pred=seg_pred_metric[
                                 batch_idx, ...].cpu().detach().numpy(),
-                            label_true=seg_true[batch_idx,
-                                                ...].cpu().detach().numpy()))
+                                      label_true=seg_true[
+                                          batch_idx,
+                                          ...].cpu().detach().numpy()))
+                    else:
+                        val_metrics['dice'].append(
+                            per_class_dice_coeff(
+                                label_pred=seg_pred_metric[
+                                    batch_idx, ...].cpu().detach().numpy(),
+                                label_true=seg_true[
+                                    batch_idx, ...].cpu().detach().numpy()))
+                        val_metrics['hausdorff'].append(
+                            per_class_hausdorff(
+                                label_pred=seg_pred_metric[
+                                    batch_idx, ...].cpu().detach().numpy(),
+                                label_true=seg_true[
+                                    batch_idx, ...].cpu().detach().numpy()))
+
                     val_metrics['ssim'].append(
                         range_aware_ssim(
                             label_pred=seg_pred_metric[
@@ -348,13 +378,28 @@ def test(config: AttributeHashmap):
                     label_true=seg_true[batch_idx, ...].cpu().detach().numpy())
 
             for batch_idx in range(seg_true.shape[0]):
-                test_metrics['dice'].append(
-                    dice_coeff(label_pred=seg_pred_relabeled[batch_idx, ...],
-                               label_true=seg_true[batch_idx,
-                                        ...].cpu().detach().numpy()))
-                test_metrics['hausdorff'].append(
-                    hausdorff(label_pred=seg_pred_relabeled[batch_idx, ...],
-                              label_true=seg_true[batch_idx, ...].cpu().detach().numpy()))
+                if num_classes == 1:
+                    test_metrics['dice'].append(
+                        dice_coeff(
+                            label_pred=seg_pred_relabeled[batch_idx, ...],
+                            label_true=seg_true[batch_idx,
+                                                ...].cpu().detach().numpy()))
+                    test_metrics['hausdorff'].append(
+                        hausdorff(
+                            label_pred=seg_pred_relabeled[batch_idx, ...],
+                            label_true=seg_true[batch_idx,
+                                                ...].cpu().detach().numpy()))
+                else:
+                    test_metrics['dice'].append(
+                        per_class_dice_coeff(
+                            label_pred=seg_pred_relabeled[batch_idx, ...],
+                            label_true=seg_true[batch_idx,
+                                                ...].cpu().detach().numpy()))
+                    test_metrics['hausdorff'].append(
+                        per_class_hausdorff(
+                            label_pred=seg_pred_relabeled[batch_idx, ...],
+                            label_true=seg_true[batch_idx,
+                                                ...].cpu().detach().numpy()))
                 test_metrics['ssim'].append(
                     range_aware_ssim(
                         label_pred=seg_pred_relabeled[batch_idx, ...],
@@ -371,7 +416,7 @@ def test(config: AttributeHashmap):
 
     test_loss = test_loss / len(test_set)
 
-    log('Test loss: %.3f, dice: %.3f \u00B1 %.3f, hausdorff:  %.3f \u00B1 %.3f, SSIM: %.3f \u00B1 %.3f, ERGAS: %.3f \u00B1 %.3f, RMSE: %.3f \u00B1 %.3f.'
+    log('Test loss: %.3f, dice: %.3f \u00B1 %.3f, hausdorff: %.3f \u00B1 %.3f, SSIM: %.3f \u00B1 %.3f, ERGAS: %.3f \u00B1 %.3f, RMSE: %.3f \u00B1 %.3f.'
         % (test_loss, np.mean(test_metrics['dice']),
            np.std(test_metrics['dice']) / np.sqrt(len(test_metrics['dice'])),
            np.mean(test_metrics['hausdorff']),

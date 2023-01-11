@@ -71,7 +71,12 @@ def per_class_dice_coeff(label_pred: np.array, label_true: np.array) -> float:
 
 
 def hausdorff(label_pred: np.array, label_true: np.array) -> float:
-    return hausdorff_distance(label_pred, label_true)
+    if np.sum(label_pred) == 0:
+        # If label_pred is all zeros, return the max Euclidean distance.
+        H, W = label_true.shape
+        return np.sqrt((H**2 + W**2))
+    else:
+        return hausdorff_distance(label_pred, label_true)
 
 
 def per_class_hausdorff(label_pred: np.array, label_true: np.array) -> float:
