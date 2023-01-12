@@ -92,9 +92,15 @@ if __name__ == '__main__':
             elif method == 'watershed':
                 label_pred_watershed = get_baseline_predictions(
                     image, method='watershed')
+                if label_true.max() == 1:
+                    label_pred_watershed = (label_pred_watershed > 0).astype(
+                        np.uint8)
             elif method == 'felzenszwalb':
                 label_pred_felzenszwalb = get_baseline_predictions(
                     image, method='felzenszwalb')
+                if label_true.max() == 1:
+                    label_pred_felzenszwalb = (label_pred_felzenszwalb >
+                                               0).astype(np.uint8)
 
         with open(
                 '%s/%s' %
