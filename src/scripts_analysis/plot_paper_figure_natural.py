@@ -1,15 +1,15 @@
 import argparse
 import os
+import subprocess
 import sys
+import time
 import warnings
 from glob import glob
 
 import numpy as np
-import phate
 import scprep
 import yaml
 from matplotlib import pyplot as plt
-from sklearn.preprocessing import normalize
 
 sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
@@ -164,6 +164,13 @@ if __name__ == '__main__':
         '--comparison',
         help='Whether or not to include the comparison against other methods.',
         action='store_true')
+    parser.add_argument(
+        '-t',
+        '--max-wait-sec',
+        help='Max wait time in seconds for each process.' + \
+            'Consider increasing if you hit too many TimeOuts.',
+        type=int,
+        default=60)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
@@ -278,12 +285,48 @@ if __name__ == '__main__':
             data_phate = data_phate_numpy['data_phate']
         else:
             # Otherwise, generate the phate data.
-            phate_op = phate.PHATE(random_state=random_seed,
-                                   n_jobs=config.num_workers)
+            '''
+            Because of the frequent deadlock problem, I decided to use the following solution:
+            kill and restart whenever a process is taking too long (likely due to deadlock).
+            '''
+            load_path = files_path_diffusion[image_idx]
+            num_workers = config.num_workers
+            folder = '/'.join(
+                os.path.dirname(os.path.abspath(__file__)).split('/'))
 
-            data_phate = phate_op.fit_transform(normalize(latent, axis=1))
-            with open(phate_path, 'wb+') as f:
-                np.savez(f, data_phate=data_phate)
+            file_success = False
+            while not file_success:
+                start = time.time()
+                while True:
+                    try:
+                        proc = subprocess.Popen([
+                            'python3', folder + '/helper_run_phate.py',
+                            '--load_path', load_path, '--phate_path',
+                            phate_path, '--random_seed',
+                            str(config.random_seed), '--num_workers',
+                            str(num_workers)
+                        ],
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE)
+                        stdout, stderr = proc.communicate(
+                            timeout=args.max_wait_sec)
+                        stdout, stderr = str(stdout), str(stderr)
+                        stdout = stdout.lstrip('b\'').rstrip('\'')
+                        stderr = stderr.lstrip('b\'').rstrip('\'')
+                        print(image_idx, stdout, stderr)
+
+                        proc.kill()
+                        # This is determined by the sys.stdout in `helper_run_phate.py`
+                        if stdout[:8] == 'SUCCESS!':
+                            file_success = True
+                        break
+
+                    except subprocess.TimeoutExpired:
+                        print('Time out! Restart subprocess.')
+                        proc.kill()
+
+            data_phate_numpy = np.load(phate_path)
+            data_phate = data_phate_numpy['data_phate']
 
         if args.comparison:
             fig = plot_comparison(fig=fig,
