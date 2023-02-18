@@ -18,6 +18,7 @@ class DiabeticMacularEdema(Dataset):
         self.data_image = (self.data_image * 2) - 1
         # channel last to channel first to comply with Torch.
         self.data_image = np.moveaxis(self.data_image, -1, 1)
+        self.data_label = np.moveaxis(self.data_label, -1, 1)
 
         # Sanity check.
         assert self.data_image.shape[0] == self.data_label.shape[0], \

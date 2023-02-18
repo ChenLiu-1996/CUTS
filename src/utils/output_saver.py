@@ -47,6 +47,7 @@ class OutputSaver(object):
         # channel-first to channel-last
         image_batch = np.moveaxis(image_batch, 1, -1)
         recon_batch = np.moveaxis(recon_batch, 1, -1)
+        label_true_batch = np.moveaxis(label_true_batch, 1, -1)
         latent_batch = np.moveaxis(latent_batch, 1, -1)
 
         B, H, W, C = latent_batch.shape

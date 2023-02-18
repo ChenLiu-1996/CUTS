@@ -52,6 +52,7 @@ python -m pip install git+https://github.com/KrishnaswamyLab/CATCH
 python -m pip install opencv-python
 python -m pip install sewar
 python -m pip install monai
+python -m pip install nibabel
 ```
 
 

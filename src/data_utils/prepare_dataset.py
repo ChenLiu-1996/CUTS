@@ -2,9 +2,8 @@ from data_utils.extend import ExtendedDataset
 from data_utils.split import split_dataset
 from datasets.berkeley_natural_images import BerkeleyNaturalImages
 from datasets.brain_ventricles import BrainVentricles
-from datasets.diabetic_macular_edema import DiabeticMacularEdema
-from datasets.polyp import PolyP
 from datasets.retina import Retina
+from datasets.brain_tumor import BrainTumor
 from torch.utils.data import DataLoader
 from utils.attribute_hashmap import AttributeHashmap
 
@@ -15,12 +14,10 @@ def prepare_dataset(config: AttributeHashmap, mode: str = 'train'):
         dataset = Retina(base_path=config.dataset_path)
     elif config.dataset_name == 'berkeley':
         dataset = BerkeleyNaturalImages(base_path=config.dataset_path)
-    elif config.dataset_name == 'polyp':
-        dataset = PolyP(base_path=config.dataset_path)
-    elif config.dataset_name == 'macular_edema':
-        dataset = DiabeticMacularEdema(base_path=config.dataset_path)
     elif config.dataset_name == 'brain_ventricles':
         dataset = BrainVentricles(base_path=config.dataset_path)
+    elif config.dataset_name == 'brain_tumor':
+        dataset = BrainTumor(base_path=config.dataset_path)
     else:
         raise Exception(
             'Dataset not found. Check `dataset_name` in config yaml file.')
@@ -70,12 +67,10 @@ def prepare_dataset_supervised(config: AttributeHashmap):
         dataset = Retina(base_path=config.dataset_path)
     elif config.dataset_name == 'berkeley':
         dataset = BerkeleyNaturalImages(base_path=config.dataset_path)
-    elif config.dataset_name == 'polyp':
-        dataset = PolyP(base_path=config.dataset_path)
-    elif config.dataset_name == 'macular_edema':
-        dataset = DiabeticMacularEdema(base_path=config.dataset_path)
     elif config.dataset_name == 'brain_ventricles':
         dataset = BrainVentricles(base_path=config.dataset_path)
+    elif config.dataset_name == 'brain_tumor':
+        dataset = BrainTumor(base_path=config.dataset_path)
     else:
         raise Exception(
             'Dataset not found. Check `dataset_name` in config yaml file.')

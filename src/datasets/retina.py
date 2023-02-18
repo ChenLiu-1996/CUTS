@@ -33,6 +33,7 @@ class Retina(Dataset):
             % (len(self.imgs), len(self.labels))
 
         # Pre-load all the data to CPU. Saves time.
+        # It works for this dataset since the dataset is not huge.
         self.data_image, self.data_label = [], []
         for img in self.imgs:
             self.data_image.append(np.array(Image.open(img)))
@@ -41,6 +42,7 @@ class Retina(Dataset):
         self.data_image = (self.data_image / 255 * 2) - 1
         # channel last to channel first to comply with Torch.
         self.data_image = np.moveaxis(self.data_image, -1, 1)
+        self.data_label = np.moveaxis(self.data_label, -1, 1)
 
         for label in self.labels:
             self.data_label.append(np.load(label))
