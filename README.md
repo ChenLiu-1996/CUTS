@@ -5,7 +5,7 @@
 [![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/UnsupervisedMedicalSeg.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/UnsupervisedMedicalSeg/)
 
 
-<img src = "assets/github_img1.png" width=800>
+<img src = "assets/github_img1.png" width=720>
 <img src = "assets/github_img2.png" width=700>
 
 
