@@ -5,24 +5,31 @@
 [![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/UnsupervisedMedicalSeg.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/UnsupervisedMedicalSeg/)
 
 
+<img src = "assets/github_img1.png" width=800>
 
-### The repository is structured in the following manner.
+This repository contains the official PyTorch implementation of the following paper:
+
+> **CUTS: A Fully Unsupervised Framework for Medical Image Segmentation**<br>
+> Chen Liu, Matthew Amodio, Liangbo L. Shen, Feng Gao, Arman Avesta, Sanjay Aneja, Jay Wang, Lucian V. Del Priore, Smita Krishnaswamy <br>
+> Chen and Matthew are co-first authors and Sanjay, Jay, Lucian and Smita are co-advisory authors.
+> Please direct correspondence to: smita.krishnaswamy@yale.edu or lucian.delpriore@yale.edu.
+>
+> https://arxiv.org/abs/2209.11359
+>
+> **Abstract:** *In this work we introduce CUTS (Contrastive and Unsupervised Training for Segmentation), the first fully unsupervised deep learning framework for medical image segmentation to better utilize the vast majority of imaging data that is not labeled or annotated. Segmenting medical images into regions of interest is a critical task for facilitating both patient diagnoses and quantitative research. A major limiting factor is the lack of labeled data, as obtaining expert annotations for each new set of imaging data or task can be expensive, labor intensive, and inconsistent across annotators. Thus, we utilize self-supervision from pixels and their local neighborhoods in the images themselves. Our unsupervised approach optimizes a training objective that leverages concepts from contrastive learning and autoencoding. Previous contrastive learning approaches either focused on image-level contrastive training and therefore lacked sufficient patch-level information necessary for segmentation or framed themselves as pre-training steps that require further supervised fine-tuning. In contrast, our framework segments medical images with a novel two-stage approach without relying on any labeled data at any stage. The first stage involves the creation of a "pixel-centered patch" that embeds every pixel along with its surrounding patch, using a vector representation in a high-dimensional latent embedding space. The second stage utilizes diffusion condensation, a multi-scale topological data analysis approach, to dynamically coarse-grain these embedding vectors at all levels of granularity. The final outcome is a series of coarse-to-fine segmentations that highlight image structures at various scales. In this work, we show successful multi-scale segmentation on natural images, retinal fundus images, and brain MRI images. Our framework delineates structures and patterns at different scales which, in the cases of medical images, may carry distinct information relevant to clinical interpretation. Quantitatively, our framework demonstrates beyond 100\% improvement on dice coefficient and Hausdorff distance compared to existing unsupervised methods on geographic atrophy segmentation in retinal fundus images. When segmenting ventricles in the brain MRI images, our framework outperforms existing unsupervised methods by a factor between 2% to 300% on dice coefficient and between 14% and 77% on Hausdorff distance. As we tackle the problem of segmenting medical images at multiple meaningful granularities without relying on any label, we hope to demonstrate the possibility to circumvent tedious and repetitive manual annotations in future practice.*
+
+
+## Repository Hierarchy
 ```
 UnsupervisedMedicalSeg (CUTS)
     ├── checkpoints: model weights are saved here.
     ├── config: configuration yaml files.
     ├── data: folders containing data used.
-    |   ├── berkeley_natural_images
-    |   ├── brain_ventricles
-    |   └── retina
     ├── logs: training log files.
     ├── results: generated results (images, labels, segmentations, figures, etc.).
     └── src
         ├── data_utils
         ├── datasets: defines how to access and process the data in `CUTS/data/`.
-        |   ├── `berkeley_natural_images.py`
-        |   ├── `brain_ventricles.py`
-        |   └── `retina.py`
         ├── model
         ├── scripts_analysis: scripts for analysis and plotting.
         |   ├── `generate_baselines.py`
