@@ -13,7 +13,7 @@ class BrainVentricles(Dataset):
         with open('%s/prepared_data.npz' % base_path, 'rb') as f:
             npzfile = np.load(f)
             self.data_image = npzfile['data']
-            self.data_label = npzfile['label'][:, :, :, 0]
+            self.data_label = npzfile['label']
 
         self.data_image = self.data_image / np.percentile(self.data_image, 99)
         self.data_image = np.where(self.data_image > 1., 1., self.data_image)

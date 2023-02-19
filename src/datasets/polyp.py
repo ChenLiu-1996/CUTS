@@ -12,7 +12,7 @@ class PolyP(Dataset):
         with open('%s/selected_imgs_resized.npz' % base_path, 'rb') as f:
             npzfile = np.load(f)
             self.data_image = npzfile['imgs']
-            self.data_label = npzfile['labels'][:, :, :, 0]
+            self.data_label = npzfile['labels']
 
         self.data_image = (self.data_image * 2) - 1
         self.data_label = np.where(self.data_label > .5, 1, 0)

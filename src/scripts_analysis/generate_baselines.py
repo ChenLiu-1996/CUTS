@@ -82,6 +82,9 @@ if __name__ == '__main__':
         image = (image + 1) / 2
 
         H, W = label_true.shape[:2]
+        if len(label_true.shape) == 3:
+            assert label_true.shape[-1] == 1
+            label_true = label_true.squeeze(-1)
 
         label_pred_random = label_pred_watershed = label_pred_felzenszwalb = None
         for method in methods:

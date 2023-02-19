@@ -171,6 +171,10 @@ if __name__ == '__main__':
         hparams = AttributeHashmap({
             'is_binary': True,
         })
+    elif config.dataset_name == 'brain_tumor':
+        hparams = AttributeHashmap({
+            'is_binary': True,
+        })
 
     files_folder_baselines = '%s/%s' % (config.output_save_path,
                                         'numpy_files_seg_baselines')

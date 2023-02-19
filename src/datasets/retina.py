@@ -40,14 +40,16 @@ class Retina(Dataset):
         self.data_image = np.array(self.data_image)
 
         self.data_image = (self.data_image / 255 * 2) - 1
-        # channel last to channel first to comply with Torch.
-        self.data_image = np.moveaxis(self.data_image, -1, 1)
-        self.data_label = np.moveaxis(self.data_label, -1, 1)
 
         for label in self.labels:
             self.data_label.append(np.load(label))
         self.data_label = np.array(self.data_label)
+        # Additional channel dimension.
+        self.data_label = self.data_label[..., None]
 
+        # channel last to channel first to comply with Torch.
+        self.data_image = np.moveaxis(self.data_image, -1, 1)
+        self.data_label = np.moveaxis(self.data_label, -1, 1)
 
     def __len__(self) -> int:
         return len(self.img_path)

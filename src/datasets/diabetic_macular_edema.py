@@ -12,7 +12,7 @@ class DiabeticMacularEdema(Dataset):
         with open('%s/data.npz' % base_path, 'rb') as f:
             npzfile = np.load(f)
             self.data_image = npzfile['data']
-            self.data_label = npzfile['labels'][:, :, :, 0]
+            self.data_label = npzfile['labels']
 
         self.data_image = np.repeat(self.data_image, 3, axis=-1)
         self.data_image = (self.data_image * 2) - 1
