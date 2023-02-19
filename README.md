@@ -6,6 +6,7 @@
 
 
 <img src = "assets/github_img1.png" width=800>
+<img src = "assets/github_img2.png" width=800>
 
 
 **This repository contains the official PyTorch implementation of the following paper:**
