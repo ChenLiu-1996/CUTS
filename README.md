@@ -7,7 +7,8 @@
 
 <img src = "assets/github_img1.png" width=800>
 
-This repository contains the official PyTorch implementation of the following paper:
+
+**This repository contains the official PyTorch implementation of the following paper:**
 
 > **CUTS: A Fully Unsupervised Framework for Medical Image Segmentation**<br>
 > Chen Liu, Matthew Amodio, Liangbo L. Shen, Feng Gao, Arman Avesta, Sanjay Aneja, Jay Wang, Lucian V. Del Priore, Smita Krishnaswamy <br>
