@@ -64,9 +64,18 @@ python -m pip install sewar
 python -m pip install monai
 python -m pip install nibabel
 ```
-
+Installation usually takes between 20 minutes and 1 hour on a normal desktop computer.
 
 ## Usage
+<details>
+  <summary>Unzip data</summary>
+
+```
+cd ./data/
+unzip retina.zip
+```
+</details>
+
 <details>
   <summary>Activate environment</summary>
 
