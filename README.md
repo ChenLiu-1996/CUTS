@@ -48,6 +48,8 @@ UnsupervisedMedicalSeg (CUTS)
         └── `main.py`: unsupervised training of the CUTS encoder.
 ```
 
+## Data Provided
+The `berkeley_natural_images` and `retina` datasets are provided in `zip` format. The `brain_ventricles` dataset exceeds the GitHub size limits, and can be made available upon reasonable request.
 
 ## Dependencies
 We developed the codebase in a miniconda environment.
