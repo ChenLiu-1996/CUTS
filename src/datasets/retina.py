@@ -7,25 +7,32 @@ from torch.utils.data import Dataset
 
 
 class Retina(Dataset):
+
     def __init__(self,
                  base_path: str = '../../data/retina',
-                 image_folder: str = 'selected_128',
-                 label_folder: str = 'label_128'):
+                 image_folder: str = 'image_with_GA',
+                 label_folder: str = 'label_with_GA'):
+
         # Load file paths.
         self.img_path = glob('%s/%s/*' % (base_path, image_folder))
         self.label_path = glob('%s/%s/*' % (base_path, label_folder))
 
         # Find and keep the matching subset between imgs and labels.
-        img_ids = set([img.split('/')[-1].split('.')[0][5:]
-                       for img in self.img_path])
-        label_ids = set([label.split('/')[-1].split('.')[0][5:]
-                         for label in self.label_path])
+        img_ids = set(
+            [img.split('/')[-1].split('.')[0][5:] for img in self.img_path])
+        label_ids = set([
+            label.split('/')[-1].split('.')[0][5:] for label in self.label_path
+        ])
         matching_ids = set([_id for _id in img_ids if _id in label_ids])
 
-        self.imgs = sorted([img for img in self.img_path if img.split(
-            '/')[-1].split('.')[0][5:] in matching_ids])
-        self.labels = sorted([label for label in self.label_path if label.split(
-            '/')[-1].split('.')[0][5:] in matching_ids])
+        self.imgs = sorted([
+            img for img in self.img_path
+            if img.split('/')[-1].split('.')[0][5:] in matching_ids
+        ])
+        self.labels = sorted([
+            label for label in self.label_path
+            if label.split('/')[-1].split('.')[0][5:] in matching_ids
+        ])
 
         # Sanity check.
         assert len(self.imgs) == len(self.labels), \
