@@ -50,6 +50,13 @@ class OutputSaver(object):
         label_true_batch = np.moveaxis(label_true_batch, 1, -1)
         latent_batch = np.moveaxis(latent_batch, 1, -1)
 
+        # Squeeze the excessive label dimension.
+        if len(label_true_batch.shape) == 4:
+            assert label_true_batch.shape[-1] == 1
+            label_true_batch = label_true_batch.reshape(label_true_batch.shape[:3])
+        else:
+            assert len(label_true_batch.shape) == 3
+
         B, H, W, C = latent_batch.shape
 
         # Save the images, labels, and latent embeddings as numpy files for future reference.
