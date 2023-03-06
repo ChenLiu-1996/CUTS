@@ -176,3 +176,9 @@ before running some of the code code to minimize the risk of dead lock. For deta
 **UPDATE Dec 26, 2022**: I finally wrote a workaround to avoid running the script over and over again from the first incomplete file whenever a deadlock is hit (which is a total waste of human efforts)! The method is simple: in `generate_kmeans.py` we now outsource the kmeans computation and numpy saving to a helper file `helper_generate_kmeans.py`, and we kill and restart the helper whenever a deadlock causes the process to timeout. **However**, on our YCRC server, you may **still** need to run the command `export MKL_THREADING_LAYER=GNU` to minimize risk of dead lock.
 
 </details>
+
+<details>
+  <summary>Regarding `zsh bus error`.</summary>
+
+If you encounter `zsh bus error` while running some of the python scripts, for example, `generate_kmeans.py` or `generate_diffusion.py`, it is very likely that the program requires more CPU than available. On our YCRC, the solution is to request more memory for the job.
+</details>
