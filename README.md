@@ -14,7 +14,7 @@
 > Chen Liu, Matthew Amodio, Liangbo L. Shen, Feng Gao, Arman Avesta, Sanjay Aneja, Jay Wang, Lucian V. Del Priore, Smita Krishnaswamy <br>
 >
 >
-> *Chen and Matthew are co-first authors and Sanjay, Jay, Lucian and Smita are co-advisory authors.*
+> *Chen and Matthew are co-first authors, while Sanjay, Jay, Lucian and Smita are co-advisory authors.*
 >
 > Please direct correspondence to: smita.krishnaswamy@yale.edu or lucian.delpriore@yale.edu.
 >
