@@ -25,7 +25,7 @@ def find_nearest_idx(arr: np.array, num: float) -> int:
 
 
 def plot_comparison(fig: plt.figure, num_samples: int, sample_idx: int,
-                    data_hashmap: dict, data_phate: np.array):
+                    data_hashmap: dict, data_phate: np.array, image_grayscale:bool):
     # 2 rows, 10 columns.
     # 1-st row are the images, labels, segmentations.
     # 2-nd row are the PHATE plots if applicable.
@@ -34,7 +34,7 @@ def plot_comparison(fig: plt.figure, num_samples: int, sample_idx: int,
 
     ##### 1-st row!
     ax = fig.add_subplot(2 * num_samples, 10, 1 + 20 * sample_idx)
-    ax.imshow(data_hashmap['image'])
+    ax.imshow(data_hashmap['image'], cmap='gray' if image_grayscale else None)
     ax.set_axis_off()
 
     for (figure_idx, key) in zip(range(2, 2 + 9), [
@@ -54,7 +54,7 @@ def plot_comparison(fig: plt.figure, num_samples: int, sample_idx: int,
 
     ##### 2-nd row!
     ax = fig.add_subplot(2 * num_samples, 10, 11 + 20 * sample_idx)
-    ax.imshow(data_hashmap['recon'])
+    ax.imshow(data_hashmap['recon'], cmap='gray' if image_grayscale else None)
     ax.set_axis_off()
 
     for (figure_idx, key) in zip(range(12, 12 + 9), [
@@ -84,7 +84,7 @@ def plot_comparison(fig: plt.figure, num_samples: int, sample_idx: int,
 
 def plot_results(fig: plt.figure, num_samples: int, sample_idx: int,
                  data_hashmap: dict, data_phate: np.array,
-                 granularities: np.array):
+                 granularities: np.array, image_grayscale:bool):
     # 2 rows, 12 columns.
     # 1-st row are the images, labels, segmentations.
     # 2-nd row are the PHATE plots if applicable.
@@ -98,7 +98,7 @@ def plot_results(fig: plt.figure, num_samples: int, sample_idx: int,
 
     ##### 1-st row!
     ax = fig.add_subplot(2 * num_samples, 12, 1 + 24 * sample_idx)
-    ax.imshow(data_hashmap['image'])
+    ax.imshow(data_hashmap['image'], cmap='gray' if image_grayscale else None)
     ax.set_axis_off()
 
     for (figure_idx, key) in zip(range(2, 2 + 5), [
@@ -122,7 +122,7 @@ def plot_results(fig: plt.figure, num_samples: int, sample_idx: int,
 
     ##### 2-nd row!
     ax = fig.add_subplot(2 * num_samples, 12, 13 + 24 * sample_idx)
-    ax.imshow(data_hashmap['recon'])
+    ax.imshow(data_hashmap['recon'], cmap='gray' if image_grayscale else None)
     ax.set_axis_off()
 
     for (figure_idx, key) in zip(range(14, 14 + 5), [
@@ -177,6 +177,10 @@ if __name__ == '__main__':
             'Consider increasing if you hit too many TimeOuts.',
         type=int,
         default=60)
+    parser.add_argument(
+        '--grayscale',
+        help='Use this flag if the image is expected to be grayscale.',
+        action='store_true')
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
@@ -342,14 +346,16 @@ if __name__ == '__main__':
                                   num_samples=num_samples,
                                   sample_idx=sample_idx,
                                   data_hashmap=data_hashmap,
-                                  data_phate=data_phate)
+                                  data_phate=data_phate,
+                                  image_grayscale=args.grayscale)
         else:
             fig = plot_results(fig=fig,
                                num_samples=num_samples,
                                sample_idx=sample_idx,
                                data_hashmap=data_hashmap,
                                data_phate=data_phate,
-                               granularities=granularities)
+                               granularities=granularities,
+                               image_grayscale=args.grayscale)
 
     figure_str = ''
     for image_idx in args.image_idx:

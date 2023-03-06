@@ -45,19 +45,20 @@ class BrainTumor(Dataset):
                                dsize=dsize,
                                interpolation=cv2.INTER_NEAREST)
 
-            # Rescale image and label.
-            image = 2 * (image - image.min()) / (image.max() - image.min()) - 1
             # NOTE: Assuming binary label.
             assert len(np.unique(label)) <= 2
             label = label != np.unique(label)[0]
 
-            # Zero pad.
+            # NOTE: Assuming vaccuum/background pixels are zero for images and labels!
             image = crop_or_pad(image,
                                 in_shape=image.shape,
                                 out_shape=out_shape)
             label = crop_or_pad(label,
                                 in_shape=label.shape,
                                 out_shape=out_shape)
+
+            # Rescale image and label.
+            image = 2 * (image - image.min()) / (image.max() - image.min()) - 1
 
             # Dimension fix.
             # Channel first to comply with Torch.
@@ -87,7 +88,7 @@ class BrainTumor(Dataset):
 
 
 def crop_or_pad(in_image: np.array, in_shape: Tuple[int],
-                out_shape: Tuple[int]) -> np.array:
+                out_shape: Tuple[int], pad_value: float = 0) -> np.array:
     assert len(in_shape) == len(out_shape)
     D = len(in_shape)
 
@@ -115,7 +116,7 @@ def crop_or_pad(in_image: np.array, in_shape: Tuple[int],
     out_slicer = tuple(
         [slice(i, j) for (i, j) in zip(out_shape_min, out_shape_max)])
 
-    out_image = np.zeros(out_shape)
+    out_image = np.ones(out_shape) * pad_value
     out_image[out_slicer] = in_image[in_slicer]
 
     return out_image

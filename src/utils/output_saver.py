@@ -50,12 +50,10 @@ class OutputSaver(object):
         label_true_batch = np.moveaxis(label_true_batch, 1, -1)
         latent_batch = np.moveaxis(latent_batch, 1, -1)
 
-        # Squeeze the excessive label dimension.
-        if len(label_true_batch.shape) == 4:
-            assert label_true_batch.shape[-1] == 1
-            label_true_batch = label_true_batch.reshape(label_true_batch.shape[:3])
-        else:
-            assert len(label_true_batch.shape) == 3
+        # Squeeze excessive dimension.
+        image_batch = squeeze_excessive_dimension(image_batch)
+        recon_batch = squeeze_excessive_dimension(recon_batch)
+        label_true_batch = squeeze_excessive_dimension(label_true_batch)
 
         B, H, W, C = latent_batch.shape
 
@@ -77,3 +75,11 @@ class OutputSaver(object):
             (self.save_path_numpy, 'sample_%s.npz' % str(image_idx).zfill(5)),
                 'wb+') as f:
             np.savez(f, image=image, recon=recon, label=label, latent=latent)
+
+
+def squeeze_excessive_dimension(batched_data: np.array) -> np.array:
+    assert len(batched_data.shape) in [3, 4]
+    if len(batched_data.shape) == 4 and batched_data.shape[-1] == 1:
+        # (B, H, W, 1) to (B, H, W)
+        batched_data = batched_data.reshape(batched_data.shape[:3])
+    return batched_data

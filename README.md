@@ -136,8 +136,13 @@ python generate_baselines.py
 #### To reproduce the figures in the paper.
 Note: This is a newer version for plotting, and it already entails the following versions (spectral k-means, diffusion condensation). You don't need to worry about them if you use this plotting script.
 
+The `image-idx` argument shall be followed by space-separated index/indices of the images to be plotted.
+
 Without the `--comparison` flag, the CUTS-only results will be plotted.
 With the ` --comparison` flag, the side-by-side comparison against other methods will be plotted.
+
+With the ` --grayscale` flag, the input images and reconstructed images will be plotted in grayscale.
+
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
 
@@ -145,9 +150,13 @@ With the ` --comparison` flag, the side-by-side comparison against other methods
 python plot_paper_figure_natural.py --config ../../config/$CONFIG_FILE.yaml --image-idx $IMAGE_IDX
 python plot_paper_figure_natural.py --config ../../config/$CONFIG_FILE.yaml --image-idx $IMAGE_IDX --comparison
 
-## For medical images (retina, brain)
+## For medical images with color (retina)
 python plot_paper_figure_medical.py --config ../../config/$CONFIG_FILE.yaml --image-idx $IMAGE_IDX
 python plot_paper_figure_medical.py --config ../../config/$CONFIG_FILE.yaml --image-idx $IMAGE_IDX --comparison
+
+## For medical images without color (brain)
+python plot_paper_figure_medical.py --config ../../config/$CONFIG_FILE.yaml --image-idx $IMAGE_IDX --grayscale
+python plot_paper_figure_medical.py --config ../../config/$CONFIG_FILE.yaml --image-idx $IMAGE_IDX --comparison --grayscale
 ```
 </details>
 
@@ -165,7 +174,7 @@ python run_metrics.py --config ../../config/$CONFIG_FILE.yaml
 
 ## DEBUG Notes
 <details>
-  <summary>Regarding occasional "deadlock" when generating results (especially for generating k-means and plotting figures).</summary>
+  <summary>Regarding "dead lock" (e.g., never-ending repeated `Time out!`) when generating results.</summary>
 
 On our YCRC server, sometimes we need to run
 ```

@@ -19,11 +19,15 @@ from utils.seed import seed_everything
 
 
 def get_baseline_predictions(img: np.array, method: str):
-    img = (img + 1) / 2
     img = (img * 255).astype(np.uint8)
+
+    if len(img.shape) == 2:
+        # (H, W) to (H, W, 1)
+        img = img[..., None]
 
     if method == 'watershed':
         if img.shape[-1] == 1:
+            # (H, W, 1) to (H, W, 3)
             img = np.repeat(img, 3, axis=-1)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         gray = cv2.morphologyEx(gray, cv2.MORPH_OPEN, np.ones((3, 3),

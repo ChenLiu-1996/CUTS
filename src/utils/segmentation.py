@@ -14,22 +14,26 @@ def label_hint_seg(label_pred: np.array, label_true: np.array) -> np.array:
     '''
 
     foreground_xys = np.argwhere(label_true)
-    label_counts = {}
-    for (x, y) in foreground_xys:
-        label_id = label_pred[x, y]
-        if label_id not in label_counts.keys():
-            label_counts[label_id] = 1
-        else:
-            label_counts[label_id] += 1
+    if len(foreground_xys) > 0:
+        label_counts = {}
+        for (x, y) in foreground_xys:
+            label_id = label_pred[x, y]
+            if label_id not in label_counts.keys():
+                label_counts[label_id] = 1
+            else:
+                label_counts[label_id] += 1
 
-    label_id, max_count = 0, 0
-    for i in label_counts.keys():
-        count = label_counts[i]
-        if count > max_count:
-            max_count = count
-            label_id = i
+        label_id, max_count = 0, 0
+        for i in label_counts.keys():
+            count = label_counts[i]
+            if count > max_count:
+                max_count = count
+                label_id = i
 
-    seg = label_pred == label_id
+        seg = label_pred == label_id
+
+    else:
+        seg = np.zeros(label_pred.shape)
 
     return seg
 
