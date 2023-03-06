@@ -11,7 +11,7 @@ patience: 10
 batch_size: 16
 num_kernels: 16
 sampled_patches_per_image: 16 # recommend: 4 or above.
-num_workers: 8
+num_workers: 4
 lambda_contrastive_loss: 0.01  # Between 0 and 1. no_recon == 1. no_contrastive == 0.
 random_seed: 2021
 train_val_ratio: '7:3'

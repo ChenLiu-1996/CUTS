@@ -71,8 +71,8 @@ class CUTSEncoder(nn.Module):
         torch.save(self.state_dict(), model_save_path)
         return
 
-    def load_weights(self, model_save_path: str) -> None:
-        self.load_state_dict(torch.load(model_save_path))
+    def load_weights(self, model_save_path: str, device: torch.device) -> None:
+        self.load_state_dict(torch.load(model_save_path, map_location=device))
         return
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, ...]:

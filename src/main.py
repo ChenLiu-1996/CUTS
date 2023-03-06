@@ -121,7 +121,7 @@ def test(config: AttributeHashmap):
         num_kernels=config.num_kernels,
         random_seed=config.random_seed,
         sampled_patches_per_image=config.sampled_patches_per_image).to(device)
-    model.load_weights(config.model_save_path)
+    model.load_weights(config.model_save_path, device=device)
     log('CUTSEncoder: Model weights successfully loaded.', to_console=True)
 
     loss_fn_recon = torch.nn.MSELoss()
