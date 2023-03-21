@@ -54,25 +54,26 @@ def rmse(a: np.array, b: np.array) -> float:
 
 
 def dice_coeff(label_pred: np.array, label_true: np.array) -> float:
+    epsilon = 1e-12
     intersection = np.logical_and(label_pred, label_true).sum()
-    dice = (2 * intersection) / (label_pred.sum() + label_true.sum())
+    dice = (2 * intersection + epsilon) / (label_pred.sum() +
+                                           label_true.sum() + epsilon)
     return dice
 
 
 def per_class_dice_coeff(label_pred: np.array, label_true: np.array) -> float:
     dice_list = []
     for class_id in np.unique(label_pred):
-        intersection = np.logical_and(label_pred == class_id,
-                                      label_true == class_id).sum()
-        dice = (2 * intersection) / ((label_pred == class_id).sum() +
-                                     (label_true == class_id).sum())
-        dice_list.append(dice)
+        dice_list.append(
+            dice_coeff(label_pred=label_pred == class_id,
+                       label_true=label_true == class_id))
     return np.mean(dice_list)
 
 
 def hausdorff(label_pred: np.array, label_true: np.array) -> float:
-    if np.sum(label_pred) == 0:
-        # If label_pred is all zeros, return the max Euclidean distance.
+    if np.sum(label_pred) == 0 or np.sum(label_true) == 0:
+        # If `label_pred` or `label_true` is all zeros,
+        # return the max Euclidean distance.
         H, W = label_true.shape
         return np.sqrt((H**2 + W**2))
     else:
@@ -83,7 +84,8 @@ def per_class_hausdorff(label_pred: np.array, label_true: np.array) -> float:
     hausdorff_list = []
     for class_id in np.unique(label_pred):
         hausdorff_list.append(
-            hausdorff_distance(label_pred == class_id, label_true == class_id))
+            hausdorff(label_pred=label_pred == class_id,
+                      label_true=label_true == class_id))
     return np.mean(hausdorff_list)
 
 
