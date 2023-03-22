@@ -126,7 +126,7 @@ python generate_diffusion.py --config ../../config/$CONFIG_FILE.yaml
 #### To generate and save the segmentation using baseline methods.
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
-python generate_baselines.py
+python generate_baselines.py --config ../../config/$CONFIG_FILE.yaml
 ```
 </details>
 
