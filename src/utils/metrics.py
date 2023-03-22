@@ -124,7 +124,7 @@ def recon_ssim(x: torch.Tensor, x_recon: torch.Tensor) -> float:
             # Channel first to channel last to accommodate SSIM.
             img1 = np.moveaxis(img1, 0, -1)
             img2 = np.moveaxis(img2, 0, -1)
-            ssim_list.append(ssim(img1, img2))
+            ssim_list.append(range_aware_ssim(img1, img2))
     return np.mean(ssim_list)
 
 
