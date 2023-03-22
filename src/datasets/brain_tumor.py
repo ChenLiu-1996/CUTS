@@ -78,8 +78,15 @@ class BrainTumor(Dataset):
     def __getitem__(self, idx) -> Tuple[np.array, np.array]:
         image_nii = nib.load(self.image_paths[idx])
         label_nii = nib.load(self.label_paths[idx])
-        image = image_nii.get_fdata().squeeze(-1)
-        label = label_nii.get_fdata().squeeze(-1)
+        image = image_nii.get_fdata()
+        label = label_nii.get_fdata()
+
+        if len(image.shape[-1]) == 3:
+            assert image.shape[-1] == 1
+            image = image.squeeze(-1)
+        if len(label.shape[-1]) == 3:
+            assert label.shape[-1] == 1
+            label = label.squeeze(-1)
 
         # Resize to 128x128. Be careful with labels.
         assert image.shape == label.shape
@@ -114,6 +121,8 @@ class BrainTumor(Dataset):
         # Channel first to comply with Torch.
         assert image.shape == self.out_shape
         assert label.shape == self.out_shape
+        image = image[None, :, :]
+        label = label[None, :, :]
 
         return image, label
 
