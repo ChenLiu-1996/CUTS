@@ -24,6 +24,7 @@ class OutputSaver(object):
 
         self.save_path_numpy = '%s/%s/' % (save_path, 'numpy_files')
         os.makedirs(self.save_path_numpy, exist_ok=True)
+        self.image_idx = 0
 
     def save(
         self,
@@ -60,7 +61,6 @@ class OutputSaver(object):
         # Save the images, labels, and latent embeddings as numpy files for future reference.
         for image_idx in tqdm(range(B)):
             self.save_as_numpy(
-                image_idx=image_idx,
                 image=image_batch[image_idx, ...],
                 recon=recon_batch[image_idx, ...],
                 label=label_true_batch[image_idx, ...],
@@ -68,13 +68,14 @@ class OutputSaver(object):
                 latent=latent_batch[image_idx, ...].reshape((H * W, C)))
         return
 
-    def save_as_numpy(self, image_idx: int, image: np.array, recon: np.array,
+    def save_as_numpy(self, image: np.array, recon: np.array,
                       label: np.array, latent: np.array) -> None:
         with open(
                 '%s/%s' %
-            (self.save_path_numpy, 'sample_%s.npz' % str(image_idx).zfill(5)),
+            (self.save_path_numpy, 'sample_%s.npz' % str(self.image_idx).zfill(5)),
                 'wb+') as f:
             np.savez(f, image=image, recon=recon, label=label, latent=latent)
+        self.image_idx += 1
 
 
 def squeeze_excessive_dimension(batched_data: np.array) -> np.array:

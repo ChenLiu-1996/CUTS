@@ -43,6 +43,8 @@ def train(config: AttributeHashmap):
 
         model.train()
         for _, (x_train, _) in enumerate(train_set):
+            B = x_train.shape[0]
+
             x_train = x_train.type(torch.FloatTensor).to(device)
             _, patch_real, patch_recon, z_anchors, z_positives = model(x_train)
 
@@ -55,13 +57,14 @@ def train(config: AttributeHashmap):
             loss.backward()
             optimizer.step()
 
-            train_loss_recon += loss_recon.item()
-            train_loss_contrastive += loss_contrastive.item()
-            train_loss += loss.item()
+            train_loss_recon += loss_recon.item() * B
+            train_loss_contrastive += loss_contrastive.item() * B
+            train_loss += loss.item() * B
 
-        train_loss_recon = train_loss_recon / len(train_set)
-        train_loss_contrastive = train_loss_contrastive / len(train_set)
-        train_loss = train_loss / len(train_set)
+        train_loss_recon = train_loss_recon / len(train_set.dataset)
+        train_loss_contrastive = train_loss_contrastive / len(
+            train_set.dataset)
+        train_loss = train_loss / len(train_set.dataset)
 
         log('Train [%s/%s] recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f'
             % (epoch_idx + 1, config.max_epochs, train_loss_recon,
@@ -73,6 +76,8 @@ def train(config: AttributeHashmap):
         model.eval()
         with torch.no_grad():
             for _, (x_val, _) in enumerate(val_set):
+                B = x_val.shape[0]
+
                 x_val = x_val.type(torch.FloatTensor).to(device)
                 _, patch_real, patch_recon, z_anchors, z_positives = model(
                     x_val)
@@ -82,13 +87,13 @@ def train(config: AttributeHashmap):
                 loss = config.lambda_contrastive_loss * \
                     loss_contrastive + (1 - config.lambda_contrastive_loss) * loss_recon
 
-                val_loss_recon += loss_recon.item()
-                val_loss_contrastive += loss_contrastive.item()
-                val_loss += loss.item()
+                val_loss_recon += loss_recon.item() * B
+                val_loss_contrastive += loss_contrastive.item() * B
+                val_loss += loss.item() * B
 
-        val_loss_recon = val_loss_recon / len(val_set)
-        val_loss_contrastive = val_loss_contrastive / len(val_set)
-        val_loss = val_loss / len(val_set)
+        val_loss_recon = val_loss_recon / len(val_set.dataset)
+        val_loss_contrastive = val_loss_contrastive / len(val_set.dataset)
+        val_loss = val_loss / len(val_set.dataset)
         log('Validation [%s/%s] recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f'
             % (epoch_idx + 1, config.max_epochs, val_loss_recon,
                val_loss_contrastive, val_loss),
@@ -126,9 +131,8 @@ def test(config: AttributeHashmap):
 
     loss_fn_recon = torch.nn.MSELoss()
     loss_fn_contrastive = NTXentLoss()
-    output_saver = OutputSaver(
-        save_path=config.output_save_path,
-        random_seed=config.random_seed)
+    output_saver = OutputSaver(save_path=config.output_save_path,
+                               random_seed=config.random_seed)
 
     test_loss_recon, test_loss_contrastive, test_loss = 0, 0, 0
     model.eval()
@@ -143,9 +147,10 @@ def test(config: AttributeHashmap):
             loss = config.lambda_contrastive_loss * \
                 loss_contrastive + (1 - config.lambda_contrastive_loss) * loss_recon
 
-            test_loss_recon += loss_recon.item()
-            test_loss_contrastive += loss_contrastive.item()
-            test_loss += loss.item()
+            B = x_test.shape[0]
+            test_loss_recon += loss_recon.item() * B
+            test_loss_contrastive += loss_contrastive.item() * B
+            test_loss += loss.item() * B
 
             # Each pixel embedding recons to a patch.
             # Here we only take the center pixel of the reconed patch and collect into a reconed image.
@@ -162,9 +167,9 @@ def test(config: AttributeHashmap):
                               label_true_batch=y_test,
                               latent_batch=z)
 
-    test_loss_recon = test_loss_recon / len(test_set)
-    test_loss_contrastive = test_loss_contrastive / len(test_set)
-    test_loss = test_loss / len(test_set)
+    test_loss_recon = test_loss_recon / len(test_set.dataset)
+    test_loss_contrastive = test_loss_contrastive / len(test_set.dataset)
+    test_loss = test_loss / len(test_set.dataset)
 
     log('Test recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f.' %
         (test_loss_recon, test_loss_contrastive, test_loss),

@@ -49,13 +49,13 @@ def prepare_dataset(config: AttributeHashmap, mode: str = 'train'):
                                shuffle=True,
                                num_workers=config.num_workers)
         val_set = DataLoader(dataset=val_set,
-                             batch_size=len(val_set),
+                             batch_size=config.batch_size,
                              shuffle=False,
                              num_workers=config.num_workers)
         return train_set, val_set, num_image_channel
     else:
         test_set = DataLoader(dataset=dataset,
-                              batch_size=len(dataset),
+                              batch_size=config.batch_size,
                               shuffle=False,
                               num_workers=config.num_workers)
         return test_set, num_image_channel
