@@ -63,7 +63,9 @@ class BrainTumor(Dataset):
                             out_shape=self.out_shape)
 
         # Rescale image and label.
-        image = 2 * (image - image.min()) / (image.max() - image.min()) - 1
+        epsilon = 1e-12
+        image = 2 * (image - image.min() +
+                     epsilon) / (image.max() - image.min() + epsilon) - 1
 
         # Dimension fix.
         # Channel first to comply with Torch.
