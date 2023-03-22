@@ -81,10 +81,10 @@ class BrainTumor(Dataset):
         image = image_nii.get_fdata()
         label = label_nii.get_fdata()
 
-        if len(image.shape[-1]) == 3:
+        if len(image.shape) == 3:
             assert image.shape[-1] == 1
             image = image.squeeze(-1)
-        if len(label.shape[-1]) == 3:
+        if len(label.shape) == 3:
             assert label.shape[-1] == 1
             label = label.squeeze(-1)
 
