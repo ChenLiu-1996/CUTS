@@ -13,82 +13,125 @@ class BrainTumor(Dataset):
                  base_path: str = '../../data/brain_tumor/',
                  out_shape: Tuple[int] = (128, 128)):
 
-        # Pre-load all the data to CPU. Saves time.
-        # It works for this dataset since the dataset is not huge.
         self.base_path = base_path
         self.label_paths = sorted(glob('%s/%s' % (base_path, '*_seg.nii.gz')))
         self.image_paths = [
             _str.replace('_seg', '') for _str in self.label_paths
         ]
+        self.out_shape = out_shape
 
-        N = len(self.image_paths)
-        self.data_image = np.empty((N, 1, *out_shape))
-        self.data_label = np.empty((N, 1, *out_shape))
+        # # Pre-load all the data to CPU. Saves time.
+        # # It works for this dataset since the dataset is not huge.
+        # N = len(self.image_paths)
+        # self.data_image = np.empty((N, 1, *out_shape))
+        # self.data_label = np.empty((N, 1, *out_shape))
 
-        for i in range(len(self.image_paths)):
-            image_nii = nib.load(self.image_paths[i])
-            label_nii = nib.load(self.label_paths[i])
-            image = image_nii.get_fdata()
-            label = label_nii.get_fdata()
+        # for i in range(len(self.image_paths)):
+        #     image_nii = nib.load(self.image_paths[i])
+        #     label_nii = nib.load(self.label_paths[i])
+        #     image = image_nii.get_fdata().squeeze(-1)
+        #     label = label_nii.get_fdata().squeeze(-1)
 
-            # Resize to 128x128. Be careful with labels.
-            assert image.shape == label.shape
-            assert len(image.shape) in [2, 3]
-            if len(image.shape) == 3:
-                assert image.shape[2] == 1
-            resize_factor = np.array(out_shape) / image.shape[:2]
-            dsize = np.int16(resize_factor.min() * np.float16(image.shape[:2]))
-            image = cv2.resize(src=image,
-                               dsize=dsize,
-                               interpolation=cv2.INTER_CUBIC)
-            label = cv2.resize(src=label,
-                               dsize=dsize,
-                               interpolation=cv2.INTER_NEAREST)
+        #     # Resize to 128x128. Be careful with labels.
+        #     assert image.shape == label.shape
+        #     assert len(image.shape) in [2, 3]
+        #     if len(image.shape) == 3:
+        #         assert image.shape[2] == 1
+        #     resize_factor = np.array(out_shape) / image.shape[:2]
+        #     dsize = np.int16(resize_factor.min() * np.float16(image.shape[:2]))
+        #     image = cv2.resize(src=image,
+        #                        dsize=dsize,
+        #                        interpolation=cv2.INTER_CUBIC)
+        #     label = cv2.resize(src=label,
+        #                        dsize=dsize,
+        #                        interpolation=cv2.INTER_NEAREST)
 
-            # NOTE: Assuming binary label.
-            assert len(np.unique(label)) <= 2
-            label = label != np.unique(label)[0]
+        #     # NOTE: Assuming binary label.
+        #     assert len(np.unique(label)) <= 2
+        #     label = label != np.unique(label)[0]
 
-            # NOTE: Assuming vaccuum/background pixels are zero for images and labels!
-            image = crop_or_pad(image,
-                                in_shape=image.shape,
-                                out_shape=out_shape)
-            label = crop_or_pad(label,
-                                in_shape=label.shape,
-                                out_shape=out_shape)
+        #     # NOTE: Assuming vaccuum/background pixels are zero for images and labels!
+        #     image = crop_or_pad(image,
+        #                         in_shape=image.shape,
+        #                         out_shape=out_shape)
+        #     label = crop_or_pad(label,
+        #                         in_shape=label.shape,
+        #                         out_shape=out_shape)
 
-            # Rescale image and label.
-            image = 2 * (image - image.min()) / (image.max() - image.min()) - 1
+        #     # Rescale image and label.
+        #     image = 2 * (image - image.min()) / (image.max() - image.min()) - 1
 
-            # Dimension fix.
-            # Channel first to comply with Torch.
-            assert image.shape == out_shape
-            assert label.shape == out_shape
-            image = image[None, ...]
-            label = label[None, ...]
+        #     # Dimension fix.
+        #     # Channel first to comply with Torch.
+        #     assert image.shape == out_shape
+        #     assert label.shape == out_shape
+        #     image = image[None, ...]
+        #     label = label[None, ...]
 
-            # Filling in.
-            self.data_image[i, ...] = image
-            self.data_label[i, ...] = label
+        #     # Filling in.
+        #     self.data_image[i, ...] = image
+        #     self.data_label[i, ...] = label
 
     def __len__(self) -> int:
         return len(self.image_paths)
 
     def __getitem__(self, idx) -> Tuple[np.array, np.array]:
-        image = self.data_image[idx]
-        label = self.data_label[idx]
+        image_nii = nib.load(self.image_paths[idx])
+        label_nii = nib.load(self.label_paths[idx])
+        image = image_nii.get_fdata().squeeze(-1)
+        label = label_nii.get_fdata().squeeze(-1)
+
+        # Resize to 128x128. Be careful with labels.
+        assert image.shape == label.shape
+        assert len(image.shape) in [2, 3]
+        if len(image.shape) == 3:
+            assert image.shape[2] == 1
+        resize_factor = np.array(self.out_shape) / image.shape[:2]
+        dsize = np.int16(resize_factor.min() * np.float16(image.shape[:2]))
+        image = cv2.resize(src=image,
+                           dsize=dsize,
+                           interpolation=cv2.INTER_CUBIC)
+        label = cv2.resize(src=label,
+                           dsize=dsize,
+                           interpolation=cv2.INTER_NEAREST)
+
+        # NOTE: Assuming binary label.
+        assert len(np.unique(label)) <= 2
+        label = label != np.unique(label)[0]
+
+        # NOTE: Assuming vaccuum/background pixels are zero for images and labels!
+        image = crop_or_pad(image,
+                            in_shape=image.shape,
+                            out_shape=self.out_shape)
+        label = crop_or_pad(label,
+                            in_shape=label.shape,
+                            out_shape=self.out_shape)
+
+        # Rescale image and label.
+        image = 2 * (image - image.min()) / (image.max() - image.min()) - 1
+
+        # Dimension fix.
+        # Channel first to comply with Torch.
+        assert image.shape == self.out_shape
+        assert label.shape == self.out_shape
+
         return image, label
 
     def num_image_channel(self) -> int:
-        # [B, C, H, W]
-        return self.data_image.shape[1]
+        # # [B, C, H, W]
+        # return self.data_image.shape[1]
+        return 1
 
     def num_classes(self) -> int:
-        return len(np.unique(self.data_label)) - 1
+        # return len(np.unique(self.data_label)) - 1
+        # NOTE: temporary fix!
+        return 1
 
 
-def crop_or_pad(in_image: np.array, in_shape: Tuple[int],
-                out_shape: Tuple[int], pad_value: float = 0) -> np.array:
+def crop_or_pad(in_image: np.array,
+                in_shape: Tuple[int],
+                out_shape: Tuple[int],
+                pad_value: float = 0) -> np.array:
     assert len(in_shape) == len(out_shape)
     D = len(in_shape)
 
