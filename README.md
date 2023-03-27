@@ -194,7 +194,7 @@ The process is largely the same as detailed in the section: **To reproduce the r
   <summary>The additional work you need to complete prior to training are</summary>
 
 1. Put your dataset under `src/data/`, similar to the other datasets.
-2. Write your custom config file and put it under `config/`, similar to the other config files. Simiar to `example_dataset_without_label_seed2021.yaml` that we provided as an example, you shall specify the additional field `no_label: True`.
+2. Write your custom config file and put it under `config/`, similar to the other config files. Please note that, just like `example_dataset_without_label_seed2021.yaml`, you shall specify the additional field `no_label: True`.
 3. Write your custom `Dataset` class in `src/datasets/*.py`, similar to the existing examples.
     - If your dataset is very small (e.g., 50 images), you can refer to `src/datasets/brain_ventricles.py` or `src/datasets/retina.py`, where the data is pre-loaded to the CPU prior to training.
     - If your dataset is rather big, you can refer to `src/datasets/brain_tumor.py`, where the data is loaded on-the-fly during training.
