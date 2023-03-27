@@ -134,7 +134,7 @@ python generate_baselines.py --config ../../config/$CONFIG_FILE.yaml
   <summary>Results Plotting</summary>
 
 #### To reproduce the figures in the paper.
-Note: This is a newer version for plotting, and it already entails the following versions (spectral k-means, diffusion condensation). You don't need to worry about them if you use this plotting script.
+There are primarily two scripts for this purpose: `plot_paper_figure_natural.py` and `plot_paper_figure_medical.py`. The difference between them is self-explanatory by their names.
 
 The `image-idx` argument shall be followed by space-separated index/indices of the images to be plotted.
 
