@@ -173,7 +173,7 @@ python run_metrics.py --config ../../config/$CONFIG_FILE.yaml
 
 ## To train on your custom dataset **with label**.
 **NOTE**: Since our method is **completely unsupervised**, the only additional benefit for providing labels are:
-1. With labels, we will have quantitative metrics (dice coefficient, etc.).
+1. With labels, we will have meaningful quantitative metrics (dice coefficient, etc.) when you run `run_metrics.py`.
 2. With labels, for binary segmentation tasks, our method can predict binary masks in addition to multi-scale segmentations.
 
 The process is largely the same as detailed in the section: **To reproduce the results in the paper** above.
