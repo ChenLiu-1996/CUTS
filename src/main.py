@@ -164,7 +164,7 @@ def test(config: AttributeHashmap):
 
             output_saver.save(image_batch=x_test,
                               recon_batch=patch_recon,
-                              label_true_batch=y_test,
+                              label_true_batch=y_test if config.no_label is False else None,
                               latent_batch=z)
 
     test_loss_recon = test_loss_recon / len(test_set.dataset)
@@ -191,7 +191,6 @@ if __name__ == '__main__':
     config.config_file_name = args.config
     config = parse_settings(config, log_settings=args.mode == 'train')
 
-    # Currently supports 2 modes: `train`: Train+Validation+Test & `test`: Test.
     assert args.mode in ['train', 'test']
 
     seed_everything(config.random_seed)

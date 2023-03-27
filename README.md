@@ -67,7 +67,7 @@ python -m pip install nibabel
 ```
 Installation usually takes between 20 minutes and 1 hour on a normal desktop computer.
 
-## Usage
+## To reproduce the results in the paper.
 <details>
   <summary>Unzip data</summary>
 
@@ -171,6 +171,40 @@ python run_metrics.py --config ../../config/$CONFIG_FILE.yaml
 ```
 </details>
 
+## To train on your data **with label**.
+The process is largely the same as detailed in the section: *To reproduce the results in the paper* above.
+
+<details>
+  <summary>The additional work you need to complete prior to training are</summary>
+
+1. Put your dataset under `src/data/`, similar to the other datasets.
+2. Write your custom config file and put it under `config/`, similar to the other config files.
+3. Write your custom `Dataset` class in `src/datasets/*.py`, similar to the existing examples.
+    - If your dataset is very small (e.g., 50 images), you can refer to `src/datasets/brain_ventricles.py` or `src/datasets/retina.py`, where the data is pre-loaded to the CPU prior to training.
+    - If your dataset is rather big, you can refer to `src/datasets/brain_tumor.py`, where the data is loaded on-the-fly during training.
+4. Make sure your custom `Dataset` is included in `src/data_utils/prepare_datasets.py`, both in the import section on the top of the page, and inside the `prepare_dataset` function, alongside the lines such as `dataset = Retina(base_path=config.dataset_path)`.
+</details>
+
+Other than that, you can use the pipeline as usual.
+
+## To train on your data **without label**.
+The process is largely the same as detailed in the section: *To reproduce the results in the paper* above.
+
+<details>
+  <summary>The additional work you need to complete prior to training are</summary>
+
+1. Put your dataset under `src/data/`, similar to the other datasets.
+2. Write your custom config file and put it under `config/`, similar to the other config files. Simiar to `example_dataset_without_label_seed2021.yaml` that we provided as an example, you shall specify the additional field `no_label: True`.
+3. Write your custom `Dataset` class in `src/datasets/*.py`, similar to the existing examples.
+    - If your dataset is very small (e.g., 50 images), you can refer to `src/datasets/brain_ventricles.py` or `src/datasets/retina.py`, where the data is pre-loaded to the CPU prior to training.
+    - If your dataset is rather big, you can refer to `src/datasets/brain_tumor.py`, where the data is loaded on-the-fly during training.
+    - However, you need to pay attention that, since your custom dataset does not have labels, you shall refer to `src/datasets/example_dataset_without_label.py` to see how you need to use an `np.nan` as a placeholder for the non-existent labels inside the `__getitem__` method.
+4. Make sure your custom `Dataset` is included in `src/data_utils/prepare_datasets.py`, both in the import section on the top of the page, and inside the `prepare_dataset` function, alongside the lines such as `dataset = ExampleDatasetWithoutLabel(base_path=config.dataset_path)`.
+</details>
+
+Other than that, you can use the pipeline as usual.
+
+Be mindful though: when you run `generate_kmeans.py`, the script will still print out dice scores for each image. The values shall be very close to zero (1e-16). This does not mean the segmentation is bad. This only means the ground truth label is not provided. The dice score is computed against a placeholding all-zero label, with a very tiny numerical stability term.
 
 ## DEBUG Notes
 <details>

@@ -159,22 +159,9 @@ if __name__ == '__main__':
     config.config_file_name = args.config
     config = parse_settings(config, log_settings=False)
 
-    if config.dataset_name == 'retina':
-        hparams = AttributeHashmap({
-            'is_binary': True,
-        })
-    elif config.dataset_name == 'berkeley':
-        hparams = AttributeHashmap({
-            'is_binary': False,
-        })
-    elif config.dataset_name == 'brain_ventricles':
-        hparams = AttributeHashmap({
-            'is_binary': True,
-        })
-    elif config.dataset_name == 'brain_tumor':
-        hparams = AttributeHashmap({
-            'is_binary': True,
-        })
+    hparams = AttributeHashmap({
+        'is_binary': config.is_binary,
+    })
 
     files_folder_baselines = '%s/%s' % (config.output_save_path,
                                         'numpy_files_seg_baselines')

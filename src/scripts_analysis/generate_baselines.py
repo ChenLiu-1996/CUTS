@@ -93,9 +93,14 @@ if __name__ == '__main__':
         label_pred_random = label_pred_watershed = label_pred_felzenszwalb = None
         for method in methods:
             if method == 'random':
-                label_pred_random = np.random.randint(0,
-                                                      label_true.max() + 1,
-                                                      label_true.shape)
+                if np.isnan(label_true.max()):
+                    label_pred_random = np.random.randint(0,
+                                                          2,
+                                                          label_true.shape)
+                else:
+                    label_pred_random = np.random.randint(0,
+                                                          label_true.max() + 1,
+                                                          label_true.shape)
             elif method == 'watershed':
                 label_pred_watershed = get_baseline_predictions(
                     image, method='watershed')

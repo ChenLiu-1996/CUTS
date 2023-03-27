@@ -22,6 +22,10 @@ def parse_settings(config: AttributeHashmap, log_settings: bool = True):
     if 'model_setting' in config.keys() and config.model_setting == 'no_contrastive':
         config.lambda_contrastive_loss = 0
 
+    # for "no label" option
+    if 'no_label' not in config.keys():
+        config.no_label = False
+
     # Initialize log file.
     config.log_dir = config.log_folder + '/' + \
         os.path.basename(

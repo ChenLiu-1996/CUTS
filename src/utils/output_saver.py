@@ -43,20 +43,27 @@ class OutputSaver(object):
 
         image_batch = image_batch.cpu().detach().numpy()
         recon_batch = recon_batch.cpu().detach().numpy()
-        label_true_batch = label_true_batch.cpu().detach().numpy()
+        if label_true_batch is not None:
+            label_true_batch = label_true_batch.cpu().detach().numpy()
         latent_batch = latent_batch.cpu().detach().numpy()
         # channel-first to channel-last
         image_batch = np.moveaxis(image_batch, 1, -1)
         recon_batch = np.moveaxis(recon_batch, 1, -1)
-        label_true_batch = np.moveaxis(label_true_batch, 1, -1)
+        if label_true_batch is not None:
+            label_true_batch = np.moveaxis(label_true_batch, 1, -1)
         latent_batch = np.moveaxis(latent_batch, 1, -1)
 
         # Squeeze excessive dimension.
         image_batch = squeeze_excessive_dimension(image_batch)
         recon_batch = squeeze_excessive_dimension(recon_batch)
-        label_true_batch = squeeze_excessive_dimension(label_true_batch)
+        if label_true_batch is not None:
+            label_true_batch = squeeze_excessive_dimension(label_true_batch)
 
         B, H, W, C = latent_batch.shape
+
+        if label_true_batch is None:
+            label_true_batch = np.empty((B,H,W))
+            label_true_batch[:] = np.nan
 
         # Save the images, labels, and latent embeddings as numpy files for future reference.
         for image_idx in tqdm(range(B)):

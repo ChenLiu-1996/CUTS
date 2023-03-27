@@ -178,6 +178,8 @@ if __name__ == '__main__':
     config.config_file_name = args.config
     config = parse_settings(config, log_settings=False)
 
+    files_folder_raw = '%s/%s' % (config.output_save_path,
+                                  'numpy_files')
     files_folder_baselines = '%s/%s' % (config.output_save_path,
                                         'numpy_files_seg_baselines')
     files_folder_stego = '%s/%s' % (config.output_save_path,
@@ -196,6 +198,8 @@ if __name__ == '__main__':
     os.makedirs(figure_folder, exist_ok=True)
     os.makedirs(phate_folder, exist_ok=True)
 
+    files_path_raw = sorted(
+        glob('%s/%s' % (files_folder_raw, '*.npz')))
     files_path_baselines = sorted(
         glob('%s/%s' % (files_folder_baselines, '*.npz')))
     files_path_stego = sorted(glob('%s/%s' % (files_folder_stego, '*.npz')))
@@ -216,33 +220,57 @@ if __name__ == '__main__':
 
     for sample_idx, image_idx in enumerate(args.image_idx):
 
-        numpy_array_baselines = np.load(files_path_baselines[image_idx])
-        numpy_array_kmeans = np.load(files_path_kmeans[image_idx])
-        numpy_array_diffusion = np.load(files_path_diffusion[image_idx])
+        numpy_array_raw = np.load(files_path_raw[image_idx])
+        image = numpy_array_raw['image']
+        recon = numpy_array_raw['recon']
+        label_true = numpy_array_raw['label']
+        if np.isnan(label_true).all():
+            print('\n\n[Major Warning !!!] We found that the true label is all `NaN`s.' + \
+            '\nThis shall only happen if you are not providing labels. Please double check!\n\n')
+        label_true = label_true.astype(np.int16)
+        latent = numpy_array_raw['latent']
 
-        image = numpy_array_diffusion['image']
-        recon = numpy_array_diffusion['recon']
-        label_true = numpy_array_diffusion['label'].astype(np.int16)
-        latent = numpy_array_diffusion['latent']
-        label_random = numpy_array_baselines['label_random']
-        label_watershed = numpy_array_baselines['label_watershed']
-        label_felzenszwalb = numpy_array_baselines['label_felzenszwalb']
-        label_kmeans = numpy_array_kmeans['label_kmeans']
-        granularities = numpy_array_diffusion['granularities_diffusion']
-        labels_diffusion = numpy_array_diffusion['labels_diffusion']
+        # In case some results are not generated, we will placehold them with blank labels.
+        try:
+            numpy_array_baselines = np.load(files_path_baselines[image_idx])
+            label_random = numpy_array_baselines['label_random']
+            label_watershed = numpy_array_baselines['label_watershed']
+            label_felzenszwalb = numpy_array_baselines['label_felzenszwalb']
+        except:
+            print('Warning! `baselines` results not found. Placeholding with blank labels.')
+            label_random = np.zeros_like(label_true)
+            label_watershed = np.zeros_like(label_true)
+            label_felzenszwalb = np.zeros_like(label_true)
 
-        # We have provided scripts to generate all other results except for STEGO.
-        # In case you have not generated STEGO results, we will skip its plotting.
+        try:
+            numpy_array_kmeans = np.load(files_path_kmeans[image_idx])
+            label_kmeans = numpy_array_kmeans['label_kmeans']
+        except:
+            print('Warning! `CUTS + k-means` results not found. Placeholding with blank labels.')
+            label_kmeans = np.zeros_like(label_true)
+
+        try:
+            numpy_array_diffusion = np.load(files_path_diffusion[image_idx])
+            granularities = numpy_array_diffusion['granularities_diffusion']
+            labels_diffusion = numpy_array_diffusion['labels_diffusion']
+        except:
+            print('Warning! `CUTS + diffusion condensation` results not found. Placeholding with blank labels.')
+            num_placeholder_granularities = 10
+            granularities = np.arange(num_placeholder_granularities)
+            labels_diffusion = np.zeros((num_placeholder_granularities, *label_true.shape))
+
         try:
             numpy_array_stego = np.load(files_path_stego[image_idx])
             label_stego = numpy_array_stego['label_stego']
         except:
+            print('Warning! `STEGO` results not found. Placeholding with blank labels.')
             label_stego = np.zeros_like(label_true)
 
         try:
             numpy_array_unet = np.load(files_path_supervised_unet[image_idx])
             label_supervised_unet = numpy_array_unet['label_pred']
         except:
+            print('Warning! `Supervised UNet` results not found. Placeholding with blank labels.')
             label_supervised_unet = np.zeros_like(label_true)
 
         try:
@@ -250,6 +278,7 @@ if __name__ == '__main__':
                 files_path_supervised_nnunet[image_idx])
             label_supervised_nnunet = numpy_array_nnunet['label_pred']
         except:
+            print('Warning! `Supervised nn-UNet` results not found. Placeholding with blank labels.')
             label_supervised_nnunet = np.zeros_like(label_true)
 
         H, W = label_true.shape[:2]
@@ -289,7 +318,7 @@ if __name__ == '__main__':
             Because of the frequent deadlock problem, I decided to use the following solution:
             kill and restart whenever a process is taking too long (likely due to deadlock).
             '''
-            load_path = files_path_diffusion[image_idx]
+            load_path = files_path_raw[image_idx]
             num_workers = config.num_workers
             folder = '/'.join(
                 os.path.dirname(os.path.abspath(__file__)).split('/'))

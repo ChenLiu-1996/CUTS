@@ -15,3 +15,4 @@ num_workers: 8
 lambda_contrastive_loss: 0.01  # Between 0 and 1. no_recon == 1. no_contrastive == 0.
 random_seed: 2021
 train_val_ratio: '7:3'
+is_binary: True
