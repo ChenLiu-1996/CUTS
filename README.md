@@ -171,7 +171,7 @@ python run_metrics.py --config ../../config/$CONFIG_FILE.yaml
 ```
 </details>
 
-## To train on your data **with label**.
+## Run on your custom dataset **with label**.
 The process is largely the same as detailed in the section: *To reproduce the results in the paper* above.
 
 <details>
@@ -187,7 +187,7 @@ The process is largely the same as detailed in the section: *To reproduce the re
 
 Other than that, you can use the pipeline as usual.
 
-## To train on your data **without label**.
+## Run on your custom dataset **without label**.
 The process is largely the same as detailed in the section: *To reproduce the results in the paper* above.
 
 <details>
