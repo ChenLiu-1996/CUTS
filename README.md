@@ -208,7 +208,7 @@ The process is largely the same as detailed in the section: **To reproduce the r
 
 Other than that, you can use the pipeline as usual.
 
-Be mindful though: when you run `generate_kmeans.py`, the script will still print out dice scores for each image. The values shall be very close to zero (1e-16). This does not mean the segmentation is bad. This only means the ground truth label is not provided. The dice score is computed against a placeholding all-zero label, with a very tiny numerical stability term.
+Be mindful though: when you run `generate_kmeans.py`, the script will still print out dice scores for each image. The values shall be very close to zero (on the order of 1e-16). This does not mean the segmentation is bad. This only means the ground truth label is not provided. The dice score is computed against a placeholding all-zero label, with a very tiny numerical stability term.
 
 ## DEBUG Notes
 <details>
