@@ -68,6 +68,8 @@ python -m pip install nibabel
 Installation usually takes between 20 minutes and 1 hour on a normal desktop computer.
 
 ## To reproduce the results in the paper.
+The following commands are using `retina_seed2022` as an example (retina dataset, random seed set to 2022).
+
 <details>
   <summary>Unzip data</summary>
 
@@ -90,13 +92,13 @@ conda activate cuts
 
 #### To train a model.
 ```
-## Under $CUTS_ROOT/src
-python main.py --mode train --config ../config/$CONFIG_FILE.yaml
+## Under `src`
+python main.py --mode train --config ../config/retina_seed2022.yaml
 ```
 #### To test a model (automatically done during `train` mode).
 ```
-## Under $CUTS_ROOT/src
-python main.py --mode test --config ../config/$CONFIG_FILE.yaml
+## Under `src`
+python main.py --mode test --config ../config/retina_seed2022.yaml
 ```
 </details>
 
@@ -104,8 +106,8 @@ python main.py --mode test --config ../config/$CONFIG_FILE.yaml
   <summary>(Optional) [Comparison] Training a supervised model</summary>
 
 ```
-## Under $CUTS_ROOT/src/
-python main_supervised.py --mode train --config ../$CONFIG_FILE.yaml
+## Under `src/`
+python main_supervised.py --mode train --config ../retina_seed2022.yaml
 ```
 </details>
 
@@ -115,18 +117,18 @@ python main_supervised.py --mode train --config ../$CONFIG_FILE.yaml
 
 #### To generate and save the segmentation using spectral k-means.
 ```
-## Under $CUTS_ROOT/src/scripts_analysis
-python generate_kmeans.py --config ../../config/$CONFIG_FILE.yaml
+## Under `src/scripts_analysis`
+python generate_kmeans.py --config ../../config/retina_seed2022.yaml
 ```
 #### To generate and save the segmentation using diffusion condensation.
 ```
-## Under $CUTS_ROOT/src/scripts_analysis
-python generate_diffusion.py --config ../../config/$CONFIG_FILE.yaml
+## Under `src/scripts_analysis`
+python generate_diffusion.py --config ../../config/retina_seed2022.yaml
 ```
 #### To generate and save the segmentation using baseline methods.
 ```
-## Under $CUTS_ROOT/src/scripts_analysis
-python generate_baselines.py --config ../../config/$CONFIG_FILE.yaml
+## Under `src/scripts_analysis`
+python generate_baselines.py --config ../../config/retina_seed2022.yaml
 ```
 </details>
 
@@ -144,7 +146,7 @@ With the ` --comparison` flag, the side-by-side comparison against other methods
 With the ` --grayscale` flag, the input images and reconstructed images will be plotted in grayscale.
 
 ```
-## Under $CUTS_ROOT/src/scripts_analysis
+## Under `src/scripts_analysis`
 
 ## For natural images (berkeley)
 python plot_paper_figure_natural.py --config ../../config/$CONFIG_FILE.yaml --image-idx $IMAGE_IDX
