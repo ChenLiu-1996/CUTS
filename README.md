@@ -185,7 +185,7 @@ The process is largely the same as detailed in the section: **To reproduce the r
 
 1. Put your dataset under `src/data/`, similar to the other datasets.
 2. Write your custom config file and put it under `config/`, similar to the other config files.
-3. Write your custom `Dataset` class in `src/datasets/*.py`, similar to the existing examples.
+3. Write your custom `Dataset` class in `src/datasets/***.py`, similar to the existing examples.
     - If your dataset is very small (e.g., 50 images), you can refer to `src/datasets/brain_ventricles.py` or `src/datasets/retina.py`, where the data is pre-loaded to the CPU prior to training.
     - If your dataset is rather big, you can refer to `src/datasets/brain_tumor.py`, where the data is loaded on-the-fly during training.
 4. Make sure your custom `Dataset` is included in `src/data_utils/prepare_datasets.py`, both in the import section on the top of the page, and inside the `prepare_dataset` function, alongside the lines such as `dataset = Retina(base_path=config.dataset_path)`.
@@ -202,7 +202,7 @@ The process is largely the same as detailed in the section: **To reproduce the r
 
 1. Put your dataset under `src/data/`, similar to the other datasets.
 2. Write your custom config file and put it under `config/`, similar to the other config files. Please note that, just like `example_dataset_without_label_seed2021.yaml`, you shall specify the additional field `no_label: True`.
-3. Write your custom `Dataset` class in `src/datasets/*.py`, similar to the existing examples.
+3. Write your custom `Dataset` class in `src/datasets/***.py`, similar to the existing examples.
     - If your dataset is very small (e.g., 50 images), you can refer to `src/datasets/brain_ventricles.py` or `src/datasets/retina.py`, where the data is pre-loaded to the CPU prior to training.
     - If your dataset is rather big, you can refer to `src/datasets/brain_tumor.py`, where the data is loaded on-the-fly during training.
     - However, you need to pay attention that, since your custom dataset does not have labels, you shall refer to `src/datasets/example_dataset_without_label.py` to see how you need to use an `np.nan` as a placeholder for the non-existent labels inside the `__getitem__` method.
@@ -213,11 +213,11 @@ Other than that, you can use the pipeline as usual.
 
 Be mindful though: when you run `generate_kmeans.py`, the script will still print out dice scores for each image. The values shall be very close to zero (on the order of 1e-16). This does not mean the segmentation is bad. This only means the ground truth label is not provided. The dice score is computed against a placeholding all-zero label, with a very tiny numerical stability term.
 
-**SPECIAL NOTE**: The outcome of this pipeline will be the multi-scale segmentations as a result of diffusion condensation. No binary mask will be generated. **If you really want the model to generate binary masks in addition to the multi-scale segmentations, what you can do is to provide a set of "pseudo-labels"** as follows:
+**SPECIAL NOTE**: The outcome of this pipeline will be the multi-scale segmentations as a result of diffusion condensation. No binary mask will be generated. **If you really want the model to generate binary masks in addition to the multi-scale segmentations, what you can do is to provide a set of pseudo-labels** as follows:
 1. Instead of segmenting the desired region-of-interest carefully as in regular labels, you just casually circle/square/whatever a typical enough subregion inside region-of-interest, and mark them as 1's whereas the backgrounds as 0's.
-2. Then, you provide these casual "pseudo-labels" as if they are real "labels".
+2. Then, you provide these casual pseudo-labels as if they were real labels. Put them in the correct folders under `src/data/` and load them as if they were real labels in your `src/datasets/***.py`.
 3. Follow the pipeline as in the previous section: **To train on your custom dataset with label**.
-4. In this way, binary masks will also be generated. Please be careful though: the quantitative metrics will not be accurate, as you are providing "pseudo-labels" instead of accurate "labels".
+4. In this way, binary masks will also be generated. Please be careful though: the quantitative metrics will not be accurate, as you are providing pseudo-labels instead of accurate real labels.
 
 ## DEBUG Notes
 <details>
