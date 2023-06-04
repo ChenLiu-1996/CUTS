@@ -28,6 +28,8 @@ if __name__ == '__main__':
             'Consider increasing if you hit too many TimeOuts.',
         type=int,
         default=60)
+    parser.add_argument('-r', '--rerun', action='store_true')
+    parser.add_argument('-o', '--overwrite', action='store_true')
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
@@ -44,50 +46,89 @@ if __name__ == '__main__':
 
     dice_list = []
     for image_idx in tqdm(range(len(np_files_path))):
-        '''
-        Because of the frequent deadlock problem, I decided to use the following solution:
-        kill and restart whenever a process is taking too long (likely due to deadlock).
-        '''
 
         load_path = np_files_path[image_idx]
         save_path = '%s/%s' % (save_path_numpy,
-                               'sample_%s.npz' % str(image_idx).zfill(5))
+                               os.path.basename(np_files_path[image_idx]))
         num_workers = config.num_workers
 
         folder = '/'.join(
             os.path.dirname(os.path.abspath(__file__)).split('/'))
 
-        file_success = False
-        while not file_success:
-            start = time.time()
-            while True:
-                try:
-                    proc = subprocess.Popen([
-                        'python3', folder + '/helper_generate_kmeans.py',
-                        '--load_path', load_path, '--save_path', save_path,
-                        '--num_workers',
-                        str(num_workers)
-                    ],
-                                            stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE)
-                    stdout, stderr = proc.communicate(
-                        timeout=args.max_wait_sec)
-                    stdout, stderr = str(stdout), str(stderr)
-                    stdout = stdout.lstrip('b\'').rstrip('\'')
-                    stderr = stderr.lstrip('b\'').rstrip('\'')
-                    print(image_idx, stdout, stderr)
+        if os.path.exists(save_path) and not args.overwrite:
+            print('File already exists: %s' % save_path)
+            print(
+                'Skipping this file. If want to recompute and overwrite, use `-o`/`--overwrite`.'
+            )
+            continue
 
-                    proc.kill()
-                    # This is determined by the sys.stdout in `helper_generate_kmeans.py`
-                    if stdout[:8] == 'SUCCESS!':
-                        file_success = True
-                        dice = float(stdout.split('dice:')[1])
-                        dice_list.append(dice)
-                    break
+        if not args.rerun:
+            '''
+            In many cases this is enough. If you experience deadlock, you can try to use `-r`/`--rerun`.
+            '''
+            numpy_array = np.load(load_path)
+            image = numpy_array['image']
+            label_true = numpy_array['label']
+            latent = numpy_array['latent']
 
-                except subprocess.TimeoutExpired:
-                    print('Time out! Restart subprocess.')
-                    proc.kill()
+            image = (image + 1) / 2
+
+            H, W = label_true.shape[:2]
+            C = latent.shape[-1]
+            X = latent
+
+            from helper_generate_kmeans import generate_kmeans
+            dice_score, label_pred, seg_pred = generate_kmeans(
+                (H, W, C), latent, label_true, num_workers=num_workers)
+
+            with open(save_path, 'wb+') as f:
+                np.savez(f,
+                         image=image,
+                         label=label_true,
+                         latent=latent,
+                         label_kmeans=label_pred,
+                         seg_kmeans=seg_pred)
+
+            print('SUCCESS! %s, dice: %s' %
+                  (load_path.split('/')[-1], dice_score))
+            dice_list.append(dice_score)
+
+        else:
+            '''
+            Because of the frequent deadlock problem, I decided to use the following solution:
+            kill and restart whenever a process is taking too long (likely due to deadlock).
+            '''
+            file_success = False
+            while not file_success:
+                start = time.time()
+                while True:
+                    try:
+                        proc = subprocess.Popen([
+                            'python3', folder + '/helper_generate_kmeans.py',
+                            '--load_path', load_path, '--save_path', save_path,
+                            '--num_workers',
+                            str(num_workers)
+                        ],
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE)
+                        stdout, stderr = proc.communicate(
+                            timeout=args.max_wait_sec)
+                        stdout, stderr = str(stdout), str(stderr)
+                        stdout = stdout.lstrip('b\'').rstrip('\'')
+                        stderr = stderr.lstrip('b\'').rstrip('\'')
+                        print(image_idx, stdout, stderr)
+
+                        proc.kill()
+                        # This is determined by the sys.stdout in `helper_generate_kmeans.py`
+                        if 'SUCCESS!' in stdout:
+                            file_success = True
+                            dice = float(stdout.split('dice:')[1])
+                            dice_list.append(dice)
+                        break
+
+                    except subprocess.TimeoutExpired:
+                        print('Time out! Restart subprocess.')
+                        proc.kill()
 
     print('All kmeans results generated.')
     print('Dice: %.3f \u00B1 %.3f.' %

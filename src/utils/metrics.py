@@ -42,6 +42,9 @@ def range_aware_ssim(label_true: np.array, label_pred: np.array) -> float:
     '''
     data_range = label_true.max() - label_true.min()
 
+    if data_range == 0:
+        data_range = 1.0
+
     return ssim(a=label_true, b=label_pred, data_range=data_range)
 
 

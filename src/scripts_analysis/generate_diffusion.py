@@ -74,10 +74,9 @@ if __name__ == '__main__':
         labels_pred, granularities, levels, gradients = generate_diffusion(
             (H, W, C), latent, num_workers=config.num_workers)
 
-
         with open(
                 '%s/%s' %
-            (save_path_numpy, 'sample_%s.npz' % str(image_idx).zfill(5)),
+            (save_path_numpy, os.path.basename(np_files_path[image_idx])),
                 'wb+') as f:
             np.savez(f,
                      image=image,
