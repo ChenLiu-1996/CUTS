@@ -2,6 +2,7 @@ from data_utils.extend import ExtendedDataset
 from data_utils.split import split_dataset
 from datasets.berkeley_natural_images import BerkeleyNaturalImages
 from datasets.brain_ventricles import BrainVentricles
+from datasets.glas_histology import GlasHistology
 from datasets.retina import Retina
 from datasets.brain_tumor import BrainTumor
 from datasets.example_dataset_without_label import ExampleDatasetWithoutLabel
@@ -19,6 +20,8 @@ def prepare_dataset(config: AttributeHashmap, mode: str = 'train'):
         dataset = BrainVentricles(base_path=config.dataset_path)
     elif config.dataset_name == 'brain_tumor':
         dataset = BrainTumor(base_path=config.dataset_path)
+    elif config.dataset_name == 'glas_histology':
+        dataset = GlasHistology(base_path=config.dataset_path)
     elif config.dataset_name == 'example_dataset_without_label':
         dataset = ExampleDatasetWithoutLabel(base_path=config.dataset_path)
     else:

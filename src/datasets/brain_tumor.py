@@ -36,7 +36,7 @@ class BrainTumor(Dataset):
             assert label.shape[-1] == 1
             label = label.squeeze(-1)
 
-        # Resize to 128x128. Be careful with labels.
+        # Resize to `out_shape`. Be careful with labels.
         assert image.shape == label.shape
         assert len(image.shape) in [2, 3]
         if len(image.shape) == 3:

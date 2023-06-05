@@ -3,11 +3,6 @@
 [![Twitter](https://img.shields.io/twitter/follow/KrishnaswamyLab.svg?style=social&label=Follow)](https://twitter.com/KrishnaswamyLab)
 [![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/UnsupervisedMedicalSeg.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/UnsupervisedMedicalSeg/)
 
-
-<img src = "assets/github_img1.png" width=720>
-<img src = "assets/github_img2.png" width=700>
-
-
 **This repository contains the official PyTorch implementation of the following paper:**
 
 > **CUTS: A Fully Unsupervised Framework for Medical Image Segmentation**<br>
@@ -19,6 +14,10 @@
 > Please direct correspondence to: smita.krishnaswamy@yale.edu or lucian.delpriore@yale.edu.
 >
 > https://arxiv.org/abs/2209.11359
+
+
+<img src = "assets/github_img1.png" width=720>
+<img src = "assets/github_img2.png" width=700>
 
 
 ## Repository Hierarchy
