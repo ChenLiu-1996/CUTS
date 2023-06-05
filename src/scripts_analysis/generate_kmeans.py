@@ -28,8 +28,17 @@ if __name__ == '__main__':
             'Consider increasing if you hit too many TimeOuts.',
         type=int,
         default=60)
-    parser.add_argument('-r', '--rerun', action='store_true')
-    parser.add_argument('-o', '--overwrite', action='store_true')
+    parser.add_argument(
+        '-r',
+        '--rerun',
+        action='store_true',
+        help=
+        'If true, will rerun the script until succeeds to circumvent deadlock.'
+    )
+    parser.add_argument('-o',
+                        '--overwrite',
+                        action='store_true',
+                        help='If true, overwrite previously computed results.')
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 

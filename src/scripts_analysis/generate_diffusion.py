@@ -44,6 +44,10 @@ if __name__ == '__main__':
     parser.add_argument('--config',
                         help='Path to config yaml file.',
                         required=True)
+    parser.add_argument('-o',
+                        '--overwrite',
+                        action='store_true',
+                        help='If true, overwrite previously computed results.')
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
@@ -59,6 +63,16 @@ if __name__ == '__main__':
     os.makedirs(save_path_numpy, exist_ok=True)
 
     for image_idx in tqdm(range(len(np_files_path))):
+        save_path = '%s/%s' % (save_path_numpy,
+                               os.path.basename(np_files_path[image_idx]))
+
+        if os.path.exists(save_path) and not args.overwrite:
+            print('File already exists: %s' % save_path)
+            print(
+                'Skipping this file. If want to recompute and overwrite, use `-o`/`--overwrite`.'
+            )
+            continue
+
         numpy_array = np.load(np_files_path[image_idx])
         image = numpy_array['image']
         recon = numpy_array['recon']
@@ -74,10 +88,7 @@ if __name__ == '__main__':
         labels_pred, granularities, levels, gradients = generate_diffusion(
             (H, W, C), latent, num_workers=config.num_workers)
 
-        with open(
-                '%s/%s' %
-            (save_path_numpy, os.path.basename(np_files_path[image_idx])),
-                'wb+') as f:
+        with open(save_path, 'wb+') as f:
             np.savez(f,
                      image=image,
                      recon=recon,
