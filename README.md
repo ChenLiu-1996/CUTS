@@ -6,19 +6,24 @@
 **This repository contains the official PyTorch implementation of the following paper:**
 
 > **CUTS: A Fully Unsupervised Framework for Medical Image Segmentation**<br>
-> Chen Liu, Matthew Amodio, Liangbo L. Shen, Feng Gao, Arman Avesta, Sanjay Aneja, Jay Wang, Lucian V. Del Priore, Smita Krishnaswamy <br>
->
->
-> *Chen and Matthew are co-first authors, while Sanjay, Jay, Lucian and Smita are co-advisory authors.*
->
 > Please direct correspondence to: smita.krishnaswamy@yale.edu or lucian.delpriore@yale.edu.
->
 > https://arxiv.org/abs/2209.11359
 
 
+## Quick Glimpse on the Methods
 <img src = "assets/github_img1.png" width=720>
 <img src = "assets/github_img2.png" width=700>
 
+
+## Citation
+```
+@article{chen2022cuts,
+  title={CUTS: A Fully Unsupervised Framework for Medical Image Segmentation},
+  author={Liu, Chen and Amodio, Matthew and Shen, Liangbo L and Gao, Feng and Avesta, Arman and Aneja, Sanjay and Wang, Jay and Del Priore, Lucian V and Krishnaswamy, Smita},
+  journal={arXiv preprint arXiv:2209.11359},
+  year={2022}
+}
+```
 
 ## Repository Hierarchy
 ```
