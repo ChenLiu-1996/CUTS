@@ -117,6 +117,8 @@ def train(config: AttributeHashmap):
                     torch.FloatTensor).to(device)
                 seg_pred_metric = (seg_pred > 0.5).type(
                     torch.FloatTensor).to(device)
+                if len(seg_true.shape) == 4:
+                    seg_true = seg_true.squeeze(1)
                 seg_true = seg_true.type(torch.FloatTensor).to(device)
             else:
                 seg_pred_metric = torch.argmax(seg_pred, dim=1).type(
@@ -210,6 +212,8 @@ def train(config: AttributeHashmap):
                         torch.FloatTensor).to(device)
                     seg_pred_metric = (seg_pred > 0.5).type(
                         torch.FloatTensor).to(device)
+                    if len(seg_true.shape) == 4:
+                        seg_true = seg_true.squeeze(1)
                     seg_true = seg_true.type(torch.FloatTensor).to(device)
                 else:
                     seg_pred_metric = torch.argmax(seg_pred, dim=1).type(
@@ -356,6 +360,8 @@ def test(config: AttributeHashmap):
                     torch.FloatTensor).to(device)
                 seg_pred_metric = (seg_pred > 0.5).type(
                     torch.FloatTensor).to(device)
+                if len(seg_true.shape) == 4:
+                    seg_true = seg_true.squeeze(1)
                 seg_true = seg_true.type(torch.FloatTensor).to(device)
             else:
                 seg_pred_metric = torch.argmax(seg_pred, dim=1).type(
@@ -476,6 +482,8 @@ def infer(config: AttributeHashmap):
                 seg_pred = seg_pred.squeeze(1).type(
                     torch.FloatTensor).to(device)
                 seg_pred = (seg_pred > 0.5).type(torch.FloatTensor).to(device)
+                if len(seg_true.shape) == 4:
+                    seg_true = seg_true.squeeze(1)
                 seg_true = seg_true.type(torch.FloatTensor).to(device)
             else:
                 seg_pred = torch.argmax(seg_pred, dim=1).type(

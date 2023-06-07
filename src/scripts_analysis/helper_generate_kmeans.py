@@ -8,7 +8,7 @@ import phate
 
 sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
-from utils.metrics import dice_coeff
+from utils.metrics import per_class_dice_coeff
 from utils.segmentation import label_hint_seg
 
 warnings.filterwarnings("ignore")
@@ -25,7 +25,26 @@ def generate_kmeans(shape: Tuple[int],
 
     seg_true = label_true > 0
 
-    # Perform PHATE clustering.
+    # Very occasionally, SVD won't converge.
+    try:
+        clusters = phate_clustering(latent=latent,
+                                    random_seed=random_seed,
+                                    num_workers=num_workers)
+    except:
+        clusters = phate_clustering(latent=latent,
+                                    random_seed=random_seed + 1,
+                                    num_workers=num_workers)
+
+    # [H x W, C] to [H, W, C]
+    label_pred = clusters.reshape((H, W))
+
+    seg_pred = label_hint_seg(label_pred=label_pred, label_true=label_true)
+
+    return per_class_dice_coeff(seg_pred, seg_true), label_pred, seg_pred
+
+
+def phate_clustering(latent: np.array, random_seed: int,
+                     num_workers: int) -> np.array:
     phate_operator = phate.PHATE(n_components=3,
                                  knn=100,
                                  n_landmark=500,
@@ -38,13 +57,7 @@ def generate_kmeans(shape: Tuple[int],
     clusters = phate.cluster.kmeans(phate_operator,
                                     n_clusters=10,
                                     random_state=random_seed)
-
-    # [H x W, C] to [H, W, C]
-    label_pred = clusters.reshape((H, W))
-
-    seg_pred = label_hint_seg(label_pred=label_pred, label_true=label_true)
-
-    return dice_coeff(seg_pred, seg_true), label_pred, seg_pred
+    return clusters
 
 
 if __name__ == '__main__':

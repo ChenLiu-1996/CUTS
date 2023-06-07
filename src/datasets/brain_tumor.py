@@ -2,7 +2,6 @@ from glob import glob
 from typing import Tuple
 
 import cv2
-import nibabel as nib
 import numpy as np
 from torch.utils.data import Dataset
 
@@ -14,20 +13,16 @@ class BrainTumor(Dataset):
                  out_shape: Tuple[int] = (128, 128)):
 
         self.base_path = base_path
-        self.label_paths = sorted(glob('%s/%s' % (base_path, '*_seg.nii.gz')))
-        self.image_paths = [
-            _str.replace('_seg', '') for _str in self.label_paths
-        ]
+        self.npy_paths = sorted(glob('%s/%s' % (base_path, '*.npz')))
         self.out_shape = out_shape
 
     def __len__(self) -> int:
-        return len(self.image_paths)
+        return len(self.npy_paths)
 
     def __getitem__(self, idx) -> Tuple[np.array, np.array]:
-        image_nii = nib.load(self.image_paths[idx])
-        label_nii = nib.load(self.label_paths[idx])
-        image = image_nii.get_fdata()
-        label = label_nii.get_fdata()
+        np_arr = np.load(self.npy_paths[idx])
+        image = np_arr['image']
+        label = np_arr['label']
 
         if len(image.shape) == 3:
             assert image.shape[-1] == 1
@@ -41,6 +36,7 @@ class BrainTumor(Dataset):
         assert len(image.shape) in [2, 3]
         if len(image.shape) == 3:
             assert image.shape[2] == 1
+
         resize_factor = np.array(self.out_shape) / image.shape[:2]
         dsize = np.int16(resize_factor.min() * np.float16(image.shape[:2]))
         image = cv2.resize(src=image,
@@ -61,11 +57,6 @@ class BrainTumor(Dataset):
         label = crop_or_pad(label,
                             in_shape=label.shape,
                             out_shape=self.out_shape)
-
-        # Rescale image and label.
-        epsilon = 1e-12
-        image = 2 * (image - image.min() +
-                     epsilon) / (image.max() - image.min() + epsilon) - 1
 
         # Dimension fix.
         # Channel first to comply with Torch.
