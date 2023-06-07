@@ -115,8 +115,8 @@ def train(config: AttributeHashmap):
             if num_classes == 1:
                 seg_pred = seg_pred.squeeze(1).type(
                     torch.FloatTensor).to(device)
-                seg_pred_metric = (seg_pred > 0.5).type(
-                    torch.FloatTensor).to(device)
+                seg_pred_metric = (seg_pred
+                                   > 0.5).type(torch.FloatTensor).to(device)
                 if len(seg_true.shape) == 4:
                     seg_true = seg_true.squeeze(1)
                 seg_true = seg_true.type(torch.FloatTensor).to(device)
@@ -358,8 +358,8 @@ def test(config: AttributeHashmap):
             if num_classes == 1:
                 seg_pred = seg_pred.squeeze(1).type(
                     torch.FloatTensor).to(device)
-                seg_pred_metric = (seg_pred > 0.5).type(
-                    torch.FloatTensor).to(device)
+                seg_pred_metric = (seg_pred
+                                   > 0.5).type(torch.FloatTensor).to(device)
                 if len(seg_true.shape) == 4:
                     seg_true = seg_true.squeeze(1)
                 seg_true = seg_true.type(torch.FloatTensor).to(device)
@@ -438,6 +438,9 @@ def test(config: AttributeHashmap):
 
 
 def infer(config: AttributeHashmap):
+    # Currently the `save_numpy` code only supports batch size of 1.
+    config.batch_size = 1
+
     device = torch.device('cpu')
     entire_set, _ = \
         prepare_dataset(config=config, mode='test')
@@ -518,7 +521,7 @@ if __name__ == '__main__':
     if args.mode == 'train':
         train(config=config)
         test(config=config)
-        # infer(config=config)
+        infer(config=config)
     elif args.mode == 'test':
         test(config=config)
     elif args.mode == 'infer':
