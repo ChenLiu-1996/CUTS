@@ -105,6 +105,9 @@ python main_supervised.py --mode train --config ../retina_seed2022.yaml
 ```
 ## Under `comparison/STEGO/src/`
 python step01_prepare_data.py --config ../../../config/retina_seed2022.yaml
+python step02_precompute_knns.py --train-config ./train_config/train_config_retina_seed2022.yaml
+python step03_train_segmentation.py --train-config ./train_config/train_config_retina_seed2022.yaml
+python step04_produce_results.py --config ../../../config/retina_seed2022.yaml --eval-config ./eval_config/eval_config_retina_seed2022.yaml
 ```
 </details>
 

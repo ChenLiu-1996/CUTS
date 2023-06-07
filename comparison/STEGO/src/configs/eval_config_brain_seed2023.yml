@@ -1,0 +1,21 @@
+output_root: '../'
+pytorch_data_dir: '/gpfs/gibbs/pi/krishnaswamy_smita/cl2482/CUTS/STEGO/data/'
+experiment_name: "brain"
+res: 128
+batch_size: 8
+num_workers: 1
+run_picie: True
+run_crf: True
+run_prediction: True
+dark_mode: True
+use_ddp: False
+
+model_paths:
+  - '/gpfs/gibbs/pi/krishnaswamy_smita/cl2482/CUTS/STEGO/checkpoints/brain_seed2023/directory_brain_seed2023_date_Dec27_11-21-07/epoch=239-step=1199.ckpt'
+
+hydra:
+  run:
+    dir: "."
+  output_subdir: ~
+  #job_logging: "disabled"
+  #hydra_logging: "disabled"

@@ -1,0 +1,18 @@
+output_root: '../'
+pytorch_data_dir: '$CUTS_ROOT/comparison/STEGO/data/'
+experiment_name: "brain_ventricles_seed2021"
+res: 128
+num_workers: 1
+run_picie: True
+run_crf: True
+run_prediction: True
+dark_mode: True
+use_ddp: False
+
+model_paths:
+- '$CUTS_ROOT/comparison/STEGO/checkpoints/brain_ventricles_seed2021/directory_brain_ventricles_seed2021/'
+
+hydra:
+  run:
+    dir: "."
+  output_subdir: ~
