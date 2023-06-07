@@ -27,8 +27,11 @@ def load_weights(model_save_path: str, model, device: torch.device):
     return
 
 
-def save_numpy(config: AttributeHashmap, image_batch: torch.Tensor,
-               label_true_batch: torch.Tensor, label_pred_batch: torch.Tensor):
+def save_numpy(config: AttributeHashmap,
+               image_batch: torch.Tensor,
+               label_true_batch: torch.Tensor,
+               label_pred_batch: torch.Tensor,
+               batch_idx: int = 0):
     image_batch = image_batch.cpu().detach().numpy()
     label_true_batch = label_true_batch.cpu().detach().numpy()
     label_pred_batch = label_pred_batch.cpu().detach().numpy()
@@ -44,6 +47,7 @@ def save_numpy(config: AttributeHashmap, image_batch: torch.Tensor,
                                    '_pretrained' if config.pretrained else ''))
     os.makedirs(save_path_numpy, exist_ok=True)
     for image_idx in tqdm(range(B)):
+        image_idx += batch_idx * config.batch_size
         with open(
                 '%s/%s' %
             (save_path_numpy, 'sample_%s.npz' % str(image_idx).zfill(5)),
@@ -438,9 +442,6 @@ def test(config: AttributeHashmap):
 
 
 def infer(config: AttributeHashmap):
-    # Currently the `save_numpy` code only supports batch size of 1.
-    config.batch_size = 1
-
     device = torch.device('cpu')
     entire_set, _ = \
         prepare_dataset(config=config, mode='test')
@@ -478,7 +479,7 @@ def infer(config: AttributeHashmap):
     model.eval()
 
     with torch.no_grad():
-        for _, (x, seg_true) in enumerate(entire_set):
+        for batch_idx, (x, seg_true) in enumerate(entire_set):
             x = x.type(torch.FloatTensor).to(device)
             seg_pred = model(x)
             if num_classes == 1:
@@ -496,7 +497,8 @@ def infer(config: AttributeHashmap):
             save_numpy(config=config,
                        image_batch=x,
                        label_true_batch=seg_true,
-                       label_pred_batch=seg_pred)
+                       label_pred_batch=seg_pred,
+                       batch_idx=batch_idx)
 
     return
 

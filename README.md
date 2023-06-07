@@ -54,23 +54,6 @@ UnsupervisedMedicalSeg (CUTS)
 ## Data Provided
 The `berkeley_natural_images` and `retina` datasets are provided in `zip` format. The `brain_ventricles` dataset exceeds the GitHub size limits, and can be made available upon reasonable request.
 
-## Dependencies
-We developed the codebase in a miniconda environment.
-Tested on Python 3.9.13 + PyTorch 1.12.1.
-How we created the conda environment:
-```
-conda create --name cuts pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch
-conda activate cuts
-conda install scikit-image pillow matplotlib seaborn tqdm -c anaconda
-python -m pip install -U phate
-python -m pip install git+https://github.com/KrishnaswamyLab/CATCH
-python -m pip install opencv-python
-python -m pip install sewar
-python -m pip install monai
-python -m pip install nibabel
-```
-Installation usually takes between 20 minutes and 1 hour on a normal desktop computer.
-
 ## To reproduce the results in the paper.
 The following commands are using `retina_seed2022` as an example (retina dataset, random seed set to 2022).
 
@@ -112,6 +95,16 @@ python main.py --mode test --config ../config/retina_seed2022.yaml
 ```
 ## Under `src/`
 python main_supervised.py --mode train --config ../retina_seed2022.yaml
+```
+</details>
+
+<details>
+  <summary>(Optional) [Comparison] Training other models</summary>
+
+#### To train STEGO.
+```
+## Under `comparison/STEGO/src/`
+python step01_prepare_data.py --config ../../../config/retina_seed2022.yaml
 ```
 </details>
 
@@ -222,6 +215,32 @@ Be mindful though: when you run `generate_kmeans.py`, the script will still prin
 2. Then, you provide these casual pseudo-labels as if they were real labels. Put them in the correct folder under `src/data/` and load them as if they were real labels in your `src/datasets/***.py`.
 3. Follow the pipeline as in the previous section: **To train on your custom dataset with label**.
 4. In this way, binary masks will also be generated. Please be careful though: the quantitative metrics will not be accurate, as you are providing pseudo-labels instead of accurate real labels.
+
+## Dependencies
+We developed the codebase in a miniconda environment.
+Tested on Python 3.9.13 + PyTorch 1.12.1.
+How we created the conda environment:
+```
+conda create --name cuts pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch
+conda activate cuts
+conda install scikit-image pillow matplotlib seaborn tqdm -c anaconda
+python -m pip install -U phate
+python -m pip install git+https://github.com/KrishnaswamyLab/CATCH
+python -m pip install opencv-python
+python -m pip install sewar
+python -m pip install monai
+python -m pip install nibabel
+
+# (Optional) For STEGO
+python -m pip install omegaconf
+python -m pip install wget
+python -m pip install torchmetrics
+python -m pip install tensorboard
+python -m pip install pytorch-lightning==1.9
+python -m pip install azureml
+python -m pip install azureml.core
+```
+Installation usually takes between 20 minutes and 1 hour on a normal desktop computer.
 
 ## DEBUG Notes
 <details>
