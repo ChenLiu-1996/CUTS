@@ -47,10 +47,9 @@ def save_numpy(config: AttributeHashmap,
                                    '_pretrained' if config.pretrained else ''))
     os.makedirs(save_path_numpy, exist_ok=True)
     for image_idx in tqdm(range(B)):
-        image_idx += batch_idx * config.batch_size
         with open(
                 '%s/%s' %
-            (save_path_numpy, 'sample_%s.npz' % str(image_idx).zfill(5)),
+            (save_path_numpy, 'sample_%s.npz' % str(image_idx + batch_idx * config.batch_size).zfill(5)),
                 'wb+') as f:
             np.savez(f,
                      image=image_batch[image_idx, ...],
