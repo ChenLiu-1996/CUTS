@@ -1,7 +1,11 @@
 import os
+import sys
 
-from utils.attribute_hashmap import AttributeHashmap
-from utils.log_util import log
+import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
+sys.path.insert(0, import_dir + '/utils/')
+
+from attribute_hashmap import AttributeHashmap
+from log_util import log
 
 
 def parse_settings(config: AttributeHashmap, log_settings: bool = True):

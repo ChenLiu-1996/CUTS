@@ -1,13 +1,24 @@
-from data_utils.extend import ExtendedDataset
-from data_utils.split import split_dataset
-from datasets.berkeley_natural_images import BerkeleyNaturalImages
-from datasets.brain_ventricles import BrainVentricles
-from datasets.glas_histology import GlasHistology
-from datasets.retina import Retina
-from datasets.brain_tumor import BrainTumor
-from datasets.example_dataset_without_label import ExampleDatasetWithoutLabel
+import os
+import sys
+
 from torch.utils.data import DataLoader
-from utils.attribute_hashmap import AttributeHashmap
+
+import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
+sys.path.insert(0, import_dir + '/datasets/')
+
+from berkeley_natural_images import BerkeleyNaturalImages
+from brain_ventricles import BrainVentricles
+from glas_histology import GlasHistology
+from retina import Retina
+from brain_tumor import BrainTumor
+from example_dataset_without_label import ExampleDatasetWithoutLabel
+
+sys.path.insert(0, import_dir + '/utils/')
+from attribute_hashmap import AttributeHashmap
+
+sys.path.insert(0, import_dir + '/data_utils/')
+from extend import ExtendedDataset
+from split import split_dataset
 
 
 def prepare_dataset(config: AttributeHashmap, mode: str = 'train'):
