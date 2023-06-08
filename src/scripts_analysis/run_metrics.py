@@ -59,6 +59,24 @@ def load_stego(path: str) -> dict:
     return hashmap
 
 
+def load_unet(path: str) -> dict:
+    numpy_array = np.load(path)
+    hashmap = {}
+    hashmap['image'] = numpy_array['image']
+    hashmap['label_true'] = numpy_array['label_true']
+    hashmap['label_unet'] = numpy_array['label_pred']
+    return hashmap
+
+
+def load_nnunet(path: str) -> dict:
+    numpy_array = np.load(path)
+    hashmap = {}
+    hashmap['image'] = numpy_array['image']
+    hashmap['label_true'] = numpy_array['label_true']
+    hashmap['label_nnunet'] = numpy_array['label_pred']
+    return hashmap
+
+
 def combine_hashmaps(*args: dict) -> dict:
     combined = {}
     for hashmap in args:
@@ -115,38 +133,6 @@ def persistent_structures(hashmap: dict) -> dict:
     return hashmap
 
 
-# def metric_permuted_label(fn, mode: str, permutee: np.array,
-#                           other_array: np.array) -> List[np.array]:
-#     '''
-#     Return the (min or max) metric:
-#         fn(permutee, other_array)
-#     as we permute the label indices of `permutee`.
-
-#     NOTE: Nice try. But it takes too long as it runs each metric several million times.
-#     '''
-#     indices_from = sorted(list(set(np.unique(permutee)) - set([0])))
-
-#     assert mode in ['min', 'max']
-
-#     if mode == 'min':
-#         best_metric = np.inf
-#     elif mode == 'max':
-#         best_metric = -np.inf
-
-#     for indices_to in itertools.permutations(indices_from):
-#         permuted = np.zeros_like(permutee)
-#         assert len(indices_from) == len(indices_to)
-#         for (i, j) in zip(indices_from, indices_to):
-#             permuted[permutee == i] = j
-
-#         metric = fn(permuted, other_array)
-#         if mode == 'min':
-#             best_metric = min(best_metric, metric)
-#         elif mode == 'max':
-#             best_metric = max(best_metric, metric)
-
-#     return best_metric
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config',
@@ -171,6 +157,10 @@ if __name__ == '__main__':
                                         'numpy_files_seg_diffusion')
     files_folder_stego = '%s/%s' % (config.output_save_path,
                                     'numpy_files_seg_STEGO')
+    files_folder_unet = '%s/%s' % (config.output_save_path,
+                                   'numpy_files_seg_supervised_unet')
+    files_folder_nnunet = '%s/%s' % (config.output_save_path,
+                                     'numpy_files_seg_supervised_nnunet')
 
     np_files_path_baselines = sorted(
         glob('%s/%s' % (files_folder_baselines, '*.npz')))
@@ -179,12 +169,17 @@ if __name__ == '__main__':
     np_files_path_diffusion = sorted(
         glob('%s/%s' % (files_folder_diffusion, '*.npz')))
     np_files_path_stego = sorted(glob('%s/%s' % (files_folder_stego, '*.npz')))
+    np_files_path_unet = sorted(glob('%s/%s' % (files_folder_unet, '*.npz')))
+    np_files_path_nnunet = sorted(
+        glob('%s/%s' % (files_folder_nnunet, '*.npz')))
 
     num_files = max([
         len(np_files_path_baselines),
         len(np_files_path_kmeans),
         len(np_files_path_diffusion),
-        len(np_files_path_stego)
+        len(np_files_path_stego),
+        len(np_files_path_unet),
+        len(np_files_path_nnunet),
     ])
 
     assert len(np_files_path_baselines) == num_files or len(
@@ -195,6 +190,9 @@ if __name__ == '__main__':
         np_files_path_diffusion) == 0
     assert len(np_files_path_stego) == num_files or len(
         np_files_path_stego) == 0
+    assert len(np_files_path_unet) == num_files or len(np_files_path_unet) == 0
+    assert len(np_files_path_nnunet) == num_files or len(
+        np_files_path_nnunet) == 0
 
     has_baselines = True if len(
         np_files_path_baselines) == num_files else False
@@ -202,6 +200,8 @@ if __name__ == '__main__':
     has_diffusion = True if len(
         np_files_path_diffusion) == num_files else False
     has_stego = True if len(np_files_path_stego) == num_files else False
+    has_unet = True if len(np_files_path_unet) == num_files else False
+    has_nnunet = True if len(np_files_path_nnunet) == num_files else False
 
     entity_tuples = []
     if has_baselines:
@@ -209,10 +209,6 @@ if __name__ == '__main__':
             ('random', 'label_true', 'label_random'),
             ('watershed', 'label_true', 'label_watershed'),
             ('felzenszwalb', 'label_true', 'label_felzenszwalb'),
-        ])
-    if has_stego:
-        entity_tuples.extend([
-            ('STEGO', 'label_true', 'label_stego'),
         ])
     if has_kmeans:
         if hparams.is_binary:
@@ -238,18 +234,40 @@ if __name__ == '__main__':
                 ('ours (diffusion-best, multiclass)', 'label_true',
                  'label_diffusion-best'),
             ])
+    if has_stego:
+        entity_tuples.extend([
+            ('STEGO', 'label_true', 'label_stego'),
+        ])
+    if has_unet:
+        entity_tuples.extend([
+            ('Supervised UNet', 'label_true', 'label_unet'),
+        ])
+    if has_nnunet:
+        entity_tuples.extend([
+            ('Supervised nn-UNet', 'label_true', 'label_nnunet'),
+        ])
 
     metrics = {
-        'dice': {tup[0]: []
-                 for tup in entity_tuples},
-        'hausdorff': {tup[0]: []
-                      for tup in entity_tuples},
-        'ssim': {tup[0]: []
-                 for tup in entity_tuples},
-        'ergas': {tup[0]: []
-                  for tup in entity_tuples},
-        'rmse': {tup[0]: []
-                 for tup in entity_tuples},
+        'dice': {
+            tup[0]: []
+            for tup in entity_tuples
+        },
+        'hausdorff': {
+            tup[0]: []
+            for tup in entity_tuples
+        },
+        'ssim': {
+            tup[0]: []
+            for tup in entity_tuples
+        },
+        'ergas': {
+            tup[0]: []
+            for tup in entity_tuples
+        },
+        'rmse': {
+            tup[0]: []
+            for tup in entity_tuples
+        },
     }
 
     for image_idx in tqdm(range(num_files)):
@@ -264,9 +282,14 @@ if __name__ == '__main__':
                 np_files_path_diffusion[image_idx])
         if has_stego:
             stego_hashmap = load_stego(np_files_path_stego[image_idx])
+        if has_unet:
+            unet_hashmap = load_unet(np_files_path_unet[image_idx])
+        if has_nnunet:
+            nnunet_hashmap = load_nnunet(np_files_path_nnunet[image_idx])
 
         hashmap = combine_hashmaps(baselines_hashmap, kmeans_hashmap,
-                                   diffusion_hashmap, stego_hashmap)
+                                   diffusion_hashmap, stego_hashmap,
+                                   unet_hashmap, nnunet_hashmap)
 
         if has_kmeans:
             hashmap = segment(hashmap, label_name='kmeans')
