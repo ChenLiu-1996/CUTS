@@ -10,7 +10,7 @@
 > https://arxiv.org/abs/2209.11359
 
 
-## Quick Glimpse on the Methods
+## Quick Glimpse into the Methods
 <img src = "assets/github_img1.png" width=720>
 <img src = "assets/github_img2.png" width=700>
 
