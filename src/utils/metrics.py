@@ -66,7 +66,7 @@ def dice_coeff(label_pred: np.array, label_true: np.array) -> float:
 
 def per_class_dice_coeff(label_pred: np.array, label_true: np.array) -> float:
     dice_list = []
-    for class_id in np.unique(label_pred):
+    for class_id in np.unique(label_true):
         dice_list.append(
             dice_coeff(label_pred=label_pred == class_id,
                        label_true=label_true == class_id))
@@ -85,7 +85,7 @@ def hausdorff(label_pred: np.array, label_true: np.array) -> float:
 
 def per_class_hausdorff(label_pred: np.array, label_true: np.array) -> float:
     hausdorff_list = []
-    for class_id in np.unique(label_pred):
+    for class_id in np.unique(label_true):
         hausdorff_list.append(
             hausdorff(label_pred=label_pred == class_id,
                       label_true=label_true == class_id))
