@@ -27,6 +27,10 @@ def process(image: np.array) -> np.array:
 
     if image.shape[-1] == 1:
         image = np.repeat(image, 3, axis=-1)
+
+    # RGB to BGR for `cv2.imwrite`
+    if len(image.shape) == 3:
+        image = image[..., ::-1]
     return image
 
 
