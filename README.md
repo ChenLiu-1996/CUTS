@@ -31,26 +31,32 @@
 ## Repository Hierarchy
 ```
 UnsupervisedMedicalSeg (CUTS)
+    ├── (*) comparison: other SOTA unsupervised methods for comparison.
+    |
     ├── checkpoints: model weights are saved here.
     ├── config: configuration yaml files.
-    ├── data: folders containing data used.
+    ├── data: folders containing data files.
     ├── logs: training log files.
     ├── results: generated results (images, labels, segmentations, figures, etc.).
+    |
     └── src
-        ├── data_utils
-        ├── datasets: defines how to access and process the data in `CUTS/data/`.
-        ├── model
-        ├── scripts_analysis: scripts for analysis and plotting.
+        ├── (*) scripts_analysis: scripts for analysis and plotting.
         |   ├── `generate_baselines.py`
         |   ├── `generate_kmeans.py`
         |   ├── `generate_diffusion.py`
         |   ├── `plot_paper_figure_natural.py`
         |   ├── `plot_paper_figure_medical.py`
         |   └── `run_metrics.py`
-        ├── comparison: other SOTA unsupervised methods for comparison.
-        ├── utils
-        ├── `main_supervised.py`: supervised training of UNet/nnUNet for comparison.
-        └── `main.py`: unsupervised training of the CUTS encoder.
+        |
+        ├── (*) `main.py`: unsupervised training of the CUTS encoder.
+        ├── (*) `main_supervised.py`: supervised training of UNet/nnUNet for comparison.
+        |
+        ├── datasets: defines how to access and process the data in `CUTS/data/`.
+        ├── data_utils
+        ├── model
+        └── utils
+
+Relatively core files or folders are marked with (*).
 ```
 
 ## Data Provided
