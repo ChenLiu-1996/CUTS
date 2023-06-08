@@ -10,9 +10,13 @@
 > https://arxiv.org/abs/2209.11359
 
 
-## Quick Glimpse into the Methods
-<img src = "assets/github_img1.png" width=720>
-<img src = "assets/github_img2.png" width=700>
+## A Glimpse into the Methods
+<img src = "assets/github_img1.png" width=600>
+<img src = "assets/github_img2.png" width=560>
+
+## Quick Flavor of the Results
+<img src = "assets/github_img3.png" width=600>
+<img src = "assets/github_img4.png" width=600>
 
 
 ## Citation
