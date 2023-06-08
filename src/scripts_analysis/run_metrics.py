@@ -137,311 +137,347 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config',
                         help='Path to config yaml file.',
+                        nargs='+',
                         required=True)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
-    config = AttributeHashmap(yaml.safe_load(open(args.config)))
-    config.config_file_name = args.config
-    config = parse_settings(config, log_settings=False)
-
-    hparams = AttributeHashmap({
-        'is_binary': config.is_binary,
-    })
-
-    files_folder_baselines = '%s/%s' % (config.output_save_path,
-                                        'numpy_files_seg_baselines')
-    files_folder_kmeans = '%s/%s' % (config.output_save_path,
-                                     'numpy_files_seg_kmeans')
-    files_folder_diffusion = '%s/%s' % (config.output_save_path,
-                                        'numpy_files_seg_diffusion')
-    files_folder_stego = '%s/%s' % (config.output_save_path,
-                                    'numpy_files_seg_STEGO')
-    files_folder_unet = '%s/%s' % (config.output_save_path,
-                                   'numpy_files_seg_supervised_unet')
-    files_folder_nnunet = '%s/%s' % (config.output_save_path,
-                                     'numpy_files_seg_supervised_nnunet')
-
-    np_files_path_baselines = sorted(
-        glob('%s/%s' % (files_folder_baselines, '*.npz')))
-    np_files_path_kmeans = sorted(
-        glob('%s/%s' % (files_folder_kmeans, '*.npz')))
-    np_files_path_diffusion = sorted(
-        glob('%s/%s' % (files_folder_diffusion, '*.npz')))
-    np_files_path_stego = sorted(glob('%s/%s' % (files_folder_stego, '*.npz')))
-    np_files_path_unet = sorted(glob('%s/%s' % (files_folder_unet, '*.npz')))
-    np_files_path_nnunet = sorted(
-        glob('%s/%s' % (files_folder_nnunet, '*.npz')))
-
-    num_files = max([
-        len(np_files_path_baselines),
-        len(np_files_path_kmeans),
-        len(np_files_path_diffusion),
-        len(np_files_path_stego),
-        len(np_files_path_unet),
-        len(np_files_path_nnunet),
-    ])
-
-    assert len(np_files_path_baselines) == num_files or len(
-        np_files_path_baselines) == 0
-    assert len(np_files_path_kmeans) == num_files or len(
-        np_files_path_kmeans) == 0
-    assert len(np_files_path_diffusion) == num_files or len(
-        np_files_path_diffusion) == 0
-    assert len(np_files_path_stego) == num_files or len(
-        np_files_path_stego) == 0
-    assert len(np_files_path_unet) == num_files or len(np_files_path_unet) == 0
-    assert len(np_files_path_nnunet) == num_files or len(
-        np_files_path_nnunet) == 0
-
-    has_baselines = True if len(
-        np_files_path_baselines) == num_files else False
-    has_kmeans = True if len(np_files_path_kmeans) == num_files else False
-    has_diffusion = True if len(
-        np_files_path_diffusion) == num_files else False
-    has_stego = True if len(np_files_path_stego) == num_files else False
-    has_unet = True if len(np_files_path_unet) == num_files else False
-    has_nnunet = True if len(np_files_path_nnunet) == num_files else False
-
-    entity_tuples = []
-    if has_baselines:
-        entity_tuples.extend([
-            ('random', 'label_true', 'label_random'),
-            ('watershed', 'label_true', 'label_watershed'),
-            ('felzenszwalb', 'label_true', 'label_felzenszwalb'),
-        ])
-    if has_kmeans:
-        if hparams.is_binary:
-            entity_tuples.extend([
-                ('ours (kmeans, binary)', 'label_true', 'seg_kmeans'),
-            ])
-        else:
-            entity_tuples.extend([
-                ('ours (kmeans, multiclass)', 'label_true', 'label_kmeans'),
-            ])
-    if has_diffusion:
-        if hparams.is_binary:
-            entity_tuples.extend([
-                ('ours (diffusion-persistent, binary)', 'label_true',
-                 'seg_diffusion-persistent'),
-                ('ours (diffusion-best, binary)', 'label_true',
-                 'seg_diffusion-best'),
-            ])
-        else:
-            entity_tuples.extend([
-                ('ours (diffusion-persistent, multiclass)', 'label_true',
-                 'label_diffusion-persistent'),
-                ('ours (diffusion-best, multiclass)', 'label_true',
-                 'label_diffusion-best'),
-            ])
-    if has_stego:
-        entity_tuples.extend([
-            ('STEGO', 'label_true', 'label_stego'),
-        ])
-    if has_unet:
-        entity_tuples.extend([
-            ('Supervised UNet', 'label_true', 'label_unet'),
-        ])
-    if has_nnunet:
-        entity_tuples.extend([
-            ('Supervised nn-UNet', 'label_true', 'label_nnunet'),
-        ])
-
-    metrics = {
-        'dice': {
-            tup[0]: []
-            for tup in entity_tuples
-        },
-        'hausdorff': {
-            tup[0]: []
-            for tup in entity_tuples
-        },
-        'ssim': {
-            tup[0]: []
-            for tup in entity_tuples
-        },
-        'ergas': {
-            tup[0]: []
-            for tup in entity_tuples
-        },
-        'rmse': {
-            tup[0]: []
-            for tup in entity_tuples
-        },
+    metric_name_map = {
+        'dice': 'Dice Coefficient',
+        'hausdorff': 'Hausdorff Distance',
+        'ssim': 'SSIM',
+        'ergas': 'ERGAS',
+        'rmse': 'RMSE'
     }
 
-    for image_idx in tqdm(range(num_files)):
-        baselines_hashmap, kmeans_hashmap, diffusion_hashmap, stego_hashmap = {}, {}, {}, {}
+    if len(args.config) > 1:
+        META_ANALYSIS = True
+        meta_metrics = {}
+        print('Computing the metrics across different experiments.')
+    else:
+        META_ANALYSIS = False
+        print('Computing the metrics in a single experiment.')
+
+    for config_file in args.config:
+        config = AttributeHashmap(yaml.safe_load(open(config_file)))
+        config.config_file_name = config_file
+        config = parse_settings(config, log_settings=False)
+
+        hparams = AttributeHashmap({
+            'is_binary': config.is_binary,
+        })
+
+        files_folder_baselines = '%s/%s' % (config.output_save_path,
+                                            'numpy_files_seg_baselines')
+        files_folder_kmeans = '%s/%s' % (config.output_save_path,
+                                         'numpy_files_seg_kmeans')
+        files_folder_diffusion = '%s/%s' % (config.output_save_path,
+                                            'numpy_files_seg_diffusion')
+        files_folder_stego = '%s/%s' % (config.output_save_path,
+                                        'numpy_files_seg_STEGO')
+        files_folder_unet = '%s/%s' % (config.output_save_path,
+                                       'numpy_files_seg_supervised_unet')
+        files_folder_nnunet = '%s/%s' % (config.output_save_path,
+                                         'numpy_files_seg_supervised_nnunet')
+
+        np_files_path_baselines = sorted(
+            glob('%s/%s' % (files_folder_baselines, '*.npz')))
+        np_files_path_kmeans = sorted(
+            glob('%s/%s' % (files_folder_kmeans, '*.npz')))
+        np_files_path_diffusion = sorted(
+            glob('%s/%s' % (files_folder_diffusion, '*.npz')))
+        np_files_path_stego = sorted(
+            glob('%s/%s' % (files_folder_stego, '*.npz')))
+        np_files_path_unet = sorted(
+            glob('%s/%s' % (files_folder_unet, '*.npz')))
+        np_files_path_nnunet = sorted(
+            glob('%s/%s' % (files_folder_nnunet, '*.npz')))
+
+        num_files = max([
+            len(np_files_path_baselines),
+            len(np_files_path_kmeans),
+            len(np_files_path_diffusion),
+            len(np_files_path_stego),
+            len(np_files_path_unet),
+            len(np_files_path_nnunet),
+        ])
+
+        assert len(np_files_path_baselines) == num_files or len(
+            np_files_path_baselines) == 0
+        assert len(np_files_path_kmeans) == num_files or len(
+            np_files_path_kmeans) == 0
+        assert len(np_files_path_diffusion) == num_files or len(
+            np_files_path_diffusion) == 0
+        assert len(np_files_path_stego) == num_files or len(
+            np_files_path_stego) == 0
+        assert len(np_files_path_unet) == num_files or len(
+            np_files_path_unet) == 0
+        assert len(np_files_path_nnunet) == num_files or len(
+            np_files_path_nnunet) == 0
+
+        has_baselines = True if len(
+            np_files_path_baselines) == num_files else False
+        has_kmeans = True if len(np_files_path_kmeans) == num_files else False
+        has_diffusion = True if len(
+            np_files_path_diffusion) == num_files else False
+        has_stego = True if len(np_files_path_stego) == num_files else False
+        has_unet = True if len(np_files_path_unet) == num_files else False
+        has_nnunet = True if len(np_files_path_nnunet) == num_files else False
+
+        entity_tuples = []
         if has_baselines:
-            baselines_hashmap = load_baselines(
-                np_files_path_baselines[image_idx])
+            entity_tuples.extend([
+                ('random', 'label_true', 'label_random'),
+                ('watershed', 'label_true', 'label_watershed'),
+                ('felzenszwalb', 'label_true', 'label_felzenszwalb'),
+            ])
         if has_kmeans:
-            kmeans_hashmap = load_kmeans(np_files_path_kmeans[image_idx])
-        if has_diffusion:
-            diffusion_hashmap = load_diffusion(
-                np_files_path_diffusion[image_idx])
-        if has_stego:
-            stego_hashmap = load_stego(np_files_path_stego[image_idx])
-        if has_unet:
-            unet_hashmap = load_unet(np_files_path_unet[image_idx])
-        if has_nnunet:
-            nnunet_hashmap = load_nnunet(np_files_path_nnunet[image_idx])
-
-        hashmap = combine_hashmaps(baselines_hashmap, kmeans_hashmap,
-                                   diffusion_hashmap, stego_hashmap,
-                                   unet_hashmap, nnunet_hashmap)
-
-        if has_kmeans:
-            hashmap = segment(hashmap, label_name='kmeans')
-        if has_diffusion:
-            hashmap = persistent_structures(hashmap)
-            hashmap = segment(hashmap, label_name='diffusion-persistent')
-            hashmap = segment_every_diffusion(hashmap)
-
-        # Re-label the label indices for multi-class labels.
-        if not hparams.is_binary:
-            # Relabel each of the diffusion labels.
-            if has_diffusion:
-                for i in range(hashmap['labels_diffusion'].shape[0]):
-                    hashmap['labels_diffusion'][i, ...] = guided_relabel(
-                        label_pred=hashmap['labels_diffusion'][i, ...],
-                        label_true=hashmap['label_true'])
-            # Relabel all the other predicted labels.
-            for (_, _, p2) in entity_tuples:
-                if p2 not in hashmap.keys():
-                    continue
-                else:
-                    hashmap[p2] = guided_relabel(
-                        label_pred=hashmap[p2],
-                        label_true=hashmap['label_true'])
-
-        for (entry, p1, p2) in entity_tuples:
-            if p2 == 'label_diffusion-best':
-                # Get the best among all diffusion labels.
-                assert not hparams.is_binary
-                metrics['dice'][entry].append(
-                    max([
-                        per_class_dice_coeff(
-                            label_true=hashmap['label_true'],
-                            label_pred=hashmap['labels_diffusion'][i, ...])
-                        for i in range(hashmap['labels_diffusion'].shape[0])
-                    ]))
-                metrics['hausdorff'][entry].append(
-                    min([
-                        per_class_hausdorff(
-                            label_true=hashmap['label_true'],
-                            label_pred=hashmap['labels_diffusion'][i, ...])
-                        for i in range(hashmap['labels_diffusion'].shape[0])
-                    ]))
-                metrics['ssim'][entry].append(
-                    max([
-                        range_aware_ssim(
-                            label_true=hashmap['label_true'],
-                            label_pred=hashmap['labels_diffusion'][i, ...])
-                        for i in range(hashmap['labels_diffusion'].shape[0])
-                    ]))
-                metrics['ergas'][entry].append(
-                    min([
-                        ergas(hashmap['label_true'],
-                              hashmap['labels_diffusion'][i, ...])
-                        for i in range(hashmap['labels_diffusion'].shape[0])
-                    ]))
-                metrics['rmse'][entry].append(
-                    min([
-                        rmse(hashmap['label_true'],
-                             hashmap['labels_diffusion'][i, ...])
-                        for i in range(hashmap['labels_diffusion'].shape[0])
-                    ]))
-            elif p2 == 'seg_diffusion-best':
-                # Get the best among all diffusion segmentations.
-                assert hparams.is_binary
-                metrics['dice'][entry].append(
-                    max([
-                        dice_coeff(label_true=hashmap['label_true'],
-                                   label_pred=hashmap['segs_diffusion'][i,
-                                                                        ...])
-                        for i in range(hashmap['segs_diffusion'].shape[0])
-                    ]))
-                metrics['hausdorff'][entry].append(
-                    min([
-                        hausdorff(label_true=hashmap['label_true'],
-                                  label_pred=hashmap['segs_diffusion'][i, ...])
-                        for i in range(hashmap['segs_diffusion'].shape[0])
-                    ]))
-                metrics['ssim'][entry].append(
-                    max([
-                        range_aware_ssim(
-                            label_true=hashmap['label_true'],
-                            label_pred=hashmap['segs_diffusion'][i, ...])
-                        for i in range(hashmap['segs_diffusion'].shape[0])
-                    ]))
-                metrics['ergas'][entry].append(
-                    min([
-                        ergas(hashmap['label_true'],
-                              hashmap['segs_diffusion'][i, ...])
-                        for i in range(hashmap['segs_diffusion'].shape[0])
-                    ]))
-                metrics['rmse'][entry].append(
-                    min([
-                        rmse(hashmap['label_true'],
-                             hashmap['segs_diffusion'][i, ...])
-                        for i in range(hashmap['segs_diffusion'].shape[0])
-                    ]))
-            elif p2 not in hashmap.keys():
-                # nan-padding for unavailable measurements.
-                metrics['dice'][entry].append(np.nan)
-                metrics['hausdorff'][entry].append(np.nan)
-                metrics['ssim'][entry].append(np.nan)
-                metrics['ergas'][entry].append(np.nan)
-                metrics['rmse'][entry].append(np.nan)
+            if hparams.is_binary:
+                entity_tuples.extend([
+                    ('ours (kmeans, binary)', 'label_true', 'seg_kmeans'),
+                ])
             else:
-                if hparams.is_binary:
+                entity_tuples.extend([
+                    ('ours (kmeans, multiclass)', 'label_true',
+                     'label_kmeans'),
+                ])
+        if has_diffusion:
+            if hparams.is_binary:
+                entity_tuples.extend([
+                    ('ours (diffusion-persistent, binary)', 'label_true',
+                     'seg_diffusion-persistent'),
+                    ('ours (diffusion-best, binary)', 'label_true',
+                     'seg_diffusion-best'),
+                ])
+            else:
+                entity_tuples.extend([
+                    ('ours (diffusion-persistent, multiclass)', 'label_true',
+                     'label_diffusion-persistent'),
+                    ('ours (diffusion-best, multiclass)', 'label_true',
+                     'label_diffusion-best'),
+                ])
+        if has_stego:
+            entity_tuples.extend([
+                ('STEGO', 'label_true', 'label_stego'),
+            ])
+        if has_unet:
+            entity_tuples.extend([
+                ('Supervised UNet', 'label_true', 'label_unet'),
+            ])
+        if has_nnunet:
+            entity_tuples.extend([
+                ('Supervised nn-UNet', 'label_true', 'label_nnunet'),
+            ])
+
+        metrics = {
+            'dice': {
+                tup[0]: []
+                for tup in entity_tuples
+            },
+            'hausdorff': {
+                tup[0]: []
+                for tup in entity_tuples
+            },
+            'ssim': {
+                tup[0]: []
+                for tup in entity_tuples
+            },
+            'ergas': {
+                tup[0]: []
+                for tup in entity_tuples
+            },
+            'rmse': {
+                tup[0]: []
+                for tup in entity_tuples
+            },
+        }
+
+        for image_idx in tqdm(range(num_files)):
+            baselines_hashmap, kmeans_hashmap, diffusion_hashmap, stego_hashmap = {}, {}, {}, {}
+            if has_baselines:
+                baselines_hashmap = load_baselines(
+                    np_files_path_baselines[image_idx])
+            if has_kmeans:
+                kmeans_hashmap = load_kmeans(np_files_path_kmeans[image_idx])
+            if has_diffusion:
+                diffusion_hashmap = load_diffusion(
+                    np_files_path_diffusion[image_idx])
+            if has_stego:
+                stego_hashmap = load_stego(np_files_path_stego[image_idx])
+            if has_unet:
+                unet_hashmap = load_unet(np_files_path_unet[image_idx])
+            if has_nnunet:
+                nnunet_hashmap = load_nnunet(np_files_path_nnunet[image_idx])
+
+            hashmap = combine_hashmaps(baselines_hashmap, kmeans_hashmap,
+                                       diffusion_hashmap, stego_hashmap,
+                                       unet_hashmap, nnunet_hashmap)
+
+            if has_kmeans:
+                hashmap = segment(hashmap, label_name='kmeans')
+            if has_diffusion:
+                hashmap = persistent_structures(hashmap)
+                hashmap = segment(hashmap, label_name='diffusion-persistent')
+                hashmap = segment_every_diffusion(hashmap)
+
+            # Re-label the label indices for multi-class labels.
+            if not hparams.is_binary:
+                # Relabel each of the diffusion labels.
+                if has_diffusion:
+                    for i in range(hashmap['labels_diffusion'].shape[0]):
+                        hashmap['labels_diffusion'][i, ...] = guided_relabel(
+                            label_pred=hashmap['labels_diffusion'][i, ...],
+                            label_true=hashmap['label_true'])
+                # Relabel all the other predicted labels.
+                for (_, _, p2) in entity_tuples:
+                    if p2 not in hashmap.keys():
+                        continue
+                    else:
+                        hashmap[p2] = guided_relabel(
+                            label_pred=hashmap[p2],
+                            label_true=hashmap['label_true'])
+
+            for (entry, p1, p2) in entity_tuples:
+                if p2 == 'label_diffusion-best':
+                    # Get the best among all diffusion labels.
+                    assert not hparams.is_binary
                     metrics['dice'][entry].append(
-                        dice_coeff(label_true=hashmap[p1],
-                                   label_pred=hashmap[p2]))
+                        max([
+                            per_class_dice_coeff(
+                                label_true=hashmap['label_true'],
+                                label_pred=hashmap['labels_diffusion'][i, ...])
+                            for i in range(
+                                hashmap['labels_diffusion'].shape[0])
+                        ]))
                     metrics['hausdorff'][entry].append(
-                        hausdorff(label_true=hashmap[p1],
-                                  label_pred=hashmap[p2]))
+                        min([
+                            per_class_hausdorff(
+                                label_true=hashmap['label_true'],
+                                label_pred=hashmap['labels_diffusion'][i, ...])
+                            for i in range(
+                                hashmap['labels_diffusion'].shape[0])
+                        ]))
+                    metrics['ssim'][entry].append(
+                        max([
+                            range_aware_ssim(
+                                label_true=hashmap['label_true'],
+                                label_pred=hashmap['labels_diffusion'][i, ...])
+                            for i in range(
+                                hashmap['labels_diffusion'].shape[0])
+                        ]))
+                    metrics['ergas'][entry].append(
+                        min([
+                            ergas(hashmap['label_true'],
+                                  hashmap['labels_diffusion'][i, ...]) for i in
+                            range(hashmap['labels_diffusion'].shape[0])
+                        ]))
+                    metrics['rmse'][entry].append(
+                        min([
+                            rmse(hashmap['label_true'],
+                                 hashmap['labels_diffusion'][i, ...]) for i in
+                            range(hashmap['labels_diffusion'].shape[0])
+                        ]))
+                elif p2 == 'seg_diffusion-best':
+                    # Get the best among all diffusion segmentations.
+                    assert hparams.is_binary
+                    metrics['dice'][entry].append(
+                        max([
+                            dice_coeff(
+                                label_true=hashmap['label_true'],
+                                label_pred=hashmap['segs_diffusion'][i, ...])
+                            for i in range(hashmap['segs_diffusion'].shape[0])
+                        ]))
+                    metrics['hausdorff'][entry].append(
+                        min([
+                            hausdorff(
+                                label_true=hashmap['label_true'],
+                                label_pred=hashmap['segs_diffusion'][i, ...])
+                            for i in range(hashmap['segs_diffusion'].shape[0])
+                        ]))
+                    metrics['ssim'][entry].append(
+                        max([
+                            range_aware_ssim(
+                                label_true=hashmap['label_true'],
+                                label_pred=hashmap['segs_diffusion'][i, ...])
+                            for i in range(hashmap['segs_diffusion'].shape[0])
+                        ]))
+                    metrics['ergas'][entry].append(
+                        min([
+                            ergas(hashmap['label_true'],
+                                  hashmap['segs_diffusion'][i, ...])
+                            for i in range(hashmap['segs_diffusion'].shape[0])
+                        ]))
+                    metrics['rmse'][entry].append(
+                        min([
+                            rmse(hashmap['label_true'],
+                                 hashmap['segs_diffusion'][i, ...])
+                            for i in range(hashmap['segs_diffusion'].shape[0])
+                        ]))
+                elif p2 not in hashmap.keys():
+                    # nan-padding for unavailable measurements.
+                    metrics['dice'][entry].append(np.nan)
+                    metrics['hausdorff'][entry].append(np.nan)
+                    metrics['ssim'][entry].append(np.nan)
+                    metrics['ergas'][entry].append(np.nan)
+                    metrics['rmse'][entry].append(np.nan)
                 else:
-                    metrics['dice'][entry].append(
-                        per_class_dice_coeff(label_true=hashmap[p1],
-                                             label_pred=hashmap[p2]))
-                    metrics['hausdorff'][entry].append(
-                        per_class_hausdorff(label_true=hashmap[p1],
-                                            label_pred=hashmap[p2]))
-                metrics['ssim'][entry].append(
-                    range_aware_ssim(label_true=hashmap[p1],
-                                     label_pred=hashmap[p2]))
-                metrics['ergas'][entry].append(ergas(hashmap[p1], hashmap[p2]))
-                metrics['rmse'][entry].append(rmse(hashmap[p1], hashmap[p2]))
+                    if hparams.is_binary:
+                        metrics['dice'][entry].append(
+                            dice_coeff(label_true=hashmap[p1],
+                                       label_pred=hashmap[p2]))
+                        metrics['hausdorff'][entry].append(
+                            hausdorff(label_true=hashmap[p1],
+                                      label_pred=hashmap[p2]))
+                    else:
+                        metrics['dice'][entry].append(
+                            per_class_dice_coeff(label_true=hashmap[p1],
+                                                 label_pred=hashmap[p2]))
+                        metrics['hausdorff'][entry].append(
+                            per_class_hausdorff(label_true=hashmap[p1],
+                                                label_pred=hashmap[p2]))
+                    metrics['ssim'][entry].append(
+                        range_aware_ssim(label_true=hashmap[p1],
+                                         label_pred=hashmap[p2]))
+                    metrics['ergas'][entry].append(
+                        ergas(hashmap[p1], hashmap[p2]))
+                    metrics['rmse'][entry].append(
+                        rmse(hashmap[p1], hashmap[p2]))
 
-    print('\n\nDice Coefficient')
-    for (entry, _, _) in entity_tuples:
-        print('%s: %.3f \u00B1 %.3f' % (entry, np.mean(
-            metrics['dice'][entry]), np.std(metrics['dice'][entry]) /
-                                        np.sqrt(len(metrics['dice'][entry]))))
+        if META_ANALYSIS:
+            # Take the mean value over subjects for each metric.
+            # Aggregate them across experiments.
+            for k1 in metrics.keys():
+                for k2 in metrics[k1].keys():
+                    try:
+                        meta_metrics[k1][k2] += [np.mean(metrics[k1][k2])]
+                    except:
+                        try:
+                            meta_metrics[k1][k2] = [np.mean(metrics[k1][k2])]
+                        except:
+                            meta_metrics[k1] = {}
+                            meta_metrics[k1][k2] = [np.mean(metrics[k1][k2])]
 
-    print('\n\nHausdorff Distance')
-    for (entry, _, _) in entity_tuples:
-        print('%s: %.3f \u00B1 %.3f' %
-              (entry, np.mean(metrics['hausdorff'][entry]),
-               np.std(metrics['hausdorff'][entry]) /
-               np.sqrt(len(metrics['hausdorff'][entry]))))
+        print('\n\nResults for', config_file)
 
-    print('\n\nSSIM')
-    for (entry, _, _) in entity_tuples:
-        print('%s: %.3f \u00B1 %.3f' % (entry, np.mean(
-            metrics['ssim'][entry]), np.std(metrics['ssim'][entry]) /
-                                        np.sqrt(len(metrics['ssim'][entry]))))
+        for key in metric_name_map.keys():
+            print('\n\n', metric_name_map[key])
+            for (entry, _, _) in entity_tuples:
+                print('%s: %.3f \u00B1 %.3f' %
+                      (entry, np.mean(
+                          metrics[key][entry]), np.std(metrics[key][entry]) /
+                       np.sqrt(len(metrics[key][entry]))))
 
-    print('\n\nERGAS')
-    for (entry, _, _) in entity_tuples:
-        print('%s: %.3f \u00B1 %.3f' % (entry, np.mean(
-            metrics['ergas'][entry]), np.std(metrics['ergas'][entry]) /
-                                        np.sqrt(len(metrics['ergas'][entry]))))
+    if META_ANALYSIS:
+        print('\n\n')
+        print('=======================================')
+        print('Meta Results for', args.config)
+        print('=======================================')
 
-    print('\n\nRMSE')
-    for (entry, _, _) in entity_tuples:
-        print('%s: %.3f \u00B1 %.3f' % (entry, np.mean(
-            metrics['rmse'][entry]), np.std(metrics['rmse'][entry]) /
-                                        np.sqrt(len(metrics['rmse'][entry]))))
+        for key in metric_name_map.keys():
+            print('\n\n', metric_name_map[key])
+            for (entry, _, _) in entity_tuples:
+                print('%s: %.3f \u00B1 %.3f' %
+                      (entry, np.mean(meta_metrics[key][entry]),
+                       np.std(meta_metrics[key][entry]) /
+                       np.sqrt(len(meta_metrics[key][entry]))))
+
