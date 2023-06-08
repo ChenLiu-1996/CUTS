@@ -457,7 +457,7 @@ if __name__ == '__main__':
                             meta_metrics[k1] = {}
                             meta_metrics[k1][k2] = [np.mean(metrics[k1][k2])]
 
-        print('\n\nResults for', config_file)
+        print('\n\nResults (mean\u00B1sem) for', config_file)
 
         for key in metric_name_map.keys():
             print('\n\n', metric_name_map[key])
@@ -470,7 +470,7 @@ if __name__ == '__main__':
     if META_ANALYSIS:
         print('\n\n')
         print('=======================================')
-        print('Meta Results for', args.config)
+        print('Meta Results (mean\u00B1std) for', args.config)
         print('=======================================')
 
         for key in metric_name_map.keys():
@@ -478,6 +478,5 @@ if __name__ == '__main__':
             for (entry, _, _) in entity_tuples:
                 print('%s: %.3f \u00B1 %.3f' %
                       (entry, np.mean(meta_metrics[key][entry]),
-                       np.std(meta_metrics[key][entry]) /
-                       np.sqrt(len(meta_metrics[key][entry]))))
+                       np.std(meta_metrics[key][entry])))
 
