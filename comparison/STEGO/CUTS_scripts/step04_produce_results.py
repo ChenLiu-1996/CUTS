@@ -52,77 +52,74 @@ def my_app(config: AttributeHashmap, cfg: AttributeHashmap) -> None:
     os.makedirs(join(result_dir, "cluster"), exist_ok=True)
     os.makedirs(join(result_dir, "picie"), exist_ok=True)
 
-    for model_path in cfg.model_paths:
-        model_path = sorted(glob(model_path + '*.ckpt'))[-1]
-        model = LitUnsupervisedSegmenter.load_from_checkpoint(model_path)
+    assert len(cfg.model_paths) == 1
+    model_path = sorted(glob(cfg.model_paths[0] + '*.ckpt'))[-1]
 
-        test_set, _ = prepare_dataset(config, mode='test')
+    model = LitUnsupervisedSegmenter.load_from_checkpoint(model_path)
 
-        save_path = '%s/%s' % (config.output_save_path,
-                               'numpy_files_seg_STEGO')
+    test_set, _ = prepare_dataset(config, mode='test')
 
-        os.makedirs(save_path, exist_ok=True)
+    save_path = '%s/%s' % (config.output_save_path, 'numpy_files_seg_STEGO')
 
-        model.eval().cuda()
+    os.makedirs(save_path, exist_ok=True)
 
-        if cfg.use_ddp:
-            par_model = torch.nn.DataParallel(model.net)
-        else:
-            par_model = model.net
+    model.eval().cuda()
 
-        for i, (x, y) in enumerate(tqdm(test_set)):
-            with torch.no_grad():
-                img = x.cuda().float()
-                if img.shape[1] == 1:
-                    img = img.repeat(1, 3, 1, 1)
+    if cfg.use_ddp:
+        par_model = torch.nn.DataParallel(model.net)
+    else:
+        par_model = model.net
 
-                img = (img + 1) / 2
-                label = y.cuda()
+    for i, (x, y) in enumerate(tqdm(test_set)):
+        with torch.no_grad():
+            img = x.cuda().float()
+            if img.shape[1] == 1:
+                img = img.repeat(1, 3, 1, 1)
 
-                feats, code1 = par_model(img)
-                feats, code2 = par_model(img.flip(dims=[3]))
-                code = (code1 + code2.flip(dims=[3])) / 2
+            img = (img + 1) / 2
+            label = y.cuda()
 
-                code = F.interpolate(code,
-                                     label.shape[-2:],
-                                     mode='bilinear',
-                                     align_corners=False)
+            feats, code1 = par_model(img)
+            feats, code2 = par_model(img.flip(dims=[3]))
+            code = (code1 + code2.flip(dims=[3])) / 2
 
-                linear_probs = torch.log_softmax(model.linear_probe(code),
-                                                 dim=1)
-                cluster_probs = model.cluster_probe(code, 2, log_probs=True)
+            code = F.interpolate(code,
+                                 label.shape[-2:],
+                                 mode='bilinear',
+                                 align_corners=False)
 
-                linear_preds = linear_probs.argmax(1)
-                cluster_preds = cluster_probs.argmax(1)
+            linear_probs = torch.log_softmax(model.linear_probe(code), dim=1)
+            cluster_probs = model.cluster_probe(code, 2, log_probs=True)
 
-                x = x.cpu().detach().numpy()
-                y = y.cpu().detach().numpy()
-                linear_preds = linear_preds.cpu().detach().numpy()
-                cluster_preds = cluster_preds.cpu().detach().numpy()
+            linear_preds = linear_probs.argmax(1)
+            cluster_preds = cluster_probs.argmax(1)
 
-                x = np.moveaxis(x, 1, -1)
-                y = np.moveaxis(y, 1, -1)
-                x = squeeze_excessive_dimension(x)
-                y = squeeze_excessive_dimension(y)
+            x = x.cpu().detach().numpy()
+            y = y.cpu().detach().numpy()
+            linear_preds = linear_preds.cpu().detach().numpy()
+            cluster_preds = cluster_preds.cpu().detach().numpy()
 
-                assert x.shape[0] == 1
-                assert y.shape[0] == 1
-                assert linear_preds.shape[0] == 1
-                assert cluster_preds.shape[0] == 1
-                x = x.squeeze(0)
-                y = y.squeeze(0)
-                linear_preds = linear_preds.squeeze(0)
-                cluster_preds = cluster_preds.squeeze(0)
+            x = np.moveaxis(x, 1, -1)
+            y = np.moveaxis(y, 1, -1)
+            x = squeeze_excessive_dimension(x)
+            y = squeeze_excessive_dimension(y)
 
-                with open(
-                        '%s/%s' %
-                    (save_path, 'sample_%s.npz' % str(i).zfill(5)),
-                        'wb+') as f:
-                    np.savez(f,
-                             image=x,
-                             label=y,
-                             label_stego=cluster_preds,
-                             seg_stego=linear_preds)
+            assert x.shape[0] == 1
+            assert y.shape[0] == 1
+            assert linear_preds.shape[0] == 1
+            assert cluster_preds.shape[0] == 1
+            x = x.squeeze(0)
+            y = y.squeeze(0)
+            linear_preds = linear_preds.squeeze(0)
+            cluster_preds = cluster_preds.squeeze(0)
+
+            with open('%s/%s' % (save_path, 'sample_%s.npz' % str(i).zfill(5)),
+                      'wb+') as f:
+                np.savez(f,
+                         image=x,
+                         label=y,
+                         label_stego=cluster_preds,
+                         seg_stego=linear_preds)
 
 
 if __name__ == "__main__":
