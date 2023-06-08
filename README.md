@@ -42,13 +42,12 @@ UnsupervisedMedicalSeg (CUTS)
         ├── model
         ├── scripts_analysis: scripts for analysis and plotting.
         |   ├── `generate_baselines.py`
-        |   ├── `generate_diffusion.py`
         |   ├── `generate_kmeans.py`
-        |   ├── `helper_generate_kmeans.py`
-        |   ├── `helper_run_phate.py`
-        |   ├── `plot_paper_figure_medical.py`
+        |   ├── `generate_diffusion.py`
         |   ├── `plot_paper_figure_natural.py`
+        |   ├── `plot_paper_figure_medical.py`
         |   └── `run_metrics.py`
+        ├── comparison: other SOTA unsupervised methods for comparison.
         ├── utils
         ├── `main_supervised.py`: supervised training of UNet/nnUNet for comparison.
         └── `main.py`: unsupervised training of the CUTS encoder.
