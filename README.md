@@ -157,28 +157,36 @@ With the ` --grayscale` flag, the input images and reconstructed images will be 
 ## Under `src/scripts_analysis`
 
 ## For natural images (berkeley)
-python plot_paper_figure_natural.py --config ../../config/$CONFIG_FILE.yaml --image-idx $IMAGE_IDX
-python plot_paper_figure_natural.py --config ../../config/$CONFIG_FILE.yaml --image-idx $IMAGE_IDX --comparison
+python plot_paper_figure_natural.py --config ../../config/berkeley_seed2022.yaml --image-idx 89 6 8
+python plot_paper_figure_natural.py --config ../../config/berkeley_seed2022.yaml --image-idx 89 6 8 40 22 58 --comparison
 
 ## For medical images with color (retina)
-python plot_paper_figure_medical.py --config ../../config/$CONFIG_FILE.yaml --image-idx $IMAGE_IDX
-python plot_paper_figure_medical.py --config ../../config/$CONFIG_FILE.yaml --image-idx $IMAGE_IDX --comparison
+python plot_paper_figure_medical.py --config ../../config/retina_seed2022.yaml --image-idx 4 7 14
+python plot_paper_figure_medical.py --config ../../config/retina_seed2022.yaml --image-idx 4 7 14 55 3 33 --comparison
 
 ## For medical images without color (brain)
-python plot_paper_figure_medical.py --config ../../config/$CONFIG_FILE.yaml --image-idx $IMAGE_IDX --grayscale
-python plot_paper_figure_medical.py --config ../../config/$CONFIG_FILE.yaml --image-idx $IMAGE_IDX --comparison --grayscale
+python plot_paper_figure_medical.py --config ../../config/brain_ventricles_seed2022.yaml --image-idx 35 41 88 --grayscale
+python plot_paper_figure_medical.py --config ../../config/brain_ventricles_seed2022.yaml --image-idx 35 41 88 14 15 1 --comparison --grayscale
 ```
 </details>
 
 <details>
   <summary>Results Analysis</summary>
 
-#### To compute the quantitative metrics.
+#### To compute the quantitative metrics (single experiment).
 Assuming segmentation results have already been generated and saved.
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
-python run_metrics.py --config ../../config/$CONFIG_FILE.yaml
+python run_metrics.py --config ../../config/retina_seed2022.yaml
 ```
+
+#### To compute the quantitative metrics (multiple experiments).
+Assuming segmentation results have already been generated and saved.
+```
+## Under $CUTS_ROOT/src/scripts_analysis
+python run_metrics.py --config ../../config/retina_seed2021.yaml ../../config/retina_seed2022.yaml ../../config/retina_seed2023.yaml
+```
+
 </details>
 
 ## To train on your custom dataset **with label**.
