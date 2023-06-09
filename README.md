@@ -284,5 +284,5 @@ If you encounter `zsh bus error` while running some of the python scripts, for e
 
 ## Acknowledgements
 
-For the comparison with SOTA methods, we use the official implementations from the following repositories:
+For the comparison against other methods, we use the official implementations from the following repositories:
 - [STEGO: Unsupervised Semantic Segmentation by Distilling Feature Correspondences](https://github.com/mhamilton723/STEGO)
