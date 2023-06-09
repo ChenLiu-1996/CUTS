@@ -449,13 +449,13 @@ if __name__ == '__main__':
             for k1 in metrics.keys():
                 for k2 in metrics[k1].keys():
                     try:
-                        meta_metrics[k1][k2] += [np.mean(metrics[k1][k2])]
+                        meta_metrics[k1][k2] += [np.nanmean(metrics[k1][k2])]
                     except:
                         try:
-                            meta_metrics[k1][k2] = [np.mean(metrics[k1][k2])]
+                            meta_metrics[k1][k2] = [np.nanmean(metrics[k1][k2])]
                         except:
                             meta_metrics[k1] = {}
-                            meta_metrics[k1][k2] = [np.mean(metrics[k1][k2])]
+                            meta_metrics[k1][k2] = [np.nanmean(metrics[k1][k2])]
 
         print('\n\nResults (mean \u00B1 sem) for', config_file)
 
@@ -463,8 +463,8 @@ if __name__ == '__main__':
             print('\n\n', metric_name_map[key])
             for (entry, _, _) in entity_tuples:
                 print('%s: %.3f \u00B1 %.3f' %
-                      (entry, np.mean(
-                          metrics[key][entry]), np.std(metrics[key][entry]) /
+                      (entry, np.nanmean(
+                          metrics[key][entry]), np.nanstd(metrics[key][entry]) /
                        np.sqrt(len(metrics[key][entry]))))
 
     if META_ANALYSIS:
@@ -477,6 +477,6 @@ if __name__ == '__main__':
             print('\n\n', metric_name_map[key])
             for (entry, _, _) in entity_tuples:
                 print('%s: %.3f \u00B1 %.3f' %
-                      (entry, np.mean(meta_metrics[key][entry]),
-                       np.std(meta_metrics[key][entry])))
+                      (entry, np.nanmean(meta_metrics[key][entry]),
+                       np.nanstd(meta_metrics[key][entry])))
 
