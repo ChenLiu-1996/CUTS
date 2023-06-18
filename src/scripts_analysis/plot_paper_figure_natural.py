@@ -5,6 +5,7 @@ import sys
 import time
 import warnings
 from glob import glob
+from tqdm import tqdm
 
 import numpy as np
 import scprep
@@ -165,9 +166,16 @@ if __name__ == '__main__':
         help='Whether or not to include the comparison against other methods.',
         action='store_true')
     parser.add_argument(
+        '-r',
+        '--rerun',
+        action='store_true',
+        help=
+        'If true, will rerun the script until succeeds to circumvent deadlock.'
+    )
+    parser.add_argument(
         '-t',
         '--max-wait-sec',
-        help='Max wait time in seconds for each process.' + \
+        help='Max wait time in seconds for each process (only relevant if `--rerun`).' + \
             'Consider increasing if you hit too many TimeOuts.',
         type=int,
         default=60)
@@ -178,8 +186,7 @@ if __name__ == '__main__':
     config.config_file_name = args.config
     config = parse_settings(config, log_settings=False)
 
-    files_folder_raw = '%s/%s' % (config.output_save_path,
-                                  'numpy_files')
+    files_folder_raw = '%s/%s' % (config.output_save_path, 'numpy_files')
     files_folder_baselines = '%s/%s' % (config.output_save_path,
                                         'numpy_files_seg_baselines')
     files_folder_stego = '%s/%s' % (config.output_save_path,
@@ -198,8 +205,7 @@ if __name__ == '__main__':
     os.makedirs(figure_folder, exist_ok=True)
     os.makedirs(phate_folder, exist_ok=True)
 
-    files_path_raw = sorted(
-        glob('%s/%s' % (files_folder_raw, '*.npz')))
+    files_path_raw = sorted(glob('%s/%s' % (files_folder_raw, '*.npz')))
     files_path_baselines = sorted(
         glob('%s/%s' % (files_folder_baselines, '*.npz')))
     files_path_stego = sorted(glob('%s/%s' % (files_folder_stego, '*.npz')))
@@ -218,7 +224,7 @@ if __name__ == '__main__':
     else:
         fig = plt.figure(figsize=(22, 4 * num_samples))
 
-    for sample_idx, image_idx in enumerate(args.image_idx):
+    for sample_idx, image_idx in enumerate(tqdm(args.image_idx)):
 
         numpy_array_raw = np.load(files_path_raw[image_idx])
         image = numpy_array_raw['image']
@@ -237,7 +243,9 @@ if __name__ == '__main__':
             label_watershed = numpy_array_baselines['label_watershed']
             label_felzenszwalb = numpy_array_baselines['label_felzenszwalb']
         except:
-            print('Warning! `baselines` results not found. Placeholding with blank labels.')
+            print(
+                'Warning! `baselines` results not found. Placeholding with blank labels.'
+            )
             label_random = np.zeros_like(label_true)
             label_watershed = np.zeros_like(label_true)
             label_felzenszwalb = np.zeros_like(label_true)
@@ -246,7 +254,9 @@ if __name__ == '__main__':
             numpy_array_kmeans = np.load(files_path_kmeans[image_idx])
             label_kmeans = numpy_array_kmeans['label_kmeans']
         except:
-            print('Warning! `CUTS + k-means` results not found. Placeholding with blank labels.')
+            print(
+                'Warning! `CUTS + k-means` results not found. Placeholding with blank labels.'
+            )
             label_kmeans = np.zeros_like(label_true)
 
         try:
@@ -254,23 +264,30 @@ if __name__ == '__main__':
             granularities = numpy_array_diffusion['granularities_diffusion']
             labels_diffusion = numpy_array_diffusion['labels_diffusion']
         except:
-            print('Warning! `CUTS + diffusion condensation` results not found. Placeholding with blank labels.')
+            print(
+                'Warning! `CUTS + diffusion condensation` results not found. Placeholding with blank labels.'
+            )
             num_placeholder_granularities = 10
             granularities = np.arange(num_placeholder_granularities)
-            labels_diffusion = np.zeros((num_placeholder_granularities, *label_true.shape))
+            labels_diffusion = np.zeros(
+                (num_placeholder_granularities, *label_true.shape))
 
         try:
             numpy_array_stego = np.load(files_path_stego[image_idx])
             label_stego = numpy_array_stego['label_stego']
         except:
-            print('Warning! `STEGO` results not found. Placeholding with blank labels.')
+            print(
+                'Warning! `STEGO` results not found. Placeholding with blank labels.'
+            )
             label_stego = np.zeros_like(label_true)
 
         try:
             numpy_array_unet = np.load(files_path_supervised_unet[image_idx])
             label_supervised_unet = numpy_array_unet['label_pred']
         except:
-            print('Warning! `Supervised UNet` results not found. Placeholding with blank labels.')
+            print(
+                'Warning! `Supervised UNet` results not found. Placeholding with blank labels.'
+            )
             label_supervised_unet = np.zeros_like(label_true)
 
         try:
@@ -278,7 +295,9 @@ if __name__ == '__main__':
                 files_path_supervised_nnunet[image_idx])
             label_supervised_nnunet = numpy_array_nnunet['label_pred']
         except:
-            print('Warning! `Supervised nn-UNet` results not found. Placeholding with blank labels.')
+            print(
+                'Warning! `Supervised nn-UNet` results not found. Placeholding with blank labels.'
+            )
             label_supervised_nnunet = np.zeros_like(label_true)
 
         H, W = label_true.shape[:2]
@@ -314,45 +333,63 @@ if __name__ == '__main__':
             data_phate = data_phate_numpy['data_phate']
         else:
             # Otherwise, generate the phate data.
-            '''
-            Because of the frequent deadlock problem, I decided to use the following solution:
-            kill and restart whenever a process is taking too long (likely due to deadlock).
-            '''
             load_path = files_path_raw[image_idx]
             num_workers = config.num_workers
             folder = '/'.join(
                 os.path.dirname(os.path.abspath(__file__)).split('/'))
 
-            file_success = False
-            while not file_success:
-                start = time.time()
-                while True:
-                    try:
-                        proc = subprocess.Popen([
-                            'python3', folder + '/helper_run_phate.py',
-                            '--load_path', load_path, '--phate_path',
-                            phate_path, '--random_seed',
-                            str(config.random_seed), '--num_workers',
-                            str(num_workers)
-                        ],
-                                                stdout=subprocess.PIPE,
-                                                stderr=subprocess.PIPE)
-                        stdout, stderr = proc.communicate(
-                            timeout=args.max_wait_sec)
-                        stdout, stderr = str(stdout), str(stderr)
-                        stdout = stdout.lstrip('b\'').rstrip('\'')
-                        stderr = stderr.lstrip('b\'').rstrip('\'')
-                        print(image_idx, stdout, stderr)
+            if not args.rerun:
+                '''
+                In many cases this is enough. If you experience deadlock, you can try to use `-r`/`--rerun`.
+                '''
+                import phate
+                from sklearn.preprocessing import normalize
 
-                        proc.kill()
-                        # This is determined by the sys.stdout in `helper_run_phate.py`
-                        if stdout[:8] == 'SUCCESS!':
-                            file_success = True
-                        break
+                numpy_array = np.load(load_path)
+                latent = numpy_array['latent']
 
-                    except subprocess.TimeoutExpired:
-                        print('Time out! Restart subprocess.')
-                        proc.kill()
+                phate_op = phate.PHATE(random_state=random_seed,
+                                       n_jobs=num_workers,
+                                       verbose=False)
+                data_phate = phate_op.fit_transform(normalize(latent, axis=1))
+                with open(phate_path, 'wb+') as f:
+                    np.savez(f, data_phate=data_phate)
+
+            else:
+                '''
+                Because of the frequent deadlock problem, I decided to use the following solution:
+                kill and restart whenever a process is taking too long (likely due to deadlock).
+                '''
+                file_success = False
+                while not file_success:
+                    start = time.time()
+                    while True:
+                        try:
+                            proc = subprocess.Popen([
+                                'python3', folder + '/helper_run_phate.py',
+                                '--load_path', load_path, '--phate_path',
+                                phate_path, '--random_seed',
+                                str(config.random_seed), '--num_workers',
+                                str(num_workers)
+                            ],
+                                                    stdout=subprocess.PIPE,
+                                                    stderr=subprocess.PIPE)
+                            stdout, stderr = proc.communicate(
+                                timeout=args.max_wait_sec)
+                            stdout, stderr = str(stdout), str(stderr)
+                            stdout = stdout.lstrip('b\'').rstrip('\'')
+                            stderr = stderr.lstrip('b\'').rstrip('\'')
+                            print(image_idx, stdout, stderr)
+
+                            proc.kill()
+                            # This is determined by the sys.stdout in `helper_run_phate.py`
+                            if stdout[:8] == 'SUCCESS!':
+                                file_success = True
+                            break
+
+                        except subprocess.TimeoutExpired:
+                            print('Time out! Restart subprocess.')
+                            proc.kill()
 
             data_phate_numpy = np.load(phate_path)
             data_phate = data_phate_numpy['data_phate']

@@ -22,19 +22,19 @@ if __name__ == '__main__':
                         help='Path to config yaml file.',
                         required=True)
     parser.add_argument(
-        '-t',
-        '--max-wait-sec',
-        help='Max wait time in seconds for each process.' + \
-            'Consider increasing if you hit too many TimeOuts.',
-        type=int,
-        default=60)
-    parser.add_argument(
         '-r',
         '--rerun',
         action='store_true',
         help=
         'If true, will rerun the script until succeeds to circumvent deadlock.'
     )
+    parser.add_argument(
+        '-t',
+        '--max-wait-sec',
+        help='Max wait time in seconds for each process (only relevant if `--rerun`).' + \
+            'Consider increasing if you hit too many TimeOuts.',
+        type=int,
+        default=60)
     parser.add_argument('-o',
                         '--overwrite',
                         action='store_true',

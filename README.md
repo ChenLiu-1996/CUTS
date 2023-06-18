@@ -164,7 +164,7 @@ python plot_paper_figure_natural.py --config ../../config/berkeley_seed2022.yaml
 python plot_paper_figure_medical.py --config ../../config/retina_seed2022.yaml --image-idx 4 7 14
 python plot_paper_figure_medical.py --config ../../config/retina_seed2022.yaml --image-idx 4 7 14 55 3 33 --comparison
 
-## For medical images without color (brain)
+## For medical images without color (brain ventricles)
 python plot_paper_figure_medical.py --config ../../config/brain_ventricles_seed2022.yaml --image-idx 35 41 88 --grayscale
 python plot_paper_figure_medical.py --config ../../config/brain_ventricles_seed2022.yaml --image-idx 35 41 88 14 15 1 --comparison --grayscale
 ```
