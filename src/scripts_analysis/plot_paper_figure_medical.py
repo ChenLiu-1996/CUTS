@@ -347,11 +347,6 @@ if __name__ == '__main__':
             data_phate = data_phate_numpy['data_phate']
         else:
             # Otherwise, generate the phate data.
-            load_path = files_path_raw[image_idx]
-            num_workers = config.num_workers
-            folder = '/'.join(
-                os.path.dirname(os.path.abspath(__file__)).split('/'))
-
             if not args.rerun:
                 '''
                 In many cases this is enough. If you experience deadlock, you can try to use `-r`/`--rerun`.
@@ -359,21 +354,24 @@ if __name__ == '__main__':
                 import phate
                 from sklearn.preprocessing import normalize
 
-                numpy_array = np.load(load_path)
-                latent = numpy_array['latent']
-
-                phate_op = phate.PHATE(random_state=random_seed,
-                                       n_jobs=num_workers,
-                                       verbose=False)
-                data_phate = phate_op.fit_transform(normalize(latent, axis=1))
+                _phate_op = phate.PHATE(random_state=random_seed,
+                                        n_jobs=config.num_workers,
+                                        verbose=True)
+                _data_phate = _phate_op.fit_transform(normalize(latent,
+                                                                axis=1))
                 with open(phate_path, 'wb+') as f:
-                    np.savez(f, data_phate=data_phate)
+                    np.savez(f, data_phate=_data_phate)
 
             else:
                 '''
                 Because of the frequent deadlock problem, I decided to use the following solution:
                 kill and restart whenever a process is taking too long (likely due to deadlock).
                 '''
+                load_path = files_path_raw[image_idx]
+                num_workers = config.num_workers
+                folder = '/'.join(
+                    os.path.dirname(os.path.abspath(__file__)).split('/'))
+
                 file_success = False
                 while not file_success:
                     start = time.time()
