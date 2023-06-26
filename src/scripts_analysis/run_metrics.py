@@ -1,7 +1,11 @@
 import argparse
 import sys
 import warnings
+import os
 from glob import glob
+from matplotlib import pyplot as plt
+import seaborn as sns
+import pandas as pd
 
 import numpy as np
 import yaml
@@ -133,6 +137,68 @@ def persistent_structures(hashmap: dict) -> dict:
     return hashmap
 
 
+def boxplots(meta_metrics, metric_name_map, entity_tuples, config_filepaths):
+    filenames = [
+        os.path.basename(f).replace('.yaml', '') for f in config_filepaths
+    ]
+    figure_path = 'metrics_' + '-'.join(filenames)
+
+    plt.rcParams["font.family"] = 'serif'
+    plt.rcParams['axes.spines.right'] = False
+    plt.rcParams['axes.spines.top'] = False
+
+    fig = plt.figure(figsize=(25, 4))
+    plt.rcParams['font.size'] = 18
+    plt.rcParams['legend.fontsize'] = 18
+
+    num_cols = len(metric_name_map.keys())
+    for i, key in enumerate(metric_name_map.keys(), start=1):
+        ax = fig.add_subplot(1, num_cols, i)
+
+        # Construct the dataframe.
+        data_list = []
+        for (entry, _, _) in entity_tuples:
+            for item in meta_metrics[key][entry]:
+                data_list.append([entry, metric_name_map[key], item])
+        df = pd.DataFrame(data_list, columns=['Method', 'metric', 'value'])
+
+        # Tune the color palette.
+        method_list = [entry for (entry, _, _) in entity_tuples]
+        my_palette = sns.color_palette('tab10')[::-1]
+        palette_blues = sns.color_palette('Blues',
+                                          n_colors=2 * len(method_list))
+        palette_dark = sns.color_palette('Blues',
+                                         n_colors=4 * len(method_list))[::-1]
+        cuts_locs = np.argwhere(['CUTS' in method
+                                 for method in method_list]).reshape(-1)
+        supervised_locs = np.argwhere(
+            ['[Supervised]' in method for method in method_list]).reshape(-1)
+
+        for loc in cuts_locs:
+            my_palette[loc] = palette_blues[loc]
+        for loc in supervised_locs:
+            my_palette[loc] = palette_dark[loc]
+
+        # Boxplot.
+        sns.boxplot(data=df,
+                    x='metric',
+                    y='value',
+                    hue='Method',
+                    ax=ax,
+                    palette=my_palette)
+        ax.set_xlabel('')
+        ax.set_ylabel('')
+
+        if i < num_cols:
+            ax.get_legend().remove()
+        else:
+            ax.legend(bbox_to_anchor=(1.2, 1.0))
+
+    fig.tight_layout()
+    fig.savefig(figure_path)
+    return
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config',
@@ -169,12 +235,12 @@ if __name__ == '__main__':
 
         files_folder_baselines = '%s/%s' % (config.output_save_path,
                                             'numpy_files_seg_baselines')
+        files_folder_stego = '%s/%s' % (config.output_save_path,
+                                        'numpy_files_seg_STEGO')
         files_folder_kmeans = '%s/%s' % (config.output_save_path,
                                          'numpy_files_seg_kmeans')
         files_folder_diffusion = '%s/%s' % (config.output_save_path,
                                             'numpy_files_seg_diffusion')
-        files_folder_stego = '%s/%s' % (config.output_save_path,
-                                        'numpy_files_seg_STEGO')
         files_folder_unet = '%s/%s' % (config.output_save_path,
                                        'numpy_files_seg_supervised_unet')
         files_folder_nnunet = '%s/%s' % (config.output_save_path,
@@ -182,12 +248,12 @@ if __name__ == '__main__':
 
         np_files_path_baselines = sorted(
             glob('%s/%s' % (files_folder_baselines, '*.npz')))
+        np_files_path_stego = sorted(
+            glob('%s/%s' % (files_folder_stego, '*.npz')))
         np_files_path_kmeans = sorted(
             glob('%s/%s' % (files_folder_kmeans, '*.npz')))
         np_files_path_diffusion = sorted(
             glob('%s/%s' % (files_folder_diffusion, '*.npz')))
-        np_files_path_stego = sorted(
-            glob('%s/%s' % (files_folder_stego, '*.npz')))
         np_files_path_unet = sorted(
             glob('%s/%s' % (files_folder_unet, '*.npz')))
         np_files_path_nnunet = sorted(
@@ -195,21 +261,21 @@ if __name__ == '__main__':
 
         num_files = max([
             len(np_files_path_baselines),
+            len(np_files_path_stego),
             len(np_files_path_kmeans),
             len(np_files_path_diffusion),
-            len(np_files_path_stego),
             len(np_files_path_unet),
             len(np_files_path_nnunet),
         ])
 
         assert len(np_files_path_baselines) == num_files or len(
             np_files_path_baselines) == 0
+        assert len(np_files_path_stego) == num_files or len(
+            np_files_path_stego) == 0
         assert len(np_files_path_kmeans) == num_files or len(
             np_files_path_kmeans) == 0
         assert len(np_files_path_diffusion) == num_files or len(
             np_files_path_diffusion) == 0
-        assert len(np_files_path_stego) == num_files or len(
-            np_files_path_stego) == 0
         assert len(np_files_path_unet) == num_files or len(
             np_files_path_unet) == 0
         assert len(np_files_path_nnunet) == num_files or len(
@@ -217,56 +283,56 @@ if __name__ == '__main__':
 
         has_baselines = True if len(
             np_files_path_baselines) == num_files else False
+        has_stego = True if len(np_files_path_stego) == num_files else False
         has_kmeans = True if len(np_files_path_kmeans) == num_files else False
         has_diffusion = True if len(
             np_files_path_diffusion) == num_files else False
-        has_stego = True if len(np_files_path_stego) == num_files else False
         has_unet = True if len(np_files_path_unet) == num_files else False
         has_nnunet = True if len(np_files_path_nnunet) == num_files else False
 
         entity_tuples = []
         if has_baselines:
             entity_tuples.extend([
-                ('random', 'label_true', 'label_random'),
-                ('watershed', 'label_true', 'label_watershed'),
-                ('felzenszwalb', 'label_true', 'label_felzenszwalb'),
+                ('Random', 'label_true', 'label_random'),
+                ('Watershed', 'label_true', 'label_watershed'),
+                ('Felzenszwalb', 'label_true', 'label_felzenszwalb'),
+            ])
+        if has_stego:
+            entity_tuples.extend([
+                ('STEGO', 'label_true', 'label_stego'),
             ])
         if has_kmeans:
             if hparams.is_binary:
                 entity_tuples.extend([
-                    ('ours (kmeans, binary)', 'label_true', 'seg_kmeans'),
+                    ('CUTS + Spectral $k$-means', 'label_true', 'seg_kmeans'),
                 ])
             else:
                 entity_tuples.extend([
-                    ('ours (kmeans, multiclass)', 'label_true',
+                    ('CUTS + Spectral $k$-means', 'label_true',
                      'label_kmeans'),
                 ])
         if has_diffusion:
             if hparams.is_binary:
                 entity_tuples.extend([
-                    ('ours (diffusion-persistent, binary)', 'label_true',
+                    ('CUTS + Diffusion (persistent)', 'label_true',
                      'seg_diffusion-persistent'),
-                    ('ours (diffusion-best, binary)', 'label_true',
+                    ('CUTS + Diffusion (best one)', 'label_true',
                      'seg_diffusion-best'),
                 ])
             else:
                 entity_tuples.extend([
-                    ('ours (diffusion-persistent, multiclass)', 'label_true',
+                    ('CUTS + Diffusion (persistent)', 'label_true',
                      'label_diffusion-persistent'),
-                    ('ours (diffusion-best, multiclass)', 'label_true',
+                    ('CUTS + Diffusion (best one)', 'label_true',
                      'label_diffusion-best'),
                 ])
-        if has_stego:
-            entity_tuples.extend([
-                ('STEGO', 'label_true', 'label_stego'),
-            ])
         if has_unet:
             entity_tuples.extend([
-                ('Supervised UNet', 'label_true', 'label_unet'),
+                ('[Supervised] UNet', 'label_true', 'label_unet'),
             ])
         if has_nnunet:
             entity_tuples.extend([
-                ('Supervised nn-UNet', 'label_true', 'label_nnunet'),
+                ('[Supervised] nn-UNet', 'label_true', 'label_nnunet'),
             ])
 
         metrics = {
@@ -297,13 +363,13 @@ if __name__ == '__main__':
             if has_baselines:
                 baselines_hashmap = load_baselines(
                     np_files_path_baselines[image_idx])
+            if has_stego:
+                stego_hashmap = load_stego(np_files_path_stego[image_idx])
             if has_kmeans:
                 kmeans_hashmap = load_kmeans(np_files_path_kmeans[image_idx])
             if has_diffusion:
                 diffusion_hashmap = load_diffusion(
                     np_files_path_diffusion[image_idx])
-            if has_stego:
-                stego_hashmap = load_stego(np_files_path_stego[image_idx])
             if has_unet:
                 unet_hashmap = load_unet(np_files_path_unet[image_idx])
             if has_nnunet:
@@ -483,3 +549,6 @@ if __name__ == '__main__':
                 print('%s: %.3f \u00B1 %.3f' %
                       (entry, np.nanmean(meta_metrics[key][entry]),
                        np.nanstd(meta_metrics[key][entry])))
+
+    if META_ANALYSIS:
+        boxplots(meta_metrics, metric_name_map, entity_tuples, args.config)
