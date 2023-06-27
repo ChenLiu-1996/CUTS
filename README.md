@@ -8,7 +8,7 @@
 [**CUTS: A Fully Unsupervised Framework for Medical Image Segmentation**](https://arxiv.org/abs/2209.11359)
 
 <br>
-<img src = "assets/github_img5.png" width=600>
+<img src = "assets/github_img5.png" width=800>
 
 ## A Glimpse into the Methods
 <img src = "assets/github_img1.png" width=600>
