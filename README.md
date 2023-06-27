@@ -5,10 +5,8 @@
 
 **This repository contains the official PyTorch implementation of the following paper:**
 
-> **CUTS: A Fully Unsupervised Framework for Medical Image Segmentation**<br>
-> https://arxiv.org/abs/2209.11359
+**CUTS: A Fully Unsupervised Framework for Medical Image Segmentation**<br>
 <img src = "assets/github_img5.png" width=600>
-
 
 ## A Glimpse into the Methods
 <img src = "assets/github_img1.png" width=600>
