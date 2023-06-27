@@ -7,6 +7,7 @@
 
 > **CUTS: A Fully Unsupervised Framework for Medical Image Segmentation**<br>
 > https://arxiv.org/abs/2209.11359
+<img src = "assets/github_img5.png" width=600>
 
 
 ## A Glimpse into the Methods
@@ -16,7 +17,6 @@
 ## Quick Flavors of the Results
 <img src = "assets/github_img3.png" width=600>
 <img src = "assets/github_img4.png" width=600>
-<img src = "assets/github_img5.png" width=600>
 
 
 ## Citation
