@@ -279,7 +279,7 @@ before running some of the code code to minimize the risk of dead lock. For deta
 <details>
   <summary>Regarding `zsh bus error`.</summary>
 
-If you encounter `zsh bus error` while running some of the python scripts, for example, `generate_kmeans.py` or `generate_diffusion.py`, it is very likely that the program requires more CPU than available. On our YCRC, the solution is to request more memory for the job.
+If you encounter `zsh bus error` while running some of the python scripts, for example, `generate_kmeans.py` or `generate_diffusion.py`, it is very likely that the program requires more RAM than available. On our YCRC, the solution is to request more RAM for the job.
 </details>
 
 
