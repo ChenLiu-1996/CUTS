@@ -35,42 +35,46 @@ def plot_comparison(fig: plt.figure, num_samples: int, sample_idx: int,
     H, W = data_hashmap['label_true'].shape[:2]
 
     ##### 1-st row!
-    ax = fig.add_subplot(2 * num_samples, 10, 1 + 20 * sample_idx)
+    ax = fig.add_subplot(2 * num_samples, 12, 1 + 24 * sample_idx)
     ax.imshow(data_hashmap['image'], cmap='gray' if image_grayscale else None)
     ax.set_axis_off()
 
-    for (figure_idx, key) in zip(range(2, 2 + 9), [
+    for (figure_idx, key) in zip(range(2, 2 + 11), [
             'label_true',
             'seg_kmeans',
             'seg_persistent',
             'label_random',
             'label_watershed',
             'label_felzenszwalb',
+            'label_slic',
+            'label_dfc',
             'label_stego',
             'label_supervised_unet',
             'label_supervised_nnunet',
     ]):
-        ax = fig.add_subplot(2 * num_samples, 10, figure_idx + 20 * sample_idx)
+        ax = fig.add_subplot(2 * num_samples, 12, figure_idx + 24 * sample_idx)
         ax.imshow(data_hashmap[key], cmap='gray')
         ax.set_axis_off()
 
     ##### 2-nd row!
-    ax = fig.add_subplot(2 * num_samples, 10, 11 + 20 * sample_idx)
+    ax = fig.add_subplot(2 * num_samples, 12, 13 + 24 * sample_idx)
     ax.imshow(data_hashmap['recon'], cmap='gray' if image_grayscale else None)
     ax.set_axis_off()
 
-    for (figure_idx, key) in zip(range(12, 12 + 9), [
+    for (figure_idx, key) in zip(range(14, 14 + 11), [
             'label_true',
             'seg_kmeans',
             'seg_persistent',
             'label_random',
             'label_watershed',
             'label_felzenszwalb',
+            'label_slic',
+            'label_dfc',
             'label_stego',
             'label_supervised_unet',
             'label_supervised_nnunet',
     ]):
-        ax = fig.add_subplot(2 * num_samples, 10, figure_idx + 20 * sample_idx)
+        ax = fig.add_subplot(2 * num_samples, 12, figure_idx + 24 * sample_idx)
         scprep.plot.scatter2d(data_phate,
                               c=continuous_renumber(data_hashmap[key].reshape(
                                   (H * W, -1))),
@@ -200,6 +204,8 @@ if __name__ == '__main__':
     files_folder_raw = '%s/%s' % (config.output_save_path, 'numpy_files')
     files_folder_baselines = '%s/%s' % (config.output_save_path,
                                         'numpy_files_seg_baselines')
+    files_folder_dfc = '%s/%s' % (config.output_save_path,
+                                  'numpy_files_seg_DFC')
     files_folder_stego = '%s/%s' % (config.output_save_path,
                                     'numpy_files_seg_STEGO')
     files_folder_supervised_unet = '%s/%s' % (
@@ -219,6 +225,7 @@ if __name__ == '__main__':
     files_path_raw = sorted(glob('%s/%s' % (files_folder_raw, '*.npz')))
     files_path_baselines = sorted(
         glob('%s/%s' % (files_folder_baselines, '*.npz')))
+    files_path_dfc = sorted(glob('%s/%s' % (files_folder_dfc, '*.npz')))
     files_path_stego = sorted(glob('%s/%s' % (files_folder_stego, '*.npz')))
     files_path_supervised_unet = sorted(
         glob('%s/%s' % (files_folder_supervised_unet, '*.npz')))
@@ -231,15 +238,20 @@ if __name__ == '__main__':
     # Now plot the sub-figures for each sample, one by one.
     num_samples = len(args.image_idx)
     if args.comparison:
-        fig = plt.figure(figsize=(20, 4 * num_samples))
+        fig = plt.figure(figsize=(28, 4 * num_samples))
     else:
         fig = plt.figure(figsize=(22, 4 * num_samples))
 
     for sample_idx, image_idx in enumerate(tqdm(args.image_idx)):
 
         numpy_array_raw = np.load(files_path_raw[image_idx])
+
         image = numpy_array_raw['image']
+        image = (image + 1) / 2
+
         recon = numpy_array_raw['recon']
+        recon = (recon + 1) / 2
+
         label_true = numpy_array_raw['label']
         if np.isnan(label_true).all():
             print('\n\n[Major Warning !!!] We found that the true label is all `NaN`s.' + \
@@ -253,6 +265,7 @@ if __name__ == '__main__':
             label_random = numpy_array_baselines['label_random']
             label_watershed = numpy_array_baselines['label_watershed']
             label_felzenszwalb = numpy_array_baselines['label_felzenszwalb']
+            label_slic = numpy_array_baselines['label_slic']
         except:
             print(
                 'Warning! `baselines` results not found. Placeholding with blank labels.'
@@ -260,6 +273,7 @@ if __name__ == '__main__':
             label_random = np.zeros_like(label_true)
             label_watershed = np.zeros_like(label_true)
             label_felzenszwalb = np.zeros_like(label_true)
+            label_slic = np.zeros_like(label_true)
 
         try:
             numpy_array_kmeans = np.load(files_path_kmeans[image_idx])
@@ -282,6 +296,17 @@ if __name__ == '__main__':
             granularities = np.arange(num_placeholder_granularities)
             labels_diffusion = np.zeros(
                 (num_placeholder_granularities, *label_true.shape))
+
+        try:
+            numpy_array_dfc = np.load(files_path_dfc[image_idx])
+            label_dfc = numpy_array_dfc['label_dfc']
+            label_dfc = label_hint_seg(label_pred=label_dfc,
+                                       label_true=label_true)
+        except:
+            print(
+                'Warning! `DFC` results not found. Placeholding with blank labels.'
+            )
+            label_dfc = np.zeros_like(label_true)
 
         try:
             numpy_array_stego = np.load(files_path_stego[image_idx])
@@ -328,6 +353,8 @@ if __name__ == '__main__':
             'label_random': label_random,
             'label_watershed': label_watershed,
             'label_felzenszwalb': label_felzenszwalb,
+            'label_slic': label_slic,
+            'label_dfc': label_dfc,
             'label_stego': label_stego,
             'label_supervised_unet': label_supervised_unet,
             'label_supervised_nnunet': label_supervised_nnunet,
