@@ -112,12 +112,19 @@ python main_supervised.py --mode train --config ../retina_seed2022.yaml
 
 #### To train STEGO.
 ```
-## Under `comparison/STEGO/src/`
+## Under `comparison/STEGO/CUTS_scripts/`
 python step01_prepare_data.py --config ../../../config/retina_seed2022.yaml
 python step02_precompute_knns.py --train-config ./train_config/train_config_retina_seed2022.yaml
 python step03_train_segmentation.py --train-config ./train_config/train_config_retina_seed2022.yaml
 python step04_produce_results.py --config ../../../config/retina_seed2022.yaml --eval-config ./eval_config/eval_config_retina_seed2022.yaml
 ```
+
+#### To train Differentiable Feature Clustering (DFC).
+```
+## Under `comparison/DFC/CUTS_scripts/`
+python step01_produce_results.py --config ../../../config/retina_seed2022.yaml
+```
+
 </details>
 
 
@@ -246,7 +253,7 @@ conda activate cuts
 conda install scikit-image pillow matplotlib seaborn tqdm -c anaconda
 python -m pip install -U phate
 python -m pip install git+https://github.com/KrishnaswamyLab/CATCH
-python -m pip install opencv-python
+python -m pip install opencv-python-headless
 python -m pip install sewar
 python -m pip install monai
 python -m pip install nibabel
@@ -259,6 +266,13 @@ python -m pip install tensorboard
 python -m pip install pytorch-lightning==1.9
 python -m pip install azureml
 python -m pip install azureml.core
+
+# (Optional) For Leopart
+python -m pip install click
+python -m pip install optuna
+python -m pip install infomap
+conda install -c pytorch -c nvidia faiss-gpu=1.7.4 mkl=2021 blas=1.0=mkl
+python -m pip install timm
 ```
 Installation usually takes between 20 minutes and 1 hour on a normal desktop computer.
 
@@ -286,4 +300,5 @@ If you encounter `zsh bus error` while running some of the python scripts, for e
 ## Acknowledgements
 
 For the comparison against other methods, we use the official implementations from the following repositories:
-- [STEGO: Unsupervised Semantic Segmentation by Distilling Feature Correspondences](https://github.com/mhamilton723/STEGO)
+- [[**STEGO**, *ICLR 2022*] Unsupervised Semantic Segmentation by Distilling Feature Correspondences](https://github.com/mhamilton723/STEGO)
+- [[**DFC**, *IEEE TIP 2020*]: Unsupervised Learning of Image Segmentation Based on Differentiable Feature Clustering](https://github.com/kanezaki/pytorch-unsupervised-segmentation-tip)

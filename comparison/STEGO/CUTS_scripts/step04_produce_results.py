@@ -4,11 +4,7 @@ import sys
 from glob import glob
 import numpy as np
 
-import torch.multiprocessing
-import yaml
 from tqdm import tqdm
-
-torch.multiprocessing.set_sharing_strategy('file_system')
 
 # Import from our CUTS codebase.
 import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-4])

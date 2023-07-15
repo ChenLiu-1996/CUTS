@@ -16,6 +16,7 @@ sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
 from utils.parse import parse_settings
 from utils.seed import seed_everything
+from utils.metrics import dice_coeff
 
 
 def get_baseline_predictions(img: np.array, method: str):
@@ -50,11 +51,91 @@ def get_baseline_predictions(img: np.array, method: str):
                                                     mask=threshed)
     elif method == 'felzenszwalb':
         label_pred = skimage.segmentation.felzenszwalb(img, scale=1500)
+
+    elif method == 'slic':
+        if img.shape[-1] == 1:
+            # (H, W, 1) to (H, W, 3)
+            img = np.repeat(img, 3, axis=-1)
+        label_pred = slic(img)
+
     else:
         raise Exception('cannot parse METHOD: {}'.format(method))
 
     return label_pred
 
+
+def invert_if_better(label_, label_true):
+    inverted_ = 1 - label_
+    if dice_coeff(label_, label_true) > dice_coeff(inverted_, label_true):
+        return label_
+    else:
+        return inverted_
+
+
+############################################################
+# SLIC code from:
+# https://gist.github.com/mkoehrsen/85ae483c856472c2e78e ###
+#
+def slic(img) -> np.array:
+    seg_centroids = centroids(skimage.segmentation.slic(img, n_segments=5000))
+    segments = cv2.watershed(img, seg_centroids.astype(np.int32))
+    segments = erase_boundaries(convert_specks_to_boundaries(segments))
+    return segments
+
+
+def centroids(segments):
+    assert len(segments.shape) == 2
+    num_segments = segments.max() + 1
+    row_sums = [0 for i in range(num_segments)]
+    col_sums = [0 for i in range(num_segments)]
+    pixel_counts = [0 for i in range(num_segments)]
+    for ((row, col), value) in np.ndenumerate(segments):
+        row_sums[value] += row
+        col_sums[value] += col
+        pixel_counts[value] += 1
+    result = np.zeros(segments.shape, dtype=segments.dtype)
+
+    for i in range(num_segments, 1):
+        row = row_sums[i] // pixel_counts[i]
+        col = col_sums[i] // pixel_counts[i]
+        if result[row, col] == 0:
+            result[row, col] = i
+        else:
+            "(%d,%d) is centroid of multiple segments, ignoring" % (row, col)
+    return result
+
+
+def convert_specks_to_boundaries(segments, min_size=12):
+    labels, counts = np.unique(segments, return_counts=True)
+    small_segs = []
+    for i in range(len(labels)):
+        if counts[i] < min_size:
+            small_segs.append(labels[i])
+    small_seg_mask = np.in1d(segments.reshape(-1),
+                             small_segs).reshape(segments.shape)
+    return np.where(small_seg_mask, -1, segments)
+
+
+def erase_boundaries(ws_segments):
+    result = ws_segments.copy()
+
+    iter_count = 0
+    while (result.min() < 0):
+        result[result == -1] = np.pad(result, ((0, 0), (0, 1)),
+                                      'edge')[:, 1:][result == -1]
+        result[result == -1] = np.pad(result, ((0, 1), (0, 0)),
+                                      'edge')[1:][result == -1]
+        result[result == -1] = np.pad(result, ((0, 0), (1, 0)),
+                                      'edge')[:, :-1][result == -1]
+        result[result == -1] = np.pad(result, ((1, 0), (0, 0)),
+                                      'edge')[:-1][result == -1]
+        iter_count += 1
+        assert iter_count <= 10, "Too many iterations"  # Just in case
+    return result
+
+
+# https://gist.github.com/mkoehrsen/85ae483c856472c2e78e ###
+############################################################
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -74,7 +155,7 @@ if __name__ == '__main__':
                                  'numpy_files_seg_baselines')
     os.makedirs(save_path_numpy, exist_ok=True)
 
-    methods = ['random', 'watershed', 'felzenszwalb']
+    methods = ['random', 'watershed', 'felzenszwalb', 'slic']
 
     seed_everything(config.random_seed)
 
@@ -90,29 +171,44 @@ if __name__ == '__main__':
             assert label_true.shape[-1] == 1
             label_true = label_true.squeeze(-1)
 
-        label_pred_random = label_pred_watershed = label_pred_felzenszwalb = None
+        label_pred_random = label_pred_watershed = label_pred_felzenszwalb = label_pred_slic = \
+            np.full(label_true.shape, np.nan)
+
         for method in methods:
             if method == 'random':
                 if np.isnan(label_true.max()):
-                    label_pred_random = np.random.randint(0,
-                                                          2,
-                                                          label_true.shape)
+                    label_pred_random = np.random.randint(
+                        0, 2, label_true.shape)
                 else:
-                    label_pred_random = np.random.randint(0,
-                                                          label_true.max() + 1,
-                                                          label_true.shape)
+                    label_pred_random = np.random.randint(
+                        0,
+                        label_true.max() + 1, label_true.shape)
+
             elif method == 'watershed':
                 label_pred_watershed = get_baseline_predictions(
                     image, method='watershed')
                 if label_true.max() in [0, 1]:
-                    label_pred_watershed = (label_pred_watershed > 0).astype(
-                        np.uint8)
+                    label_pred_watershed = (label_pred_watershed
+                                            > 0).astype(np.uint8)
+                    label_pred_watershed = invert_if_better(
+                        label_pred_watershed, label_true)
+
             elif method == 'felzenszwalb':
                 label_pred_felzenszwalb = get_baseline_predictions(
                     image, method='felzenszwalb')
                 if label_true.max() in [0, 1]:
-                    label_pred_felzenszwalb = (label_pred_felzenszwalb >
-                                               0).astype(np.uint8)
+                    label_pred_felzenszwalb = (label_pred_felzenszwalb
+                                               > 0).astype(np.uint8)
+                    label_pred_felzenszwalb = invert_if_better(
+                        label_pred_felzenszwalb, label_true)
+
+            elif method == 'slic':
+                label_pred_slic = get_baseline_predictions(image,
+                                                           method='slic')
+                if label_true.max() in [0, 1]:
+                    label_pred_slic = (label_pred_slic > 0).astype(np.uint8)
+                    label_pred_slic = invert_if_better(label_pred_slic,
+                                                       label_true)
 
         with open(
                 '%s/%s' %
@@ -123,4 +219,5 @@ if __name__ == '__main__':
                      label=label_true,
                      label_random=label_pred_random,
                      label_watershed=label_pred_watershed,
-                     label_felzenszwalb=label_pred_felzenszwalb)
+                     label_felzenszwalb=label_pred_felzenszwalb,
+                     label_slic=label_pred_slic)
