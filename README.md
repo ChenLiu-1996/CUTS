@@ -300,5 +300,5 @@ If you encounter `zsh bus error` while running some of the python scripts, for e
 ## Acknowledgements
 
 For the comparison against other methods, we use the official implementations from the following repositories:
-- [[**STEGO**, *ICLR 2022*] Unsupervised Semantic Segmentation by Distilling Feature Correspondences](https://github.com/mhamilton723/STEGO)
-- [[**DFC**, *IEEE TIP 2020*]: Unsupervised Learning of Image Segmentation Based on Differentiable Feature Clustering](https://github.com/kanezaki/pytorch-unsupervised-segmentation-tip)
+- [**STEGO**, *ICLR 2022*: Unsupervised Semantic Segmentation by Distilling Feature Correspondences](https://github.com/mhamilton723/STEGO)
+- [**DFC**, *IEEE TIP 2020*: Unsupervised Learning of Image Segmentation Based on Differentiable Feature Clustering](https://github.com/kanezaki/pytorch-unsupervised-segmentation-tip)
