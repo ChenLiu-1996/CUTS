@@ -244,10 +244,10 @@ if __name__ == '__main__':
 
         files_folder_baselines = '%s/%s' % (config.output_save_path,
                                             'numpy_files_seg_baselines')
-        files_folder_stego = '%s/%s' % (config.output_save_path,
-                                        'numpy_files_seg_STEGO')
         files_folder_dfc = '%s/%s' % (config.output_save_path,
                                       'numpy_files_seg_DFC')
+        files_folder_stego = '%s/%s' % (config.output_save_path,
+                                        'numpy_files_seg_STEGO')
         files_folder_kmeans = '%s/%s' % (config.output_save_path,
                                          'numpy_files_seg_kmeans')
         files_folder_diffusion = '%s/%s' % (config.output_save_path,
@@ -259,9 +259,9 @@ if __name__ == '__main__':
 
         np_files_path_baselines = sorted(
             glob('%s/%s' % (files_folder_baselines, '*.npz')))
+        np_files_path_dfc = sorted(glob('%s/%s' % (files_folder_dfc, '*.npz')))
         np_files_path_stego = sorted(
             glob('%s/%s' % (files_folder_stego, '*.npz')))
-        np_files_path_dfc = sorted(glob('%s/%s' % (files_folder_dfc, '*.npz')))
         np_files_path_kmeans = sorted(
             glob('%s/%s' % (files_folder_kmeans, '*.npz')))
         np_files_path_diffusion = sorted(
@@ -273,8 +273,8 @@ if __name__ == '__main__':
 
         num_files = max([
             len(np_files_path_baselines),
-            len(np_files_path_stego),
             len(np_files_path_dfc),
+            len(np_files_path_stego),
             len(np_files_path_kmeans),
             len(np_files_path_diffusion),
             len(np_files_path_unet),
@@ -283,10 +283,10 @@ if __name__ == '__main__':
 
         assert len(np_files_path_baselines) == num_files or len(
             np_files_path_baselines) == 0
-        assert len(np_files_path_stego) == num_files or len(
-            np_files_path_stego) == 0
         assert len(np_files_path_dfc) == num_files or len(
             np_files_path_dfc) == 0
+        assert len(np_files_path_stego) == num_files or len(
+            np_files_path_stego) == 0
         assert len(np_files_path_kmeans) == num_files or len(
             np_files_path_kmeans) == 0
         assert len(np_files_path_diffusion) == num_files or len(
@@ -298,8 +298,8 @@ if __name__ == '__main__':
 
         has_baselines = True if len(
             np_files_path_baselines) == num_files else False
-        has_stego = True if len(np_files_path_stego) == num_files else False
         has_dfc = True if len(np_files_path_dfc) == num_files else False
+        has_stego = True if len(np_files_path_stego) == num_files else False
         has_kmeans = True if len(np_files_path_kmeans) == num_files else False
         has_diffusion = True if len(
             np_files_path_diffusion) == num_files else False
@@ -314,13 +314,13 @@ if __name__ == '__main__':
                 ('Felzenszwalb', 'label_true', 'label_felzenszwalb'),
                 ('SLIC', 'label_true', 'label_slic'),
             ])
-        if has_stego:
-            entity_tuples.extend([
-                ('STEGO', 'label_true', 'seg_stego'),
-            ])
         if has_dfc:
             entity_tuples.extend([
                 ('DFC', 'label_true', 'seg_dfc'),
+            ])
+        if has_stego:
+            entity_tuples.extend([
+                ('STEGO', 'label_true', 'seg_stego'),
             ])
         if has_kmeans:
             if hparams.is_binary:
@@ -380,14 +380,14 @@ if __name__ == '__main__':
         }
 
         for image_idx in tqdm(range(num_files)):
-            baselines_hashmap, kmeans_hashmap, diffusion_hashmap, stego_hashmap, dfc_hashmap = {}, {}, {}, {}, {}
+            baselines_hashmap, kmeans_hashmap, diffusion_hashmap, dfc_hashmap, stego_hashmap = {}, {}, {}, {}, {}
             if has_baselines:
                 baselines_hashmap = load_baselines(
                     np_files_path_baselines[image_idx])
-            if has_stego:
-                stego_hashmap = load_stego(np_files_path_stego[image_idx])
             if has_dfc:
                 dfc_hashmap = load_dfc(np_files_path_dfc[image_idx])
+            if has_stego:
+                stego_hashmap = load_stego(np_files_path_stego[image_idx])
             if has_kmeans:
                 kmeans_hashmap = load_kmeans(np_files_path_kmeans[image_idx])
             if has_diffusion:
@@ -399,14 +399,14 @@ if __name__ == '__main__':
                 nnunet_hashmap = load_nnunet(np_files_path_nnunet[image_idx])
 
             hashmap = combine_hashmaps(baselines_hashmap, kmeans_hashmap,
-                                       diffusion_hashmap, stego_hashmap,
-                                       dfc_hashmap, unet_hashmap,
+                                       diffusion_hashmap, dfc_hashmap,
+                                       stego_hashmap, unet_hashmap,
                                        nnunet_hashmap)
 
-            if has_stego:
-                hashmap = segment(hashmap, label_name='stego')
             if has_dfc:
                 hashmap = segment(hashmap, label_name='dfc')
+            if has_stego:
+                hashmap = segment(hashmap, label_name='stego')
             if has_kmeans:
                 hashmap = segment(hashmap, label_name='kmeans')
             if has_diffusion:

@@ -1,7 +1,15 @@
 import argparse
-import os
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.autograd import Variable
+import cv2
 import sys
-from glob import glob
+import numpy as np
+import torch.nn.init
+
+import os
 import numpy as np
 
 import torch.multiprocessing
@@ -18,18 +26,6 @@ from output_saver import squeeze_excessive_dimension
 
 sys.path.insert(0, import_dir + '/src/data_utils/')
 from prepare_dataset import prepare_dataset
-
-# Import from DFC.
-import argparse
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torch.autograd import Variable
-import cv2
-import sys
-import numpy as np
-import torch.nn.init
 
 use_cuda = torch.cuda.is_available()
 
