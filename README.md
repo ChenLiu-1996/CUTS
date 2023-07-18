@@ -7,6 +7,8 @@
 
 [**CUTS: A Fully Unsupervised Framework for Medical Image Segmentation**](https://arxiv.org/abs/2209.11359)
 
+**Announcement**: We have updated the evaluation process for fair comparison, and as a result, the numbers and figures reported for competing methods in the Arxiv paper are out of date. We will revise them in the next release. However, the codebase as well as the following image are up-to-date.
+
 <br>
 <img src = "assets/github_img5.png" width=700>
 
