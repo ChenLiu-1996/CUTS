@@ -3,7 +3,7 @@ pytorch_data_dir: '$CUTS_ROOT/comparison/STEGO/data/'
 
 experiment_name: "retina_seed2021"
 dir_dataset_name: "retina"
-dir_dataset_n_classes: 2
+dir_dataset_n_classes: 10
 log_dir: "retina_seed2021"
 seed: 2021
 

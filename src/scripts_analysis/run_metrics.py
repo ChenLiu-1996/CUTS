@@ -156,7 +156,7 @@ def boxplots(meta_metrics, metric_name_map, entity_tuples, config_filepaths):
     plt.rcParams['axes.spines.top'] = False
 
     fig = plt.figure(figsize=(35, 5))
-    plt.rcParams['font.size'] = 18
+    plt.rcParams['font.size'] = 24
     plt.rcParams['legend.fontsize'] = 18
 
     num_cols = len(metric_name_map.keys())
@@ -310,18 +310,38 @@ if __name__ == '__main__':
         if has_baselines:
             entity_tuples.extend([
                 ('Random', 'label_true', 'label_random'),
-                ('Watershed', 'label_true', 'label_watershed'),
-                ('Felzenszwalb', 'label_true', 'label_felzenszwalb'),
-                ('SLIC', 'label_true', 'label_slic'),
             ])
+            if hparams.is_binary:
+                entity_tuples.extend([
+                    ('Watershed', 'label_true', 'seg_watershed'),
+                    ('Felzenszwalb', 'label_true', 'seg_felzenszwalb'),
+                    ('SLIC', 'label_true', 'seg_slic'),
+                ])
+            else:
+                entity_tuples.extend([
+                    ('Watershed', 'label_true', 'label_watershed'),
+                    ('Felzenszwalb', 'label_true', 'label_felzenszwalb'),
+                    ('SLIC', 'label_true', 'label_slic'),
+                ])
+
         if has_dfc:
-            entity_tuples.extend([
-                ('DFC', 'label_true', 'seg_dfc'),
-            ])
+            if hparams.is_binary:
+                entity_tuples.extend([
+                    ('DFC', 'label_true', 'seg_dfc'),
+                ])
+            else:
+                entity_tuples.extend([
+                    ('DFC', 'label_true', 'label_dfc'),
+                ])
         if has_stego:
-            entity_tuples.extend([
-                ('STEGO', 'label_true', 'seg_stego'),
-            ])
+            if hparams.is_binary:
+                entity_tuples.extend([
+                    ('STEGO', 'label_true', 'seg_stego'),
+                ])
+            else:
+                entity_tuples.extend([
+                    ('STEGO', 'label_true', 'label_stego'),
+                ])
         if has_kmeans:
             if hparams.is_binary:
                 entity_tuples.extend([
@@ -403,6 +423,10 @@ if __name__ == '__main__':
                                        stego_hashmap, unet_hashmap,
                                        nnunet_hashmap)
 
+            if has_baselines:
+                hashmap = segment(hashmap, label_name='watershed')
+                hashmap = segment(hashmap, label_name='felzenszwalb')
+                hashmap = segment(hashmap, label_name='slic')
             if has_dfc:
                 hashmap = segment(hashmap, label_name='dfc')
             if has_stego:

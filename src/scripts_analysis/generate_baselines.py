@@ -64,14 +64,6 @@ def get_baseline_predictions(img: np.array, method: str):
     return label_pred
 
 
-def invert_if_better(label_, label_true):
-    inverted_ = 1 - label_
-    if dice_coeff(label_, label_true) > dice_coeff(inverted_, label_true):
-        return label_
-    else:
-        return inverted_
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config',
@@ -121,33 +113,15 @@ if __name__ == '__main__':
 
             elif method == 'watershed':
                 label_pred_watershed = get_baseline_predictions(
-                    image, method='watershed')
-                if label_true.max() in [0, 1]:
-                    label_pred_watershed = (
-                        label_pred_watershed
-                        > np.mean(label_pred_watershed)).astype(np.uint8)
-                    label_pred_watershed = invert_if_better(
-                        label_pred_watershed, label_true)
+                    image, method='watershed').astype(np.uint8)
 
             elif method == 'felzenszwalb':
                 label_pred_felzenszwalb = get_baseline_predictions(
-                    image, method='felzenszwalb')
-                if label_true.max() in [0, 1]:
-                    label_pred_felzenszwalb = (
-                        label_pred_felzenszwalb
-                        > np.mean(label_pred_felzenszwalb)).astype(np.uint8)
-                    label_pred_felzenszwalb = invert_if_better(
-                        label_pred_felzenszwalb, label_true)
+                    image, method='felzenszwalb').astype(np.uint8)
 
             elif method == 'slic':
-                label_pred_slic = get_baseline_predictions(image,
-                                                           method='slic')
-                if label_true.max() in [0, 1]:
-                    label_pred_slic = (label_pred_slic
-                                       > np.mean(label_pred_slic)).astype(
-                                           np.uint8)
-                    label_pred_slic = invert_if_better(label_pred_slic,
-                                                       label_true)
+                label_pred_slic = get_baseline_predictions(
+                    image, method='slic').astype(np.uint8)
 
         with open(
                 '%s/%s' %

@@ -264,8 +264,14 @@ if __name__ == '__main__':
             numpy_array_baselines = np.load(files_path_baselines[image_idx])
             label_random = numpy_array_baselines['label_random']
             label_watershed = numpy_array_baselines['label_watershed']
+            label_watershed = label_hint_seg(label_pred=label_watershed,
+                                             label_true=label_true)
             label_felzenszwalb = numpy_array_baselines['label_felzenszwalb']
+            label_felzenszwalb = label_hint_seg(label_pred=label_felzenszwalb,
+                                                label_true=label_true)
             label_slic = numpy_array_baselines['label_slic']
+            label_slic = label_hint_seg(label_pred=label_slic,
+                                        label_true=label_true)
         except:
             print(
                 'Warning! `baselines` results not found. Placeholding with blank labels.'
@@ -311,6 +317,8 @@ if __name__ == '__main__':
         try:
             numpy_array_stego = np.load(files_path_stego[image_idx])
             label_stego = numpy_array_stego['label_stego']
+            label_stego = label_hint_seg(label_pred=label_stego,
+                                         label_true=label_true)
         except:
             print(
                 'Warning! `STEGO` results not found. Placeholding with blank labels.'
