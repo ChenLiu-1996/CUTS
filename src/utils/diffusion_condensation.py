@@ -2,12 +2,12 @@ import heapq
 from typing import List, Tuple
 
 # from skimage.measure import find_contours
-import cv2
+# import cv2
 import numpy as np
 import pandas as pd
 from CATCH import catch
 from scipy import sparse
-from scipy.spatial.distance import directed_hausdorff
+# from scipy.spatial.distance import directed_hausdorff
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import normalize
 from utils.metrics import dice_coeff
@@ -138,15 +138,13 @@ def diffusion_condensation(X: np.array,
 
     # Very occasionally, SVD won't converge.
     try:
-        catch_op = catch.CATCH(knn=30,
+        catch_op = catch.CATCH(knn=50,
                                random_state=random_seed,
-                               n_pca=50,
                                n_jobs=num_workers)
         catch_op.fit(data)
     except:
-        catch_op = catch.CATCH(knn=30,
+        catch_op = catch.CATCH(knn=50,
                                random_state=random_seed + 1,
-                               n_pca=50,
                                n_jobs=num_workers)
         catch_op.fit(data)
 
@@ -224,8 +222,10 @@ def get_persistent_structures(labels: np.array) -> np.array:
         curr_persistence, max_persistence, best_frame = 0, 0, -1
         for frame_idx in range(B - 1):
             size = np.sum(labels[frame_idx, ...] == label_idx)
-            diff = np.sum((labels[frame_idx, ...] == label_idx) != (
-                labels[frame_idx + 1, ...] == label_idx))
+            diff = np.sum(
+                (labels[frame_idx,
+                        ...] == label_idx) != (labels[frame_idx + 1,
+                                                      ...] == label_idx))
             if size > 0 and diff <= size * size_diff_tolerance:
                 curr_persistence += 1
                 if curr_persistence > max_persistence:
