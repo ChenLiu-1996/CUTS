@@ -254,6 +254,7 @@ conda create --name cuts pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 
 conda activate cuts
 conda install scikit-image pillow matplotlib seaborn tqdm -c anaconda
 python -m pip install -U phate
+python -m pip install multiscale-phate
 python -m pip install git+https://github.com/KrishnaswamyLab/CATCH
 python -m pip install opencv-python-headless
 python -m pip install sewar

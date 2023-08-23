@@ -51,7 +51,6 @@ def load_diffusion(path: str) -> dict:
     hashmap['recon'] = numpy_array['recon']
     hashmap['label_true'] = numpy_array['label']
     hashmap['latent'] = numpy_array['latent']
-    hashmap['granularities_diffusion'] = numpy_array['granularities_diffusion']
     hashmap['labels_diffusion'] = numpy_array['labels_diffusion']
     return hashmap
 

@@ -20,23 +20,17 @@ warnings.filterwarnings("ignore")
 def generate_diffusion(
         shape: Tuple[int],
         latent: np.array,
+        knn: int = 100,
         num_workers: int = 1,
         random_seed: int = 0) -> Tuple[float, np.array, np.array]:
 
     H, W, C = shape
     assert latent.shape == (H * W, C)
 
-    _, (catch_op, levels) = diffusion_condensation(X=latent,
-                                                   height_width=(H, W),
-                                                   pos_enc_gamma=0,
-                                                   num_workers=num_workers,
-                                                   random_seed=random_seed,
-                                                   return_all=True)
+    labels_pred, granularities = diffusion_condensation(
+        X=latent, knn=knn, num_workers=num_workers, random_seed=random_seed)
 
-    labels_pred = np.array([catch_op.NxTs[lvl] for lvl in levels])
-    granularities = [len(catch_op.NxTs) + lvl for lvl in levels]
-
-    return labels_pred, granularities, levels, catch_op.gradient
+    return labels_pred, granularities
 
 
 if __name__ == '__main__':
@@ -85,18 +79,18 @@ if __name__ == '__main__':
         H, W = label_true.shape[:2]
         C = latent.shape[-1]
 
-        labels_pred, granularities, levels, gradients = generate_diffusion(
+        labels_pred, granularities = generate_diffusion(
             (H, W, C), latent, num_workers=config.num_workers)
 
         with open(save_path, 'wb+') as f:
-            np.savez(f,
-                     image=image,
-                     recon=recon,
-                     label=label_true,
-                     latent=latent,
-                     granularities_diffusion=granularities,
-                     labels_diffusion=labels_pred,
-                     levels=levels,
-                     gradients=gradients)
+            np.savez(
+                f,
+                image=image,
+                recon=recon,
+                label=label_true,
+                latent=latent,
+                labels_diffusion=labels_pred,
+                granularities_diffusion=granularities,
+            )
 
     print('All diffusion results generated.')

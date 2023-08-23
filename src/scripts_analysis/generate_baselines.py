@@ -16,7 +16,6 @@ sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
 from utils.parse import parse_settings
 from utils.seed import seed_everything
-from utils.metrics import dice_coeff
 
 
 def get_baseline_predictions(img: np.array, method: str):

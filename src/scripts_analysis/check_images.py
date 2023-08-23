@@ -11,7 +11,6 @@ from tqdm import tqdm
 
 sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
-from utils.diffusion_condensation import diffusion_condensation
 from utils.parse import parse_settings
 
 warnings.filterwarnings("ignore")
