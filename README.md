@@ -45,8 +45,7 @@ UnsupervisedMedicalSeg (CUTS)
         |   ├── `generate_baselines.py`
         |   ├── `generate_kmeans.py`
         |   ├── `generate_diffusion.py`
-        |   ├── `plot_paper_figure_natural.py`
-        |   ├── `plot_paper_figure_medical.py`
+        |   ├── `plot_paper_figure_main.py`
         |   └── `run_metrics.py`
         |
         ├── (*) `main.py`: unsupervised training of the CUTS encoder.
@@ -152,7 +151,7 @@ python generate_baselines.py --config ../../config/retina_seed2022.yaml
   <summary>Results Plotting</summary>
 
 #### To reproduce the figures in the paper.
-There are primarily two scripts for this purpose: `plot_paper_figure_natural.py` and `plot_paper_figure_medical.py`. The difference between them is self-explanatory by their names.
+There is one single script for this purpose (previously two but we recently merged them): `plot_paper_figure_main.py`.
 
 The `image-idx` argument shall be followed by space-separated index/indices of the images to be plotted.
 
@@ -161,22 +160,24 @@ With the ` --comparison` flag, the side-by-side comparison against other methods
 
 With the ` --grayscale` flag, the input images and reconstructed images will be plotted in grayscale.
 
+With the `--binary` flag, the labels will be binarized using a consistent method described in the paper.
+
 ```
 ## Under `src/scripts_analysis`
 
-## For natural images (berkeley)
-python plot_paper_figure_natural.py --config ../../config/berkeley_seed2022.yaml --image-idx 89 6 8
-python plot_paper_figure_natural.py --config ../../config/berkeley_seed2022.yaml --image-idx 89 6 8 40 22 58 --comparison
+## For natural images (berkeley), multi-class segmentation.
+python plot_paper_figure_main.py --config ../../config/berkeley_seed2022.yaml --image-idx 8 22 89
+python plot_paper_figure_main.py --config ../../config/berkeley_seed2022.yaml --image-idx 8 22 89 --comparison
 
-## For medical images with color (retina)
-python plot_paper_figure_medical.py --config ../../config/retina_seed2022.yaml --image-idx 4 7 14
-python plot_paper_figure_medical.py --config ../../config/retina_seed2022.yaml --image-idx 4 7 14 55 3 33 --comparison
+## For medical images with color (retina), binary segmentation.
+python plot_paper_figure_main.py --config ../../config/retina_seed2022.yaml --image-idx 4 7 14
+python plot_paper_figure_main.py --config ../../config/retina_seed2022.yaml --image-idx 4 7 14 55 3 33 --comparison --binary
 
-## For medical images without color (brain ventricles, brain tumor)
-python plot_paper_figure_medical.py --config ../../config/brain_ventricles_seed2022.yaml --image-idx 35 41 88 --grayscale
-python plot_paper_figure_medical.py --config ../../config/brain_ventricles_seed2022.yaml --image-idx 35 41 88 14 15 1 --comparison --grayscale
-python plot_paper_figure_medical.py --config ../../config/brain_tumor_seed2022.yaml --image-idx 1 23 25 --grayscale
-python plot_paper_figure_medical.py --config ../../config/brain_tumor_seed2022.yaml --image-idx 1 23 25 31 39 41 --comparison --grayscale
+## For medical images without color (brain ventricles, brain tumor), binary segmentation.
+python plot_paper_figure_main.py --config ../../config/brain_ventricles_seed2022.yaml --image-idx 35 41 88 --grayscale
+python plot_paper_figure_main.py --config ../../config/brain_ventricles_seed2022.yaml --image-idx 35 41 88 --grayscale --comparison --binary
+python plot_paper_figure_main.py --config ../../config/brain_tumor_seed2022.yaml --image-idx 1 25 31 --grayscale
+python plot_paper_figure_main.py --config ../../config/brain_tumor_seed2022.yaml --image-idx 1 25 31 --grayscale --comparison --binary
 ```
 </details>
 
