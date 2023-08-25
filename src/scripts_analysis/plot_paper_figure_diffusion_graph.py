@@ -5,10 +5,11 @@ import warnings
 from glob import glob
 
 import numpy as np
-import phate
+import multiscale_phate
 import yaml
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import normalize
+import scprep
 
 sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
@@ -19,9 +20,28 @@ from utils.segmentation import label_hint_seg
 warnings.filterwarnings("ignore")
 
 
-def plot_diffusion_graph(data_hashmap: dict, data_phate: np.array):
+def plot_diffusion_graph(data_hashmap: dict):
 
     label = data_hashmap['labels_diffusion']
+
+    msphate_op = multiscale_phate.Multiscale_PHATE(knn=100,
+                                                   landmarks=500,
+                                                   random_state=0,
+                                                   n_jobs=1)
+
+    msphate_op.fit(normalize(latent, axis=1))
+    levels = msphate_op.levels
+    assert levels[0] == 0
+    msphate_granularities = [len(msphate_op.NxTs) + lvl for lvl in levels]
+    diffusion_granularities = np.arange(len(data_hashmap['labels_diffusion']))
+
+    tree = msphate_op.build_tree()
+    scprep.plot.scatter3d(tree,
+                          c=tree_clusters,
+                          s=50,
+                          fontsize=16,
+                          ticks=False,
+                          figsize=(10, 10))
 
     iter_dim = np.max(data_phate) - np.min(data_phate)
     z_values = np.linspace(0, iter_dim, label.shape[0])
@@ -35,8 +55,7 @@ def plot_diffusion_graph(data_hashmap: dict, data_phate: np.array):
         Xs.extend(list(data_phate[idx_arr, 0]))
         Ys.extend(list(data_phate[idx_arr, 1]))
         Zs.extend([z for _ in range(len(idx_arr))])
-        Cs.extend(
-            list(continuous_renumber(curr_diffusion[idx_arr])))
+        Cs.extend(list(continuous_renumber(curr_diffusion[idx_arr])))
 
         if gran_idx > 0 and gran_idx < len(z_values) - 1:
             prev_diffusion = label[gran_idx - 1, ...]
@@ -58,8 +77,14 @@ def plot_diffusion_graph(data_hashmap: dict, data_phate: np.array):
                 color = color[0]
 
                 num_filler = 5
-                Xs_link.extend(list(np.linspace(cluster_x_prev, cluster_x_curr, num_filler)))
-                Ys_link.extend(list(np.linspace(cluster_y_prev, cluster_y_curr, num_filler)))
+                Xs_link.extend(
+                    list(
+                        np.linspace(cluster_x_prev, cluster_x_curr,
+                                    num_filler)))
+                Ys_link.extend(
+                    list(
+                        np.linspace(cluster_y_prev, cluster_y_curr,
+                                    num_filler)))
                 Zs_link.extend(list(np.linspace(prev_z, curr_z, num_filler)))
                 Cs_link.extend([color for _ in range(num_filler)])
 
@@ -134,23 +159,7 @@ if __name__ == '__main__':
         'seg_persistent': seg_persistent,
     }
 
-    phate_path = '%s/sample_%s.npz' % (phate_folder, str(
-        args.image_idx).zfill(5))
-    if os.path.exists(phate_path):
-        # Load the phate data if exists.
-        data_phate_numpy = np.load(phate_path)
-        data_phate = data_phate_numpy['data_phate']
-    else:
-        # Otherwise, generate the phate data.
-        phate_op = phate.PHATE(random_state=random_seed,
-                               n_jobs=config.num_workers)
-
-        data_phate = phate_op.fit_transform(normalize(latent, axis=1))
-        with open(phate_path, 'wb+') as f:
-            np.savez(f, data_phate=data_phate)
-
-    fig = plot_diffusion_graph(data_hashmap=data_hashmap,
-                               data_phate=data_phate)
+    fig = plot_diffusion_graph(data_hashmap=data_hashmap)
 
     fig_path = '%s/diffusion_graph_sample_%s.png' % (
         figure_folder, str(args.image_idx).zfill(5))

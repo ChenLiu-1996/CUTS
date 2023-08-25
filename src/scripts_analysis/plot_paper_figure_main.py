@@ -1,16 +1,18 @@
 import argparse
 import os
-import subprocess
 import sys
-import time
 import warnings
 from glob import glob
 from tqdm import tqdm
+from typing import Dict
 
 import numpy as np
 import scprep
+import cv2
 import yaml
 from matplotlib import pyplot as plt
+import multiscale_phate
+from sklearn.preprocessing import normalize
 
 sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
@@ -21,143 +23,213 @@ from utils.segmentation import label_hint_seg
 warnings.filterwarnings("ignore")
 
 
+def grayscale_3channel(image: np.array) -> np.array:
+    if len(image.shape) == 2:
+        image = image[..., None]
+    assert len(image.shape) == 3
+    if image.shape[-1] == 1:
+        image = np.repeat(image, repeats=3, axis=-1)
+    return image
+
 def find_nearest_idx(arr: np.array, num: float) -> int:
     return np.abs(arr - num).argmin()
 
 
 def plot_comparison(fig: plt.figure, num_samples: int, sample_idx: int,
-                    data_hashmap: dict, data_phate: np.array,
-                    image_grayscale: bool):
-    # 2 rows, 10 columns.
+                    data_hashmap: Dict, image_grayscale: bool,
+                    label_binary: bool):
+    # 1 row, 12 columns.
     # 1-st row are the images, labels, segmentations.
-    # 2-nd row are the PHATE plots if applicable.
+    # 2-nd row are the msphate plots if applicable.
 
     H, W = data_hashmap['label_true'].shape[:2]
 
+    label_keys = [
+        'label_true',
+        'seg_kmeans' if label_binary else 'label_kmeans',
+        'seg_persistent' if label_binary else 'label_persistent',
+        'label_random',
+        'label_watershed',
+        'label_felzenszwalb',
+        'label_slic',
+        'label_dfc',
+        'label_stego',
+        'label_sam',
+        'label_supervised_unet',
+        'label_supervised_nnunet',
+    ]
+    num_labels = len(label_keys)
+    num_cols = num_labels + 1
+
     ##### 1-st row!
-    ax = fig.add_subplot(2 * num_samples, 12, 1 + 24 * sample_idx)
+    ax = fig.add_subplot(num_samples, num_cols, 1 + num_cols * sample_idx)
     ax.imshow(data_hashmap['image'], cmap='gray' if image_grayscale else None)
     ax.set_axis_off()
 
-    for (figure_idx, key) in zip(range(2, 2 + 11), [
-            'label_true',
-            'seg_kmeans',
-            'seg_persistent',
-            'label_random',
-            'label_watershed',
-            'label_felzenszwalb',
-            'label_slic',
-            'label_dfc',
-            'label_stego',
-            'label_supervised_unet',
-            'label_supervised_nnunet',
-    ]):
-        ax = fig.add_subplot(2 * num_samples, 12, figure_idx + 24 * sample_idx)
-        ax.imshow(data_hashmap[key], cmap='gray')
+    for (figure_idx, key) in zip(range(2, 2 + num_labels), label_keys):
+        ax = fig.add_subplot(num_samples, num_cols,
+                             figure_idx + num_cols * sample_idx)
+        ax.imshow(data_hashmap[key], cmap='gray' if label_binary else 'tab20')
         ax.set_axis_off()
-
-    ##### 2-nd row!
-    ax = fig.add_subplot(2 * num_samples, 12, 13 + 24 * sample_idx)
-    ax.imshow(data_hashmap['recon'], cmap='gray' if image_grayscale else None)
-    ax.set_axis_off()
-
-    for (figure_idx, key) in zip(range(14, 14 + 11), [
-            'label_true',
-            'seg_kmeans',
-            'seg_persistent',
-            'label_random',
-            'label_watershed',
-            'label_felzenszwalb',
-            'label_slic',
-            'label_dfc',
-            'label_stego',
-            'label_supervised_unet',
-            'label_supervised_nnunet',
-    ]):
-        ax = fig.add_subplot(2 * num_samples, 12, figure_idx + 24 * sample_idx)
-        scprep.plot.scatter2d(data_phate,
-                              c=continuous_renumber(data_hashmap[key].reshape(
-                                  (H * W, -1))),
-                              ax=ax,
-                              title=None,
-                              colorbar=False,
-                              s=3)
-        ax.set_axis_off()
-        if ax.get_legend() is not None: ax.get_legend().remove()
 
     return fig
 
 
-def plot_results(fig: plt.figure, num_samples: int, sample_idx: int,
-                 data_hashmap: dict, data_phate: np.array,
-                 granularities: np.array, image_grayscale: bool):
-    # 2 rows, 12 columns.
+def plot_overlaid_comparison(fig: plt.figure, num_samples: int,
+                             sample_idx: int, data_hashmap: Dict,
+                             image_grayscale: bool):
+    # 1 row, 12 columns.
     # 1-st row are the images, labels, segmentations.
-    # 2-nd row are the PHATE plots if applicable.
-
+    # 2-nd row are the msphate plots if applicable.
     H, W = data_hashmap['label_true'].shape[:2]
 
-    idx_selected = [
-        find_nearest_idx(granularities, num)
-        for num in np.linspace(granularities[0], granularities[-1], 6)
+    label_keys = [
+        'seg_kmeans',
+        'seg_persistent',
+        'label_random',
+        'label_watershed',
+        'label_felzenszwalb',
+        'label_slic',
+        'label_dfc',
+        'label_stego',
+        'label_sam',
+        'label_supervised_unet',
+        'label_supervised_nnunet',
     ]
+    num_labels = len(label_keys)
+    num_cols = num_labels + 1
 
     ##### 1-st row!
-    ax = fig.add_subplot(2 * num_samples, 12, 1 + 24 * sample_idx)
+    ax = fig.add_subplot(num_samples, num_cols, 1 + num_cols * sample_idx)
+
+    image = np.uint8(255 * data_hashmap['image'].copy())
+    if image_grayscale:
+        image = grayscale_3channel(image)
+    label_true = data_hashmap['label_true']
+
+    # Contour of ground truth label
+    true_contours, _hierarchy = cv2.findContours(np.uint8(label_true),
+                                                 cv2.RETR_TREE,
+                                                 cv2.CHAIN_APPROX_NONE)
+    for contour in true_contours:
+        cv2.drawContours(image, contour, -1, (0, 255, 0), 1)
+    ax.imshow(image)
+    ax.set_axis_off()
+
+    for (figure_idx, key) in zip(range(2, 2 + num_labels), label_keys):
+        image = np.uint8(255 * data_hashmap['image'].copy())
+        if image_grayscale:
+            image = grayscale_3channel(image)
+
+        for contour in true_contours:
+            cv2.drawContours(image, contour, -1, (0, 255, 0), 1)
+        pred_contours, _hierarchy = cv2.findContours(
+            np.uint8(data_hashmap[key]), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        for contour in pred_contours:
+            if key == 'label_random':
+                weight = 1
+            else:
+                weight = 2
+            cv2.drawContours(image, contour, -1, (0, 0, 255), weight)
+        ax = fig.add_subplot(num_samples, num_cols,
+                             figure_idx + num_cols * sample_idx)
+        ax.imshow(image)
+        ax.set_axis_off()
+
+    return fig
+
+
+def plot_results(fig: plt.figure,
+                 num_samples: int,
+                 sample_idx: int,
+                 data_hashmap: Dict,
+                 image_grayscale: bool,
+                 num_granularities: int = 10):
+    # 2 rows, 12 columns.
+    # 1-st row are the images, kmeans, and segmentations.
+    # 2-nd row are the recon, persistent, and msphate plots if applicable.
+
+    assert num_granularities >= 0
+    num_cols = num_granularities + 2
+
+    H, W = data_hashmap['label_true'].shape[:2]
+    latent = data_hashmap['latent']
+
+    msphate_op = multiscale_phate.Multiscale_PHATE(knn=50,
+                                                   landmarks=100,
+                                                   random_state=0,
+                                                   n_jobs=1)
+    msphate_op.fit(normalize(latent, axis=1))
+    levels = msphate_op.levels
+    assert levels[0] == 0
+    levels = levels[1:]  # Ignore finest resolution of all-distinct labels.
+    msphate_granularities = [len(msphate_op.NxTs) + lvl for lvl in levels]
+    diffusion_granularities = np.arange(len(data_hashmap['labels_diffusion']))
+
+    if num_granularities > 0:
+        diffusion_idx_selected = [
+            find_nearest_idx(diffusion_granularities, num) for num in
+            np.linspace(diffusion_granularities[0],
+                        diffusion_granularities[-1], num_granularities)
+        ]
+        msphate_idx_selected = [
+            find_nearest_idx(msphate_granularities, num) for num in
+            np.linspace(msphate_granularities[0], msphate_granularities[-1],
+                        num_granularities)
+        ]
+
+    ##### 1st row!
+    ax = fig.add_subplot(2 * num_samples, num_cols,
+                         1 + 2 * num_cols * sample_idx)
     ax.imshow(data_hashmap['image'], cmap='gray' if image_grayscale else None)
     ax.set_axis_off()
 
-    for (figure_idx, key) in zip(range(2, 2 + 5), [
-            'label_true', 'label_kmeans', 'seg_kmeans',
-            'persistent_structures', 'seg_persistent'
-    ]):
-        if key == 'label_true' or 'seg_' in key:
-            cmap = 'gray'
-        else:
-            cmap = 'tab20'
-        ax = fig.add_subplot(2 * num_samples, 12, figure_idx + 24 * sample_idx)
-        ax.imshow(data_hashmap[key], cmap=cmap)
-        ax.set_axis_off()
+    ax = fig.add_subplot(2 * num_samples, num_cols,
+                         2 + 2 * num_cols * sample_idx)
+    cmap = plt.get_cmap('tab20', len(np.unique(data_hashmap['label_kmeans'])))
+    ax.imshow(data_hashmap['label_kmeans'], cmap=cmap)
+    ax.set_axis_off()
 
-    for i in range(6):
-        ax = fig.add_subplot(2 * num_samples, 12, 7 + i + 24 * sample_idx)
-        __label = data_hashmap['labels_diffusion'][idx_selected[i]]
+    for i in range(num_granularities):
+        ax = fig.add_subplot(2 * num_samples, num_cols,
+                             3 + i + 2 * num_cols * sample_idx)
+        __label = data_hashmap['labels_diffusion'][diffusion_idx_selected[i]]
         __label = __label.reshape((H, W))
-        ax.imshow(continuous_renumber(__label), cmap='tab20')
+        ax.imshow(continuous_renumber(__label), cmap=cmap)
         ax.set_axis_off()
 
     ##### 2-nd row!
-    ax = fig.add_subplot(2 * num_samples, 12, 13 + 24 * sample_idx)
+    ax = fig.add_subplot(2 * num_samples, num_cols,
+                         1 + num_cols + 2 * num_cols * sample_idx)
     ax.imshow(data_hashmap['recon'], cmap='gray' if image_grayscale else None)
     ax.set_axis_off()
 
-    for (figure_idx, key) in zip(range(14, 14 + 5), [
-            'label_true', 'label_kmeans', 'seg_kmeans',
-            'persistent_structures', 'seg_persistent'
-    ]):
-        ax = fig.add_subplot(2 * num_samples, 12, figure_idx + 24 * sample_idx)
-        scprep.plot.scatter2d(data_phate,
-                              c=continuous_renumber(data_hashmap[key].reshape(
-                                  (H * W, -1))),
+    ax = fig.add_subplot(2 * num_samples, num_cols,
+                         2 + num_cols + 2 * num_cols * sample_idx)
+    cmap = plt.get_cmap('tab20',
+                        len(np.unique(data_hashmap['label_persistent'])))
+    ax.imshow(data_hashmap['label_persistent'], cmap=cmap)
+    ax.set_axis_off()
+
+    for i in range(num_granularities):
+        ax = fig.add_subplot(2 * num_samples, num_cols,
+                             3 + i + num_cols + 2 * num_cols * sample_idx)
+
+        _embeddings, _clusters, _sizes = msphate_op.transform(
+            visualization_level=levels[msphate_idx_selected[i]],
+            cluster_level=levels[msphate_idx_selected[i]])
+
+        cmap = plt.get_cmap('tab20', len(np.unique(_clusters)))
+        scprep.plot.scatter2d(_embeddings,
+                              c=_clusters,
+                              s=_sizes,
                               ax=ax,
+                              cmap=cmap,
                               title=None,
-                              colorbar=False,
-                              s=3)
+                              colorbar=False)
         ax.set_axis_off()
         if ax.get_legend() is not None: ax.get_legend().remove()
 
-    for i in range(6):
-        ax = fig.add_subplot(2 * num_samples, 12, 19 + i + 24 * sample_idx)
-        __label = data_hashmap['labels_diffusion'][idx_selected[i]]
-        __label = __label.reshape((H * W, -1))
-        scprep.plot.scatter2d(data_phate,
-                              c=continuous_renumber(__label),
-                              ax=ax,
-                              title=None,
-                              colorbar=False,
-                              s=3)
-        ax.set_axis_off()
-        if ax.get_legend() is not None: ax.get_legend().remove()
     return fig
 
 
@@ -173,12 +245,21 @@ if __name__ == '__main__':
                         nargs='+',
                         required=True)
     parser.add_argument(
+        '--grayscale',
+        help='Use this flag if the image is expected to be grayscale.',
+        action='store_true')
+    parser.add_argument(
+        '--binary',
+        help='Use this flag if the label is expected to be binary.',
+        action='store_true')
+    parser.add_argument(
         '--comparison',
         help='Whether or not to include the comparison against other methods.',
         action='store_true')
     parser.add_argument(
-        '--grayscale',
-        help='Use this flag if the image is expected to be grayscale.',
+        '--separate',
+        help=
+        'If true, do not overlay with contour, and show the segmentations separately. Default to true for multi-class segmentation',
         action='store_true')
     parser.add_argument(
         '-r',
@@ -208,6 +289,8 @@ if __name__ == '__main__':
                                   'numpy_files_seg_DFC')
     files_folder_stego = '%s/%s' % (config.output_save_path,
                                     'numpy_files_seg_STEGO')
+    files_folder_sam = '%s/%s' % (config.output_save_path,
+                                  'numpy_files_seg_SAM')
     files_folder_supervised_unet = '%s/%s' % (
         config.output_save_path, 'numpy_files_seg_supervised_unet')
     files_folder_supervised_nnunet = '%s/%s' % (
@@ -217,16 +300,15 @@ if __name__ == '__main__':
     files_folder_diffusion = '%s/%s' % (config.output_save_path,
                                         'numpy_files_seg_diffusion')
     figure_folder = '%s/%s' % (config.output_save_path, 'paper_figure')
-    phate_folder = '%s/%s' % (config.output_save_path, 'numpy_files_phate')
 
     os.makedirs(figure_folder, exist_ok=True)
-    os.makedirs(phate_folder, exist_ok=True)
 
     files_path_raw = sorted(glob('%s/%s' % (files_folder_raw, '*.npz')))
     files_path_baselines = sorted(
         glob('%s/%s' % (files_folder_baselines, '*.npz')))
     files_path_dfc = sorted(glob('%s/%s' % (files_folder_dfc, '*.npz')))
     files_path_stego = sorted(glob('%s/%s' % (files_folder_stego, '*.npz')))
+    files_path_sam = sorted(glob('%s/%s' % (files_folder_sam, '*.npz')))
     files_path_supervised_unet = sorted(
         glob('%s/%s' % (files_folder_supervised_unet, '*.npz')))
     files_path_supervised_nnunet = sorted(
@@ -237,10 +319,11 @@ if __name__ == '__main__':
 
     # Now plot the sub-figures for each sample, one by one.
     num_samples = len(args.image_idx)
+
     if args.comparison:
-        fig = plt.figure(figsize=(28, 4 * num_samples))
+        fig = plt.figure(figsize=(25, 2 * num_samples))
     else:
-        fig = plt.figure(figsize=(22, 4 * num_samples))
+        fig = plt.figure(figsize=(25, 4 * num_samples))
 
     for sample_idx, image_idx in enumerate(tqdm(args.image_idx)):
 
@@ -264,14 +347,17 @@ if __name__ == '__main__':
             numpy_array_baselines = np.load(files_path_baselines[image_idx])
             label_random = numpy_array_baselines['label_random']
             label_watershed = numpy_array_baselines['label_watershed']
-            label_watershed = label_hint_seg(label_pred=label_watershed,
-                                             label_true=label_true)
+            if args.binary:
+                label_watershed = label_hint_seg(label_pred=label_watershed,
+                                                 label_true=label_true)
             label_felzenszwalb = numpy_array_baselines['label_felzenszwalb']
-            label_felzenszwalb = label_hint_seg(label_pred=label_felzenszwalb,
-                                                label_true=label_true)
+            if args.binary:
+                label_felzenszwalb = label_hint_seg(
+                    label_pred=label_felzenszwalb, label_true=label_true)
             label_slic = numpy_array_baselines['label_slic']
-            label_slic = label_hint_seg(label_pred=label_slic,
-                                        label_true=label_true)
+            if args.binary:
+                label_slic = label_hint_seg(label_pred=label_slic,
+                                            label_true=label_true)
         except:
             print(
                 'Warning! `baselines` results not found. Placeholding with blank labels.'
@@ -292,16 +378,13 @@ if __name__ == '__main__':
 
         try:
             numpy_array_diffusion = np.load(files_path_diffusion[image_idx])
-            granularities = numpy_array_diffusion['granularities_diffusion']
             labels_diffusion = numpy_array_diffusion['labels_diffusion']
         except:
             print(
                 'Warning! `CUTS + diffusion condensation` results not found. Placeholding with blank labels.'
             )
-            num_placeholder_granularities = 10
-            granularities = np.arange(num_placeholder_granularities)
-            labels_diffusion = np.zeros(
-                (num_placeholder_granularities, *label_true.shape))
+            labels_diffusion = np.zeros_like(label_true)
+            granularities = None
 
         try:
             numpy_array_dfc = np.load(files_path_dfc[image_idx])
@@ -326,6 +409,15 @@ if __name__ == '__main__':
             label_stego = np.zeros_like(label_true)
 
         try:
+            numpy_array_sam = np.load(files_path_sam[image_idx])
+            label_sam = numpy_array_sam['label_sam']
+        except:
+            print(
+                'Warning! `SAM` results not found. Placeholding with blank labels.'
+            )
+            label_sam = np.zeros_like(label_true)
+
+        try:
             numpy_array_unet = np.load(files_path_supervised_unet[image_idx])
             label_supervised_unet = numpy_array_unet['label_pred']
         except:
@@ -347,16 +439,18 @@ if __name__ == '__main__':
         H, W = label_true.shape[:2]
         B = labels_diffusion.shape[0]
 
-        persistent_structures = get_persistent_structures(
+        label_persistent = get_persistent_structures(
             labels_diffusion.reshape((B, H, W)))
+
         seg_kmeans = label_hint_seg(label_pred=label_kmeans,
                                     label_true=label_true)
-        seg_persistent = label_hint_seg(label_pred=persistent_structures,
+        seg_persistent = label_hint_seg(label_pred=label_persistent,
                                         label_true=label_true)
 
         data_hashmap = {
             'image': image,
             'recon': recon,
+            'latent': latent,
             'label_true': label_true,
             'label_random': label_random,
             'label_watershed': label_watershed,
@@ -364,97 +458,36 @@ if __name__ == '__main__':
             'label_slic': label_slic,
             'label_dfc': label_dfc,
             'label_stego': label_stego,
+            'label_sam': label_sam,
             'label_supervised_unet': label_supervised_unet,
             'label_supervised_nnunet': label_supervised_nnunet,
             'label_kmeans': label_kmeans,
             'seg_kmeans': seg_kmeans,
-            'granularities': granularities,
             'labels_diffusion': labels_diffusion,
-            'persistent_structures': persistent_structures,
+            'label_persistent': label_persistent,
             'seg_persistent': seg_persistent,
         }
 
-        phate_path = '%s/sample_%s.npz' % (phate_folder,
-                                           str(image_idx).zfill(5))
-        if os.path.exists(phate_path):
-            # Load the phate data if exists.
-            data_phate_numpy = np.load(phate_path)
-            data_phate = data_phate_numpy['data_phate']
-        else:
-            # Otherwise, generate the phate data.
-            if not args.rerun:
-                '''
-                In many cases this is enough. If you experience deadlock, you can try to use `-r`/`--rerun`.
-                '''
-                import phate
-                from sklearn.preprocessing import normalize
-
-                _phate_op = phate.PHATE(random_state=random_seed,
-                                        n_jobs=config.num_workers,
-                                        verbose=True)
-                _data_phate = _phate_op.fit_transform(normalize(latent,
-                                                                axis=1))
-                with open(phate_path, 'wb+') as f:
-                    np.savez(f, data_phate=_data_phate)
-
-            else:
-                '''
-                Because of the frequent deadlock problem, I decided to use the following solution:
-                kill and restart whenever a process is taking too long (likely due to deadlock).
-                '''
-                load_path = files_path_raw[image_idx]
-                num_workers = config.num_workers
-                folder = '/'.join(
-                    os.path.dirname(os.path.abspath(__file__)).split('/'))
-
-                file_success = False
-                while not file_success:
-                    start = time.time()
-                    while True:
-                        try:
-                            proc = subprocess.Popen([
-                                'python3', folder + '/helper_run_phate.py',
-                                '--load_path', load_path, '--phate_path',
-                                phate_path, '--random_seed',
-                                str(config.random_seed), '--num_workers',
-                                str(num_workers)
-                            ],
-                                                    stdout=subprocess.PIPE,
-                                                    stderr=subprocess.PIPE)
-                            stdout, stderr = proc.communicate(
-                                timeout=args.max_wait_sec)
-                            stdout, stderr = str(stdout), str(stderr)
-                            stdout = stdout.lstrip('b\'').rstrip('\'')
-                            stderr = stderr.lstrip('b\'').rstrip('\'')
-                            print(image_idx, stdout, stderr)
-
-                            proc.kill()
-                            # This is determined by the sys.stdout in `helper_run_phate.py`
-                            if stdout[:8] == 'SUCCESS!':
-                                file_success = True
-                            break
-
-                        except subprocess.TimeoutExpired:
-                            print('Time out! Restart subprocess.')
-                            proc.kill()
-
-            data_phate_numpy = np.load(phate_path)
-            data_phate = data_phate_numpy['data_phate']
-
         if args.comparison:
-            fig = plot_comparison(fig=fig,
-                                  num_samples=num_samples,
-                                  sample_idx=sample_idx,
-                                  data_hashmap=data_hashmap,
-                                  data_phate=data_phate,
-                                  image_grayscale=args.grayscale)
+            if args.separate:
+                fig = plot_comparison(fig=fig,
+                                      num_samples=num_samples,
+                                      sample_idx=sample_idx,
+                                      data_hashmap=data_hashmap,
+                                      image_grayscale=args.grayscale,
+                                      label_binary=args.binary)
+            else:
+                assert args.binary
+                fig = plot_overlaid_comparison(fig=fig,
+                                               num_samples=num_samples,
+                                               sample_idx=sample_idx,
+                                               data_hashmap=data_hashmap,
+                                               image_grayscale=args.grayscale)
         else:
             fig = plot_results(fig=fig,
                                num_samples=num_samples,
                                sample_idx=sample_idx,
                                data_hashmap=data_hashmap,
-                               data_phate=data_phate,
-                               granularities=granularities,
                                image_grayscale=args.grayscale)
 
     figure_str = ''
@@ -464,9 +497,12 @@ if __name__ == '__main__':
 
     fig_path = '%s/sample_%s' % (figure_folder, figure_str)
     fig.tight_layout()
-    plt.subplots_adjust(wspace=0.03, hspace=0.03)
+    # plt.subplots_adjust(wspace=0.05, hspace=0.05)
 
     if args.comparison:
-        fig.savefig('%s_figure_plot_comparison.png' % fig_path)
+        if args.separate:
+            fig.savefig('%s_figure_plot_comparison_separate.png' % fig_path)
+        else:
+            fig.savefig('%s_figure_plot_comparison.png' % fig_path)
     else:
         fig.savefig('%s_figure_plot.png' % fig_path)

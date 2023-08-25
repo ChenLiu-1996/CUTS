@@ -124,6 +124,15 @@ python step04_produce_results.py --config ../../../config/retina_seed2022.yaml -
 python step01_produce_results.py --config ../../../config/retina_seed2022.yaml
 ```
 
+#### To use Segment Anything Model (SAM).
+```
+## Under `comparison/SAM/`
+mkdir SAM_checkpoint && cd SAM_checkpoint
+wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
+
+## Under `comparison/SAM/CUTS_scripts/`
+python step01_produce_results.py --config ../../../config/retina_seed2022.yaml
+```
 </details>
 
 
@@ -162,22 +171,42 @@ With the ` --grayscale` flag, the input images and reconstructed images will be 
 
 With the `--binary` flag, the labels will be binarized using a consistent method described in the paper.
 
+With the `--separate` flag, the labels will be displayed as separate masks. Otherwise they will be overlaid. This flag is altomatically turned on (and cannot be turned off) for multi-class segmentation cases.
+
 ```
 ## Under `src/scripts_analysis`
 
 ## For natural images (berkeley), multi-class segmentation.
+### Diffusion condensation trajectory.
 python plot_paper_figure_main.py --config ../../config/berkeley_seed2022.yaml --image-idx 8 22 89
-python plot_paper_figure_main.py --config ../../config/berkeley_seed2022.yaml --image-idx 8 22 89 --comparison
+### Segmentation comparison.
+python plot_paper_figure_main.py --config ../../config/berkeley_seed2022.yaml --image-idx 8 22 89 --comparison --separate
 
 ## For medical images with color (retina), binary segmentation.
-python plot_paper_figure_main.py --config ../../config/retina_seed2022.yaml --image-idx 4 7 14
-python plot_paper_figure_main.py --config ../../config/retina_seed2022.yaml --image-idx 4 7 14 55 3 33 --comparison --binary
+### Diffusion condensation trajectory.
+python plot_paper_figure_main.py --config ../../config/retina_seed2022.yaml --image-idx 4 7 18
+### Segmentation comparison (overlay).
+python plot_paper_figure_main.py --config ../../config/retina_seed2022.yaml --image-idx 4 7 18 --comparison --binary
+### Segmentation comparison (non-overlay).
+python plot_paper_figure_main.py --config ../../config/retina_seed2022.yaml --image-idx 4 7 18 --comparison --binary --separate
 
 ## For medical images without color (brain ventricles, brain tumor), binary segmentation.
+### Diffusion condensation trajectory.
 python plot_paper_figure_main.py --config ../../config/brain_ventricles_seed2022.yaml --image-idx 35 41 88 --grayscale
+### Segmentation comparison (overlay).
 python plot_paper_figure_main.py --config ../../config/brain_ventricles_seed2022.yaml --image-idx 35 41 88 --grayscale --comparison --binary
+### Segmentation comparison (non-overlay).
+python plot_paper_figure_main.py --config ../../config/brain_ventricles_seed2022.yaml --image-idx 35 41 88 --grayscale --comparison --binary --separate
+### Diffusion condensation trajectory.
 python plot_paper_figure_main.py --config ../../config/brain_tumor_seed2022.yaml --image-idx 1 25 31 --grayscale
+### Segmentation comparison (overlay).
 python plot_paper_figure_main.py --config ../../config/brain_tumor_seed2022.yaml --image-idx 1 25 31 --grayscale --comparison --binary
+### Segmentation comparison (non-overlay).
+python plot_paper_figure_main.py --config ../../config/brain_tumor_seed2022.yaml --image-idx 1 25 31 --grayscale --comparison --binary --separate
+
+## We also have an option to not overlay binary segmentation.
+python plot_paper_figure_main.py --config ../../config/retina_seed2022.yaml --image-idx 4 7 14 --comparison --binary
+
 ```
 </details>
 
@@ -271,12 +300,8 @@ python -m pip install pytorch-lightning==1.9
 python -m pip install azureml
 python -m pip install azureml.core
 
-# (Optional) For Leopart
-python -m pip install click
-python -m pip install optuna
-python -m pip install infomap
-conda install -c pytorch -c nvidia faiss-gpu=1.7.4 mkl=2021 blas=1.0=mkl
-python -m pip install timm
+# (Optional) For SAM
+python -m pip install git+https://github.com/facebookresearch/segment-anything.git
 ```
 Installation usually takes between 20 minutes and 1 hour on a normal desktop computer.
 
@@ -304,5 +329,7 @@ If you encounter `zsh bus error` while running some of the python scripts, for e
 ## Acknowledgements
 
 For the comparison against other methods, we use the official implementations from the following repositories:
-- [**STEGO**, *ICLR 2022*: Unsupervised Semantic Segmentation by Distilling Feature Correspondences](https://github.com/mhamilton723/STEGO)
 - [**DFC**, *IEEE TIP 2020*: Unsupervised Learning of Image Segmentation Based on Differentiable Feature Clustering](https://github.com/kanezaki/pytorch-unsupervised-segmentation-tip)
+- [**STEGO**, *ICLR 2022*: Unsupervised Semantic Segmentation by Distilling Feature Correspondences](https://github.com/mhamilton723/STEGO)
+- [**SAM**, *Arxiv* (Meta AI Research): Segment Anything](https://github.com/facebookresearch/segment-anything)
+- [**SAM**, *Medical Image Analysis 2024*: Segment Anything Model for Medical Image Analysis: an Experimental Study](https://github.com/mazurowski-lab/segment-anything-medical-evaluation)
