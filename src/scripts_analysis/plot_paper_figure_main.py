@@ -31,6 +31,22 @@ def grayscale_3channel(image: np.array) -> np.array:
         image = np.repeat(image, repeats=3, axis=-1)
     return image
 
+
+def pop_blue_channel(label: np.array) -> np.array:
+    assert label.min() >= 0 and label.max() <= 1
+    if len(label.shape) == 3:
+        label = label.squeeze(-1)
+    assert len(label.shape) == 2
+
+    # (R, G, B, A) where A := alpha (opacity).
+    output = np.zeros((*label.shape, 4))
+    output[..., 2] = label
+
+    # Transparent at background. Opaque at foreground.
+    output[label > 0, 3] = 0.6
+    return np.uint8(255 * output)
+
+
 def find_nearest_idx(arr: np.array, num: float) -> int:
     return np.abs(arr - num).argmin()
 
@@ -75,9 +91,12 @@ def plot_comparison(fig: plt.figure, num_samples: int, sample_idx: int,
     return fig
 
 
-def plot_overlaid_comparison(fig: plt.figure, num_samples: int,
-                             sample_idx: int, data_hashmap: Dict,
-                             image_grayscale: bool):
+def plot_overlaid_comparison(fig: plt.figure,
+                             num_samples: int,
+                             sample_idx: int,
+                             data_hashmap: Dict,
+                             image_grayscale: bool,
+                             pred_color: str = 'blue'):
     # 1 row, 12 columns.
     # 1-st row are the images, labels, segmentations.
     # 2-nd row are the msphate plots if applicable.
@@ -99,6 +118,12 @@ def plot_overlaid_comparison(fig: plt.figure, num_samples: int,
     num_labels = len(label_keys)
     num_cols = num_labels + 1
 
+    true_color = (0, 255, 0)
+    if pred_color == 'blue':
+        pred_color = (0, 0, 255)
+    elif pred_color == 'red':
+        pred_color = (255, 0, 0)
+
     ##### 1-st row!
     ax = fig.add_subplot(num_samples, num_cols, 1 + num_cols * sample_idx)
 
@@ -112,7 +137,7 @@ def plot_overlaid_comparison(fig: plt.figure, num_samples: int,
                                                  cv2.RETR_TREE,
                                                  cv2.CHAIN_APPROX_NONE)
     for contour in true_contours:
-        cv2.drawContours(image, contour, -1, (0, 255, 0), 1)
+        cv2.drawContours(image, contour, -1, true_color, 1)
     ax.imshow(image)
     ax.set_axis_off()
 
@@ -122,15 +147,15 @@ def plot_overlaid_comparison(fig: plt.figure, num_samples: int,
             image = grayscale_3channel(image)
 
         for contour in true_contours:
-            cv2.drawContours(image, contour, -1, (0, 255, 0), 1)
+            cv2.drawContours(image, contour, -1, true_color, 4)
         pred_contours, _hierarchy = cv2.findContours(
             np.uint8(data_hashmap[key]), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         for contour in pred_contours:
             if key == 'label_random':
                 weight = 1
             else:
-                weight = 2
-            cv2.drawContours(image, contour, -1, (0, 0, 255), weight)
+                weight = 4
+            cv2.drawContours(image, contour, -1, pred_color, weight)
         ax = fig.add_subplot(num_samples, num_cols,
                              figure_idx + num_cols * sample_idx)
         ax.imshow(image)
@@ -478,11 +503,14 @@ if __name__ == '__main__':
                                       label_binary=args.binary)
             else:
                 assert args.binary
-                fig = plot_overlaid_comparison(fig=fig,
-                                               num_samples=num_samples,
-                                               sample_idx=sample_idx,
-                                               data_hashmap=data_hashmap,
-                                               image_grayscale=args.grayscale)
+                fig = plot_overlaid_comparison(
+                    fig=fig,
+                    num_samples=num_samples,
+                    sample_idx=sample_idx,
+                    data_hashmap=data_hashmap,
+                    image_grayscale=args.grayscale,
+                    pred_color='blue'
+                    if config.dataset_name == 'retina' else 'red')
         else:
             fig = plot_results(fig=fig,
                                num_samples=num_samples,

@@ -8,15 +8,14 @@
 [**CUTS: A Fully Unsupervised Framework for Medical Image Segmentation**](https://arxiv.org/abs/2209.11359)
 
 <br>
-<img src = "assets/github_img5.png" width=700>
+<img src = "assets/table1.png" width=700>
 
 ## A Glimpse into the Methods
-<img src = "assets/github_img1.png" width=600>
-<img src = "assets/github_img2.png" width=560>
+<img src = "assets/architecture.png" width=600>
 
 ## Quick Flavors of the Results
-<img src = "assets/github_img3.png" width=600>
-<img src = "assets/github_img4.png" width=600>
+<img src = "assets/qualitative.png" width=600>
+<img src = "assets/brain_tumor_results.png" width=600>
 
 
 ## Citation

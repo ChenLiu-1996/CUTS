@@ -20,91 +20,71 @@ from utils.segmentation import label_hint_seg
 warnings.filterwarnings("ignore")
 
 
-def plot_diffusion_graph(data_hashmap: dict):
+def find_nearest_idx(arr: np.array, num: float) -> int:
+    return np.abs(arr - num).argmin()
+
+
+def plot_diffusion_graph(data_hashmap: dict, num_granularities: int = 20):
 
     label = data_hashmap['labels_diffusion']
 
-    msphate_op = multiscale_phate.Multiscale_PHATE(knn=100,
-                                                   landmarks=500,
+    msphate_op = multiscale_phate.Multiscale_PHATE(knn=50,
+                                                   landmarks=100,
                                                    random_state=0,
                                                    n_jobs=1)
 
     msphate_op.fit(normalize(latent, axis=1))
     levels = msphate_op.levels
     assert levels[0] == 0
+    levels = levels[1:]  # Ignore finest resolution of all-distinct labels.
     msphate_granularities = [len(msphate_op.NxTs) + lvl for lvl in levels]
     diffusion_granularities = np.arange(len(data_hashmap['labels_diffusion']))
 
-    tree = msphate_op.build_tree()
-    scprep.plot.scatter3d(tree,
-                          c=tree_clusters,
-                          s=50,
-                          fontsize=16,
-                          ticks=False,
-                          figsize=(10, 10))
+    if num_granularities > 0:
+        msphate_idx_selected = [
+            find_nearest_idx(msphate_granularities, num) for num in
+            np.linspace(msphate_granularities[0], msphate_granularities[-1],
+                        num_granularities)
+        ]
 
-    iter_dim = np.max(data_phate) - np.min(data_phate)
-    z_values = np.linspace(0, iter_dim, label.shape[0])
+    x_list, y_list, z_list, c_list, s_list = [], [], [], [], []
+    x_lnk_list, y_lnk_list, z_lnk_list, c_lnk_list = [], [], [], []
+    for i in range(num_granularities):
 
-    Xs, Ys, Zs, Cs = [], [], [], []
-    Xs_link, Ys_link, Zs_link, Cs_link = [], [], [], []
-    # matrix = np.zeros((H, W, Z))
-    for gran_idx, z in enumerate(z_values):
-        curr_diffusion = label[gran_idx, ...]
-        idx_arr = np.where(curr_diffusion)[0]
-        Xs.extend(list(data_phate[idx_arr, 0]))
-        Ys.extend(list(data_phate[idx_arr, 1]))
-        Zs.extend([z for _ in range(len(idx_arr))])
-        Cs.extend(list(continuous_renumber(curr_diffusion[idx_arr])))
+        # Record (x, y, z, c) at each granularity
+        curr_embeddings, curr_clusters, curr_sizes = msphate_op.transform(
+            visualization_level=levels[msphate_idx_selected[i]],
+            cluster_level=levels[msphate_idx_selected[i]])
 
-        if gran_idx > 0 and gran_idx < len(z_values) - 1:
-            prev_diffusion = label[gran_idx - 1, ...]
-            prev_z = z_values[gran_idx - 1]
-            curr_z = z_values[gran_idx]
-            for cluster_id in np.unique(curr_diffusion):
-                cluster_idx_arr_curr = np.where(
-                    curr_diffusion == cluster_id)[0]
-                cluster_idx_arr_prev = np.where(
-                    prev_diffusion == cluster_id)[0]
-                cluster_x_curr = np.mean(data_phate[cluster_idx_arr_curr, 0])
-                cluster_y_curr = np.mean(data_phate[cluster_idx_arr_curr, 1])
-                cluster_x_prev = np.mean(data_phate[cluster_idx_arr_prev, 0])
-                cluster_y_prev = np.mean(data_phate[cluster_idx_arr_prev, 1])
+        x_list.extend(
+            list(curr_embeddings[:, 0] /
+                 (np.ptp(curr_embeddings[:, 0]) + 1e-9)))
+        y_list.extend(
+            list(curr_embeddings[:, 1] /
+                 (np.ptp(curr_embeddings[:, 1]) + 1e-9)))
+        z_list.extend([i for _ in range(len(curr_embeddings))])
+        c_list.extend(list(curr_clusters))
+        s_list.extend(list(curr_sizes / (np.ptp(curr_sizes) + 1e-9) * 1e3))
 
-                color = continuous_renumber(
-                    curr_diffusion)[cluster_idx_arr_curr]
-                assert len(np.unique(color)) == 1
-                color = color[0]
+    x_list = np.array(x_list)
+    y_list = np.array(y_list)
+    z_list = np.array(z_list)
+    c_list = np.array(c_list)
+    s_list = np.array(s_list)
 
-                num_filler = 5
-                Xs_link.extend(
-                    list(
-                        np.linspace(cluster_x_prev, cluster_x_curr,
-                                    num_filler)))
-                Ys_link.extend(
-                    list(
-                        np.linspace(cluster_y_prev, cluster_y_curr,
-                                    num_filler)))
-                Zs_link.extend(list(np.linspace(prev_z, curr_z, num_filler)))
-                Cs_link.extend([color for _ in range(num_filler)])
-
-    Xs = np.array(Xs)
-    Ys = np.array(Ys)
-    Zs = np.array(Zs)
-    Cs = np.array(Cs)
-    Xs_link = np.array(Xs_link)
-    Ys_link = np.array(Ys_link)
-    Zs_link = np.array(Zs_link)
-    Cs_link = np.array(Cs_link)
-
-    fig = plt.figure(figsize=(12, 12))
-    ax = fig.add_subplot(1, 1, 1, projection='3d')
-    ax.scatter(Xs, Ys, Zs, c=Cs, alpha=0.05, cmap='tab20')
-    ax.scatter(Xs_link, Ys_link, Zs_link, c=Cs_link, alpha=0.5, cmap='tab20')
-    ax.set_box_aspect((np.ptp(Xs), np.ptp(Ys), np.ptp(Zs)))
-    ax.view_init(-5, 0)
+    fig = plt.figure(figsize=(20, 20))
+    ax = fig.add_subplot(projection='3d')
     ax.set_axis_off()
-
+    ax.set_box_aspect((1, 1, 2))
+    ax.scatter(x_list,
+               y_list,
+               z_list,
+               c=c_list,
+               s=s_list,
+               alpha=0.5,
+               cmap='tab20')
+    ax.view_init(10, 0)
+    fig.subplots_adjust(top=2.0, bottom=1.0)
     return fig
 
 
@@ -164,4 +144,4 @@ if __name__ == '__main__':
     fig_path = '%s/diffusion_graph_sample_%s.png' % (
         figure_folder, str(args.image_idx).zfill(5))
     fig.tight_layout()
-    fig.savefig(fig_path)
+    fig.savefig(fig_path, bbox_inches='tight')

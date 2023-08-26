@@ -254,12 +254,12 @@ if __name__ == '__main__':
                                       'numpy_files_seg_DFC')
         files_folder_stego = '%s/%s' % (config.output_save_path,
                                         'numpy_files_seg_STEGO')
-        files_folder_sam = '%s/%s' % (config.output_save_path,
-                                      'numpy_files_seg_SAM')
         files_folder_kmeans = '%s/%s' % (config.output_save_path,
                                          'numpy_files_seg_kmeans')
         files_folder_diffusion = '%s/%s' % (config.output_save_path,
                                             'numpy_files_seg_diffusion')
+        files_folder_sam = '%s/%s' % (config.output_save_path,
+                                      'numpy_files_seg_SAM')
         files_folder_unet = '%s/%s' % (config.output_save_path,
                                        'numpy_files_seg_supervised_unet')
         files_folder_nnunet = '%s/%s' % (config.output_save_path,
@@ -270,11 +270,11 @@ if __name__ == '__main__':
         np_files_path_dfc = sorted(glob('%s/%s' % (files_folder_dfc, '*.npz')))
         np_files_path_stego = sorted(
             glob('%s/%s' % (files_folder_stego, '*.npz')))
-        np_files_path_sam = sorted(glob('%s/%s' % (files_folder_sam, '*.npz')))
         np_files_path_kmeans = sorted(
             glob('%s/%s' % (files_folder_kmeans, '*.npz')))
         np_files_path_diffusion = sorted(
             glob('%s/%s' % (files_folder_diffusion, '*.npz')))
+        np_files_path_sam = sorted(glob('%s/%s' % (files_folder_sam, '*.npz')))
         np_files_path_unet = sorted(
             glob('%s/%s' % (files_folder_unet, '*.npz')))
         np_files_path_nnunet = sorted(
@@ -284,9 +284,9 @@ if __name__ == '__main__':
             len(np_files_path_baselines),
             len(np_files_path_dfc),
             len(np_files_path_stego),
-            len(np_files_path_sam),
             len(np_files_path_kmeans),
             len(np_files_path_diffusion),
+            len(np_files_path_sam),
             len(np_files_path_unet),
             len(np_files_path_nnunet),
         ])
@@ -297,12 +297,12 @@ if __name__ == '__main__':
             np_files_path_dfc) == 0
         assert len(np_files_path_stego) == num_files or len(
             np_files_path_stego) == 0
-        assert len(np_files_path_sam) == num_files or len(
-            np_files_path_sam) == 0
         assert len(np_files_path_kmeans) == num_files or len(
             np_files_path_kmeans) == 0
         assert len(np_files_path_diffusion) == num_files or len(
             np_files_path_diffusion) == 0
+        assert len(np_files_path_sam) == num_files or len(
+            np_files_path_sam) == 0
         assert len(np_files_path_unet) == num_files or len(
             np_files_path_unet) == 0
         assert len(np_files_path_nnunet) == num_files or len(
@@ -312,10 +312,10 @@ if __name__ == '__main__':
             np_files_path_baselines) == num_files else False
         has_dfc = True if len(np_files_path_dfc) == num_files else False
         has_stego = True if len(np_files_path_stego) == num_files else False
-        has_sam = True if len(np_files_path_sam) == num_files else False
         has_kmeans = True if len(np_files_path_kmeans) == num_files else False
         has_diffusion = True if len(
             np_files_path_diffusion) == num_files else False
+        has_sam = True if len(np_files_path_sam) == num_files else False
         has_unet = True if len(np_files_path_unet) == num_files else False
         has_nnunet = True if len(np_files_path_nnunet) == num_files else False
 
@@ -355,16 +355,6 @@ if __name__ == '__main__':
                 entity_tuples.extend([
                     ('STEGO', 'label_true', 'label_stego'),
                 ])
-        if has_sam:
-            if hparams.is_binary:
-                entity_tuples.extend([
-                    ('SAM', 'label_true',
-                     'label_sam'),  # Already segmented in SAM.
-                ])
-            else:
-                entity_tuples.extend([
-                    ('SAM', 'label_true', 'label_sam'),
-                ])
         if has_kmeans:
             if hparams.is_binary:
                 entity_tuples.extend([
@@ -390,6 +380,11 @@ if __name__ == '__main__':
                     ('CUTS + Diffusion (best one)', 'label_true',
                      'label_diffusion-best'),
                 ])
+        if has_sam:
+            entity_tuples.extend([
+                ('[Pre-train & zero-shot transfer] SAM', 'label_true',
+                 'label_sam'),  # Already segmented in SAM.
+            ])
         if has_unet:
             entity_tuples.extend([
                 ('[Supervised] UNet', 'label_true', 'label_unet'),
@@ -423,7 +418,7 @@ if __name__ == '__main__':
         }
 
         for image_idx in tqdm(range(num_files)):
-            baselines_hashmap, kmeans_hashmap, diffusion_hashmap, dfc_hashmap, stego_hashmap = {}, {}, {}, {}, {}
+            baselines_hashmap, kmeans_hashmap, diffusion_hashmap, dfc_hashmap, stego_hashmap, sam_hashmap = {}, {}, {}, {}, {}, {}
             if has_baselines:
                 baselines_hashmap = load_baselines(
                     np_files_path_baselines[image_idx])
@@ -431,22 +426,22 @@ if __name__ == '__main__':
                 dfc_hashmap = load_dfc(np_files_path_dfc[image_idx])
             if has_stego:
                 stego_hashmap = load_stego(np_files_path_stego[image_idx])
-            if has_sam:
-                sam_hashmap = load_sam(np_files_path_sam[image_idx])
             if has_kmeans:
                 kmeans_hashmap = load_kmeans(np_files_path_kmeans[image_idx])
             if has_diffusion:
                 diffusion_hashmap = load_diffusion(
                     np_files_path_diffusion[image_idx])
+            if has_sam:
+                sam_hashmap = load_sam(np_files_path_sam[image_idx])
             if has_unet:
                 unet_hashmap = load_unet(np_files_path_unet[image_idx])
             if has_nnunet:
                 nnunet_hashmap = load_nnunet(np_files_path_nnunet[image_idx])
 
-            hashmap = combine_hashmaps(baselines_hashmap, kmeans_hashmap,
-                                       diffusion_hashmap, dfc_hashmap,
-                                       stego_hashmap, sam_hashmap, unet_hashmap,
-                                       nnunet_hashmap)
+            hashmap = combine_hashmaps(baselines_hashmap, dfc_hashmap,
+                                       stego_hashmap, kmeans_hashmap,
+                                       diffusion_hashmap, sam_hashmap,
+                                       unet_hashmap, nnunet_hashmap)
 
             if has_baselines:
                 hashmap = segment(hashmap, label_name='watershed')
@@ -456,13 +451,13 @@ if __name__ == '__main__':
                 hashmap = segment(hashmap, label_name='dfc')
             if has_stego:
                 hashmap = segment(hashmap, label_name='stego')
-            # SAM already segments during inference. No need to do here.
             if has_kmeans:
                 hashmap = segment(hashmap, label_name='kmeans')
             if has_diffusion:
                 hashmap = persistent_structures(hashmap)
                 hashmap = segment(hashmap, label_name='diffusion-persistent')
                 hashmap = segment_every_diffusion(hashmap)
+            # SAM already segments during inference. No need to do here.
 
             # Re-label the label indices for multi-class labels.
             if not hparams.is_binary:
