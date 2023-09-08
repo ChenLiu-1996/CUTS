@@ -382,7 +382,7 @@ if __name__ == '__main__':
                 ])
         if has_sam:
             entity_tuples.extend([
-                ('[Pre-train & zero-shot transfer] SAM', 'label_true',
+                ('[Supervised Pre-training] SAM', 'label_true',
                  'label_sam'),  # Already segmented in SAM.
             ])
         if has_unet:
