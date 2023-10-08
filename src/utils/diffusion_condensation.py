@@ -26,16 +26,18 @@ def diffusion_condensation(X: np.array,
     data = pd.DataFrame(X)
 
     # Very occasionally, SVD won't converge.
-    try:
-        catch_op = catch.CATCH(knn=knn,
-                               random_state=random_seed,
-                               n_jobs=num_workers)
-        catch_op.fit(data)
-    except:
-        catch_op = catch.CATCH(knn=knn,
-                               random_state=random_seed + 1,
-                               n_jobs=num_workers)
-        catch_op.fit(data)
+    success = False
+    for seed_increment in range(5):
+        try:
+            catch_op = catch.CATCH(knn=knn,
+                                   random_state=random_seed + seed_increment,
+                                   n_jobs=num_workers)
+            catch_op.fit(data)
+            success = True
+        except:
+            pass
+        if success:
+            break
 
     levels = catch_op.transform()
     labels_pred = np.array([catch_op.NxTs[lvl] for lvl in levels])

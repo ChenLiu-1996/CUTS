@@ -364,6 +364,8 @@ if __name__ == '__main__':
         if np.isnan(label_true).all():
             print('\n\n[Major Warning !!!] We found that the true label is all `NaN`s.' + \
             '\nThis shall only happen if you are not providing labels. Please double check!\n\n')
+        # For compatibility with `label_hint_seg`.
+        label_true = np.ones_like(label_true)
         label_true = label_true.astype(np.int16)
         latent = numpy_array_raw['latent']
 
