@@ -5,7 +5,7 @@
 
 **This repository contains the official PyTorch implementation of the following paper:**
 
-[**CUTS: A Fully Unsupervised Framework for Medical Image Segmentation**](https://arxiv.org/abs/2209.11359)
+[**CUTS: A Framework for Multigranular Unsupervised Medical Image Segmentation**](https://arxiv.org/abs/2209.11359)
 
 <br>
 
@@ -21,7 +21,7 @@
 ## Citation
 ```
 @article{chen2022cuts,
-  title={CUTS: A Fully Unsupervised Framework for Medical Image Segmentation},
+  title={CUTS: A Framework for Multigranular Unsupervised Medical Image Segmentation},
   author={Liu, Chen and Amodio, Matthew and Shen, Liangbo L and Gao, Feng and Avesta, Arman and Aneja, Sanjay and Wang, Jay and Del Priore, Lucian V and Krishnaswamy, Smita},
   journal={arXiv preprint arXiv:2209.11359},
   year={2022}
