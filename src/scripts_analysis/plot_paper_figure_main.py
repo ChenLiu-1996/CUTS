@@ -410,7 +410,8 @@ if __name__ == '__main__':
             print(
                 'Warning! `CUTS + diffusion condensation` results not found. Placeholding with blank labels.'
             )
-            labels_diffusion = np.zeros_like(label_true)
+            # Placeholding with 10 diffusion granularities.
+            labels_diffusion = np.zeros((10, *label_true.shape))
             granularities = None
 
         try:

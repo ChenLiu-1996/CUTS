@@ -14,7 +14,7 @@ class MouseBrain(Dataset):
         self.out_shape = out_shape
 
         # This dataset contains a single numpy file.
-        self.img_path = glob('%s/*' % (base_path))
+        self.img_path = glob('%s/*_filtered.npz' % (base_path))
         assert len(self.img_path) == 1
         self.img_path = self.img_path[0]
 
