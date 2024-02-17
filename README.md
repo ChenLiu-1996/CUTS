@@ -62,7 +62,7 @@ Relatively core files or folders are marked with (*).
 The `berkeley_natural_images` and `retina` datasets are provided in `zip` format. The `brain_ventricles` dataset exceeds the GitHub size limits, and can be made available upon reasonable request.
 
 ## To reproduce the results in the paper.
-The following commands are using `retina_seed2022` as an example (retina dataset, random seed set to 2022).
+The following commands are using `retina_seed2` as an example (retina dataset, random seed set to 2022).
 
 <details>
   <summary>Unzip data</summary>
@@ -87,12 +87,12 @@ conda activate cuts
 #### To train a model.
 ```
 ## Under `src`
-python main.py --mode train --config ../config/retina_seed2022.yaml
+python main.py --mode train --config ../config/retina_seed2.yaml
 ```
 #### To test a model (automatically done during `train` mode).
 ```
 ## Under `src`
-python main.py --mode test --config ../config/retina_seed2022.yaml
+python main.py --mode test --config ../config/retina_seed2.yaml
 ```
 </details>
 
@@ -101,7 +101,7 @@ python main.py --mode test --config ../config/retina_seed2022.yaml
 
 ```
 ## Under `src/`
-python main_supervised.py --mode train --config ../retina_seed2022.yaml
+python main_supervised.py --mode train --config ../retina_seed2.yaml
 ```
 </details>
 
@@ -111,16 +111,16 @@ python main_supervised.py --mode train --config ../retina_seed2022.yaml
 #### To train STEGO.
 ```
 ## Under `comparison/STEGO/CUTS_scripts/`
-python step01_prepare_data.py --config ../../../config/retina_seed2022.yaml
-python step02_precompute_knns.py --train-config ./train_config/train_config_retina_seed2022.yaml
-python step03_train_segmentation.py --train-config ./train_config/train_config_retina_seed2022.yaml
-python step04_produce_results.py --config ../../../config/retina_seed2022.yaml --eval-config ./eval_config/eval_config_retina_seed2022.yaml
+python step01_prepare_data.py --config ../../../config/retina_seed2.yaml
+python step02_precompute_knns.py --train-config ./train_config/train_config_retina_seed2.yaml
+python step03_train_segmentation.py --train-config ./train_config/train_config_retina_seed2.yaml
+python step04_produce_results.py --config ../../../config/retina_seed2.yaml --eval-config ./eval_config/eval_config_retina_seed2.yaml
 ```
 
 #### To train Differentiable Feature Clustering (DFC).
 ```
 ## Under `comparison/DFC/CUTS_scripts/`
-python step01_produce_results.py --config ../../../config/retina_seed2022.yaml
+python step01_produce_results.py --config ../../../config/retina_seed2.yaml
 ```
 
 #### To use Segment Anything Model (SAM).
@@ -130,7 +130,7 @@ mkdir SAM_checkpoint && cd SAM_checkpoint
 wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
 
 ## Under `comparison/SAM/CUTS_scripts/`
-python step01_produce_results.py --config ../../../config/retina_seed2022.yaml
+python step01_produce_results.py --config ../../../config/retina_seed2.yaml
 ```
 </details>
 
@@ -141,17 +141,17 @@ python step01_produce_results.py --config ../../../config/retina_seed2022.yaml
 #### To generate and save the segmentation using spectral k-means.
 ```
 ## Under `src/scripts_analysis`
-python generate_kmeans.py --config ../../config/retina_seed2022.yaml
+python generate_kmeans.py --config ../../config/retina_seed2.yaml
 ```
 #### To generate and save the segmentation using diffusion condensation.
 ```
 ## Under `src/scripts_analysis`
-python generate_diffusion.py --config ../../config/retina_seed2022.yaml
+python generate_diffusion.py --config ../../config/retina_seed2.yaml
 ```
 #### To generate and save the segmentation using baseline methods.
 ```
 ## Under `src/scripts_analysis`
-python generate_baselines.py --config ../../config/retina_seed2022.yaml
+python generate_baselines.py --config ../../config/retina_seed2.yaml
 ```
 </details>
 
@@ -177,34 +177,34 @@ With the `--separate` flag, the labels will be displayed as separate masks. Othe
 
 ## For natural images (berkeley), multi-class segmentation.
 ### Diffusion condensation trajectory.
-python plot_paper_figure_main.py --config ../../config/berkeley_seed2022.yaml --image-idx 8 22 89
+python plot_paper_figure_main.py --config ../../config/berkeley_seed2.yaml --image-idx 8 22 89
 ### Segmentation comparison.
-python plot_paper_figure_main.py --config ../../config/berkeley_seed2022.yaml --image-idx 8 22 89 --comparison --separate
+python plot_paper_figure_main.py --config ../../config/berkeley_seed2.yaml --image-idx 8 22 89 --comparison --separate
 
 ## For medical images with color (retina), binary segmentation.
 ### Diffusion condensation trajectory.
-python plot_paper_figure_main.py --config ../../config/retina_seed2022.yaml --image-idx 4 7 18
+python plot_paper_figure_main.py --config ../../config/retina_seed2.yaml --image-idx 4 7 18
 ### Segmentation comparison (overlay).
-python plot_paper_figure_main.py --config ../../config/retina_seed2022.yaml --image-idx 4 7 18 --comparison --binary
+python plot_paper_figure_main.py --config ../../config/retina_seed2.yaml --image-idx 4 7 18 --comparison --binary
 ### Segmentation comparison (non-overlay).
-python plot_paper_figure_main.py --config ../../config/retina_seed2022.yaml --image-idx 4 7 18 --comparison --binary --separate
+python plot_paper_figure_main.py --config ../../config/retina_seed2.yaml --image-idx 4 7 18 --comparison --binary --separate
 
 ## For medical images without color (brain ventricles, brain tumor), binary segmentation.
 ### Diffusion condensation trajectory.
-python plot_paper_figure_main.py --config ../../config/brain_ventricles_seed2022.yaml --image-idx 35 41 88 --grayscale
+python plot_paper_figure_main.py --config ../../config/brain_ventricles_seed2.yaml --image-idx 35 41 88 --grayscale
 ### Segmentation comparison (overlay).
-python plot_paper_figure_main.py --config ../../config/brain_ventricles_seed2022.yaml --image-idx 35 41 88 --grayscale --comparison --binary
+python plot_paper_figure_main.py --config ../../config/brain_ventricles_seed2.yaml --image-idx 35 41 88 --grayscale --comparison --binary
 ### Segmentation comparison (non-overlay).
-python plot_paper_figure_main.py --config ../../config/brain_ventricles_seed2022.yaml --image-idx 35 41 88 --grayscale --comparison --binary --separate
+python plot_paper_figure_main.py --config ../../config/brain_ventricles_seed2.yaml --image-idx 35 41 88 --grayscale --comparison --binary --separate
 ### Diffusion condensation trajectory.
-python plot_paper_figure_main.py --config ../../config/brain_tumor_seed2022.yaml --image-idx 1 25 31 --grayscale
+python plot_paper_figure_main.py --config ../../config/brain_tumor_seed2.yaml --image-idx 1 25 31 --grayscale
 ### Segmentation comparison (overlay).
-python plot_paper_figure_main.py --config ../../config/brain_tumor_seed2022.yaml --image-idx 1 25 31 --grayscale --comparison --binary
+python plot_paper_figure_main.py --config ../../config/brain_tumor_seed2.yaml --image-idx 1 25 31 --grayscale --comparison --binary
 ### Segmentation comparison (non-overlay).
-python plot_paper_figure_main.py --config ../../config/brain_tumor_seed2022.yaml --image-idx 1 25 31 --grayscale --comparison --binary --separate
+python plot_paper_figure_main.py --config ../../config/brain_tumor_seed2.yaml --image-idx 1 25 31 --grayscale --comparison --binary --separate
 
 ## We also have an option to not overlay binary segmentation.
-python plot_paper_figure_main.py --config ../../config/retina_seed2022.yaml --image-idx 4 7 14 --comparison --binary
+python plot_paper_figure_main.py --config ../../config/retina_seed2.yaml --image-idx 4 7 14 --comparison --binary
 
 ```
 </details>
@@ -216,14 +216,14 @@ python plot_paper_figure_main.py --config ../../config/retina_seed2022.yaml --im
 Assuming segmentation results have already been generated and saved.
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
-python run_metrics.py --config ../../config/retina_seed2022.yaml
+python run_metrics.py --config ../../config/retina_seed2.yaml
 ```
 
 #### To compute the quantitative metrics (multiple experiments).
 Assuming segmentation results have already been generated and saved.
 ```
 ## Under $CUTS_ROOT/src/scripts_analysis
-python run_metrics.py --config ../../config/retina_seed2021.yaml ../../config/retina_seed2022.yaml ../../config/retina_seed2023.yaml
+python run_metrics.py --config ../../config/retina_seed1.yaml ../../config/retina_seed2.yaml ../../config/retina_seed3.yaml
 ```
 
 </details>
@@ -256,7 +256,7 @@ The process is largely the same as detailed in the section: **To reproduce the r
   <summary>The additional work you need to complete prior to training are</summary>
 
 1. Put your dataset under `src/data/`, similar to the other datasets.
-2. Write your custom config file and put it under `config/`, similar to the other config files. Please note that, just like `example_dataset_without_label_seed2021.yaml`, you shall specify the additional field `no_label: True`.
+2. Write your custom config file and put it under `config/`, similar to the other config files. Please note that, just like `example_dataset_without_label_seed1.yaml`, you shall specify the additional field `no_label: True`.
 3. Write your custom `Dataset` class in `src/datasets/***.py`, similar to the existing examples.
     - If your dataset is very small (e.g., 50 images), you can refer to `src/datasets/brain_ventricles.py` or `src/datasets/retina.py`, where the data is pre-loaded to the CPU prior to training.
     - If your dataset is rather big, you can refer to `src/datasets/brain_tumor.py`, where the data is loaded on-the-fly during training.
