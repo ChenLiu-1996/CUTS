@@ -1,22 +1,18 @@
 import heapq
 from typing import List, Tuple
 
-# from skimage.measure import find_contours
-# import cv2
 import numpy as np
 import pandas as pd
+import multiscale_phate
 from CATCH import catch
-# from scipy import sparse
-# from scipy.spatial.distance import directed_hausdorff
-# from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import normalize
 from utils.metrics import dice_coeff
 
 
-def diffusion_condensation(X: np.array,
-                           knn: int,
-                           num_workers: int = 1,
-                           random_seed: int = 0) -> np.array:
+def diffusion_condensation_catch(X: np.array,
+                                 knn: int,
+                                 num_workers: int = 1,
+                                 random_seed: int = 0) -> np.array:
     '''
     `X` : [N, C] feature matrix,
         where N := number of feature vectors
@@ -42,6 +38,28 @@ def diffusion_condensation(X: np.array,
     levels = catch_op.transform()
     labels_pred = np.array([catch_op.NxTs[lvl] for lvl in levels])
     granularities = [len(catch_op.NxTs) + lvl for lvl in levels]
+    return labels_pred, granularities
+
+
+def diffusion_condensation_msphate(X: np.array,
+                                   knn: int,
+                                   num_workers: int = 1,
+                                   random_seed: int = 0) -> np.array:
+    '''
+    `X` : [N, C] feature matrix,
+        where N := number of feature vectors
+              C := number of features
+    '''
+    msphate_op = multiscale_phate.Multiscale_PHATE(knn=knn,
+                                                   random_state=random_seed,
+                                                   n_jobs=num_workers)
+    msphate_op.fit(normalize(X, axis=1))
+    levels = msphate_op.levels
+    assert levels[0] == 0
+    levels = levels[1:]  # Ignore finest resolution of all-distinct labels.
+
+    labels_pred = np.array([msphate_op.NxTs[lvl] for lvl in levels])
+    granularities = [len(msphate_op.NxTs) + lvl for lvl in levels]
     return labels_pred, granularities
 
 
@@ -140,52 +158,6 @@ def diffusion_condensation(X: np.array,
 
 #     return clusters, all_segs
 
-# def diffusion_condensation(X: np.array,
-#                            height_width: Tuple[int] = (128, 128),
-#                            pos_enc_gamma: float = 0.0,
-#                            num_workers: int = 1,
-#                            return_all: bool = False,
-#                            random_seed: int = 0) -> np.array:
-#     '''
-#     `X_orig` : [N, C] feature matrix,
-#         where N := number of feature vectors
-#               C := number of features
-#     `pos_enc_gamma`: weighting for positional encoding.
-
-#     Returns the clusters (distinct connected components in the converged affinity matrix).
-#     `clusters`: [N,] non-negative integers.
-#     '''
-
-#     N, C = X.shape
-
-#     X = normalize(X, axis=1)
-#     if pos_enc_gamma > 0:
-#         pos_enc = pos_enc_sinusoid((*height_width, C))
-#         pos_enc = pos_enc.reshape((-1, C))
-#         X += pos_enc_gamma * normalize(pos_enc)
-
-#     data = pd.DataFrame(X)
-
-#     # Very occasionally, SVD won't converge.
-#     try:
-#         catch_op = catch.CATCH(knn=50,
-#                                random_state=random_seed,
-#                                n_jobs=num_workers)
-#         catch_op.fit(data)
-#     except:
-#         catch_op = catch.CATCH(knn=50,
-#                                random_state=random_seed + 1,
-#                                n_jobs=num_workers)
-#         catch_op.fit(data)
-
-#     levels = catch_op.transform()
-
-#     clusters = catch_op.NxTs[levels[0]]
-
-#     if return_all:
-#         return clusters, (catch_op, levels)
-#     else:
-#         return clusters
 
 
 def cluster_indices_from_mask(

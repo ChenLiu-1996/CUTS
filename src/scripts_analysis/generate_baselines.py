@@ -49,7 +49,7 @@ def get_baseline_predictions(img: np.array, method: str):
                                                     markers,
                                                     mask=threshed)
     elif method == 'felzenszwalb':
-        label_pred = skimage.segmentation.felzenszwalb(img, scale=1500)
+        label_pred = skimage.segmentation.felzenszwalb(img)
 
     elif method == 'slic':
         if img.shape[-1] == 1:

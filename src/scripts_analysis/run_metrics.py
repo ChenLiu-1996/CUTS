@@ -151,11 +151,18 @@ def persistent_structures(hashmap: dict) -> dict:
     return hashmap
 
 
+# def print_latex(meta_metrics, metric_name_map, entity_tuples):
+#     df_mean_curr = df.groupby(['model', 'test_type'])[metric].mean().reset_index()
+
+#     import pdb
+#     pdb.set_trace()
+#     return
+
 def boxplots(meta_metrics, metric_name_map, entity_tuples, config_filepaths):
     filenames = [
         os.path.basename(f).replace('.yaml', '') for f in config_filepaths
     ]
-    figure_path = 'metrics_' + '-'.join(filenames)
+    figure_path = 'boxplot_metrics_' + '-'.join(filenames)
 
     plt.rcParams["font.family"] = 'serif'
     plt.rcParams['axes.spines.right'] = False
@@ -418,7 +425,10 @@ if __name__ == '__main__':
         }
 
         for image_idx in tqdm(range(num_files)):
-            baselines_hashmap, kmeans_hashmap, diffusion_hashmap, dfc_hashmap, stego_hashmap, sam_hashmap = {}, {}, {}, {}, {}, {}
+            baselines_hashmap, kmeans_hashmap, diffusion_hashmap = {}, {}, {}
+            dfc_hashmap, stego_hashmap, sam_hashmap = {}, {}, {}
+            unet_hashmap, nnunet_hashmap = {}, {}
+
             if has_baselines:
                 baselines_hashmap = load_baselines(
                     np_files_path_baselines[image_idx])
@@ -624,4 +634,5 @@ if __name__ == '__main__':
                        np.nanstd(meta_metrics[key][entry])))
 
     if META_ANALYSIS:
+        # print_latex(meta_metrics, metric_name_map, entity_tuples)
         boxplots(meta_metrics, metric_name_map, entity_tuples, args.config)

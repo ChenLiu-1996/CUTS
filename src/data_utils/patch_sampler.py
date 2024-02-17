@@ -6,7 +6,7 @@ import numpy as np
 import torch
 
 sys.path.append('../')
-from utils.metrics import ssim
+from utils.metrics import range_aware_ssim
 
 
 class PatchSampler(object):
@@ -28,7 +28,7 @@ class PatchSampler(object):
         self.patch_size = patch_size
         self.sampled_patches_per_image = sampled_patches_per_image
         # Give up finding positive sample after this many unsuccessful attempts.
-        self.max_attempts = 10
+        self.max_attempts = 20
         self.ssim_thr = 0.5
 
     def sample(self, image: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -59,26 +59,24 @@ class PatchSampler(object):
 
                 # Sample nearby the anchor and check SSIM.
                 # Only samples with high enough SSIM are considered positive.
-                # Keep the one with highest SSIM.
-                highest_ssim = 0
                 best_pos_hw_candidate = None
                 for _ in range(self.max_attempts):
                     pos_hw_candidate = sample_hw_nearby(
                         anchors_hw[batch_idx, sample_idx, :],
                         H=H,
                         W=W,
+                        neighborhood=self.patch_size,
                         patch_size=self.patch_size)
 
-                    curr_ssim = compute_ssim(image[batch_idx,
-                                                   ...].cpu().detach().numpy(),
+                    curr_ssim = compute_ssim(image[batch_idx, ...].cpu().detach().numpy(),
                                              h1w1=anchors_hw[batch_idx,
                                                              sample_idx, :],
                                              h2w2=pos_hw_candidate,
                                              patch_size=self.patch_size)
 
-                    if curr_ssim > self.ssim_thr and curr_ssim > highest_ssim:
-                        highest_ssim = curr_ssim
+                    if curr_ssim > self.ssim_thr:
                         best_pos_hw_candidate = pos_hw_candidate
+                        break
 
                 if best_pos_hw_candidate is None:
                     # If positive sample not found, just take a nearest neighbor.
@@ -124,4 +122,4 @@ def compute_ssim(image: np.array, h1w1: Tuple[int, int], h2w2: Tuple[int, int],
     # Channel first to channel last to accommodate SSIM.
     patch1 = np.moveaxis(patch1, 0, -1)
     patch2 = np.moveaxis(patch2, 0, -1)
-    return ssim(patch1, patch2, data_range=2)
+    return range_aware_ssim(patch1, patch2)

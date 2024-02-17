@@ -11,10 +11,16 @@ from tqdm import tqdm
 
 sys.path.append('../')
 from utils.attribute_hashmap import AttributeHashmap
-from utils.diffusion_condensation import diffusion_condensation
+from utils.diffusion_condensation import diffusion_condensation_catch, diffusion_condensation_msphate
 from utils.parse import parse_settings
 
 warnings.filterwarnings("ignore")
+
+os.environ["OMP_NUM_THREADS"] = "1"  # export OMP_NUM_THREADS=1
+os.environ["OPENBLAS_NUM_THREADS"] = "1"  # export OPENBLAS_NUM_THREADS=1
+os.environ["MKL_NUM_THREADS"] = "1"  # export MKL_NUM_THREADS=1
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"  # export VECLIB_MAXIMUM_THREADS=1
+os.environ["NUMEXPR_NUM_THREADS"] = "1"  # export NUMEXPR_NUM_THREADS=1
 
 
 def generate_diffusion(
@@ -22,13 +28,18 @@ def generate_diffusion(
         latent: np.array,
         knn: int = 100,
         num_workers: int = 1,
-        random_seed: int = 0) -> Tuple[float, np.array, np.array]:
+        random_seed: int = 0,
+        use_msphate: bool = True) -> Tuple[float, np.array, np.array]:
 
     H, W, C = shape
     assert latent.shape == (H * W, C)
 
-    labels_pred, granularities = diffusion_condensation(
-        X=latent, knn=knn, num_workers=num_workers, random_seed=random_seed)
+    if use_msphate:
+        labels_pred, granularities = diffusion_condensation_msphate(
+            X=latent, knn=knn, num_workers=num_workers, random_seed=random_seed)
+    else:
+        labels_pred, granularities = diffusion_condensation_catch(
+            X=latent, knn=knn, num_workers=num_workers, random_seed=random_seed)
 
     return labels_pred, granularities
 
@@ -80,7 +91,7 @@ if __name__ == '__main__':
         C = latent.shape[-1]
 
         labels_pred, granularities = generate_diffusion(
-            (H, W, C), latent, num_workers=config.num_workers)
+            (H, W, C), latent, num_workers=1)
 
         with open(save_path, 'wb+') as f:
             np.savez(
@@ -94,3 +105,7 @@ if __name__ == '__main__':
             )
 
     print('All diffusion results generated.')
+
+    # Somehow the code may hang at this point...
+    # Force exit.
+    os._exit(0)

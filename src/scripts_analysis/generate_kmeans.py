@@ -1,6 +1,5 @@
 import argparse
 import os
-import subprocess
 import sys
 import time
 import warnings
@@ -15,6 +14,13 @@ from utils.attribute_hashmap import AttributeHashmap
 from utils.parse import parse_settings
 
 warnings.filterwarnings("ignore")
+
+os.environ["OMP_NUM_THREADS"] = "1"  # export OMP_NUM_THREADS=1
+os.environ["OPENBLAS_NUM_THREADS"] = "1"  # export OPENBLAS_NUM_THREADS=1
+os.environ["MKL_NUM_THREADS"] = "1"  # export MKL_NUM_THREADS=1
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"  # export VECLIB_MAXIMUM_THREADS=1
+os.environ["NUMEXPR_NUM_THREADS"] = "1"  # export NUMEXPR_NUM_THREADS=1
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -52,6 +58,7 @@ if __name__ == '__main__':
     save_path_numpy = '%s/%s' % (config.output_save_path,
                                  'numpy_files_seg_kmeans')
     os.makedirs(save_path_numpy, exist_ok=True)
+    num_workers = 1
 
     dice_list = []
     for image_idx in tqdm(range(len(np_files_path))):
@@ -59,7 +66,6 @@ if __name__ == '__main__':
         load_path = np_files_path[image_idx]
         save_path = '%s/%s' % (save_path_numpy,
                                os.path.basename(np_files_path[image_idx]))
-        num_workers = config.num_workers
 
         folder = '/'.join(
             os.path.dirname(os.path.abspath(__file__)).split('/'))
@@ -107,6 +113,8 @@ if __name__ == '__main__':
             Because of the frequent deadlock problem, I decided to use the following solution:
             kill and restart whenever a process is taking too long (likely due to deadlock).
             '''
+            import subprocess
+
             file_success = False
             while not file_success:
                 start = time.time()
@@ -142,3 +150,7 @@ if __name__ == '__main__':
     print('All kmeans results generated.')
     print('Dice: %.3f \u00B1 %.3f.' %
           (np.mean(dice_list), np.std(dice_list) / np.sqrt(len(dice_list))))
+
+    # Somehow the code may hang at this point...
+    # Force exit.
+    os._exit(0)

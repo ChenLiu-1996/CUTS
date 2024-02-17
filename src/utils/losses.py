@@ -10,10 +10,9 @@ class NTXentLoss(nn.Module):
     the positive sample from a different anchor in the same image.
     """
 
-    def __init__(self, temperature: float = 0.5):
-        super(NTXentLoss, self).__init__()
+    def __init__(self, temperature: float = 0.1):
+        super().__init__()
         self.temperature = temperature
-        self.epsilon = 1e-7
 
     def forward(self, anchors: torch.Tensor, positives: torch.Tensor):
         """
@@ -34,22 +33,34 @@ class NTXentLoss(nn.Module):
             Z_anchors = anchors[batch_idx, ...]
             Z_pos = positives[batch_idx, ...]
 
-            # Create a matrix that represent the [i,j] entries of positive pairs.
-            pos_pair_ij = torch.diag(torch.ones(S)).bool()
+            assert Z_anchors.shape == Z_pos.shape
 
-            Z_anchor = F.normalize(input=Z_anchors, p=2, dim=-1)
-            Z_pos = F.normalize(input=Z_pos, p=2, dim=-1)
-            sim_matrix = torch.matmul(Z_anchor, Z_pos.T)
+            z1 = torch.nn.functional.normalize(Z_anchors, p=2, dim=1)
+            z2 = torch.nn.functional.normalize(Z_pos, p=2, dim=1)
+            z = torch.cat((z1, z2), dim=0)
 
-            # Entries noted by 1's in `pos_pair_ij` are similarities of positive pairs.
-            numerator = torch.sum(
-                torch.exp(sim_matrix[pos_pair_ij] / self.temperature))
+            # Compute similarity matrix
+            # Note that we refactor the `exp` and `1/temperature` operations here.
+            sim_matrix = torch.exp(torch.matmul(z, z.T) / self.temperature)
 
-            # Entries elsewhere are similarities of negative pairs.
-            denominator = torch.sum(
-                torch.exp(sim_matrix[~pos_pair_ij] / self.temperature))
+            # Masks to identify positive and all valid negatives for each example
+            positive_mask = torch.cat((
+                torch.cat((torch.zeros((S, S), dtype=torch.bool), torch.eye(S, dtype=torch.bool)), dim=0),
+                torch.cat((torch.eye(S, dtype=torch.bool), torch.zeros((S, S), dtype=torch.bool)), dim=0),
+                                    ), dim=1)
+            negative_mask = torch.cat((
+                torch.cat((~torch.eye(S, dtype=torch.bool), ~torch.eye(S, dtype=torch.bool)), dim=0),
+                torch.cat((~torch.eye(S, dtype=torch.bool), ~torch.eye(S, dtype=torch.bool)), dim=0),
+                                    ), dim=1)
 
-            loss += -torch.log(numerator /
-                               (denominator + self.epsilon) + self.epsilon)
+            # Selecting the positive examples for each anchor
+            score_pos = sim_matrix[positive_mask].view(2 * S, 1)
 
-        return loss / B
+            # Sum of all similarities for negative pairs
+            score_neg = sim_matrix[negative_mask].view(2 * S, -1).sum(dim=1, keepdim=True)
+
+            # Calculating the InfoNCE loss as the log ratio
+            loss += -torch.log(score_pos / (score_pos + score_neg))
+
+        # Average loss over the batch
+        return loss.mean() / B

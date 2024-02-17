@@ -7,12 +7,12 @@ from data_utils.prepare_dataset import prepare_dataset
 from model import CUTSEncoder
 from tqdm import tqdm
 from utils.attribute_hashmap import AttributeHashmap
-from utils.early_stop import EarlyStopping
 from utils.log_util import log
 from utils.losses import NTXentLoss
 from utils.output_saver import OutputSaver
 from utils.parse import parse_settings
 from utils.seed import seed_everything
+from utils.scheduler import LinearWarmupCosineAnnealingLR
 
 
 def train(config: AttributeHashmap):
@@ -25,13 +25,15 @@ def train(config: AttributeHashmap):
         in_channels=num_image_channel,
         num_kernels=config.num_kernels,
         random_seed=config.random_seed,
-        sampled_patches_per_image=config.sampled_patches_per_image).to(device)
+        sampled_patches_per_image=config.sampled_patches_per_image,
+        patch_size=config.patch_size).to(device)
     optimizer = torch.optim.AdamW(model.parameters(),
                                   lr=config.learning_rate,
                                   weight_decay=config.weight_decay)
-    early_stopper = EarlyStopping(mode='min',
-                                  patience=config.patience,
-                                  percentage=False)
+    scheduler = LinearWarmupCosineAnnealingLR(optimizer=optimizer,
+                                              warmup_epochs=10,
+                                              warmup_start_lr=1e-3 * config.learning_rate,
+                                              max_epochs=config.max_epochs)
 
     loss_fn_recon = torch.nn.MSELoss()
     loss_fn_contrastive = NTXentLoss()
@@ -65,6 +67,8 @@ def train(config: AttributeHashmap):
         train_loss_contrastive = train_loss_contrastive / len(
             train_set.dataset)
         train_loss = train_loss / len(train_set.dataset)
+
+        scheduler.step()
 
         log('Train [%s/%s] recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f'
             % (epoch_idx + 1, config.max_epochs, train_loss_recon,
@@ -107,12 +111,6 @@ def train(config: AttributeHashmap):
                 filepath=config.log_dir,
                 to_console=False)
 
-        if early_stopper.step(val_loss):
-            # If the validation loss stop decreasing, stop training.
-            log('Early stopping criterion met. Ending training.',
-                filepath=config.log_dir,
-                to_console=True)
-            break
     return
 
 
@@ -125,7 +123,8 @@ def test(config: AttributeHashmap):
         in_channels=num_image_channel,
         num_kernels=config.num_kernels,
         random_seed=config.random_seed,
-        sampled_patches_per_image=config.sampled_patches_per_image).to(device)
+        sampled_patches_per_image=config.sampled_patches_per_image,
+        patch_size=config.patch_size).to(device)
     model.load_weights(config.model_save_path, device=device)
     log('CUTSEncoder: Model weights successfully loaded.', to_console=True)
 

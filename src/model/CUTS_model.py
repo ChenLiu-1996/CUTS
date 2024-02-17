@@ -19,6 +19,7 @@ class CUTSEncoder(nn.Module):
                  num_kernels: int = None,
                  random_seed: int = None,
                  sampled_patches_per_image: int = None,
+                 patch_size: int = 5,
                  inference: bool = False) -> None:
         super(CUTSEncoder, self).__init__()
 
@@ -52,7 +53,7 @@ class CUTSEncoder(nn.Module):
         self.latent_dim = num_kernels * 8
 
         # Request reconstruction of local patch.
-        self.patch_size = 5
+        self.patch_size = patch_size
 
         self.inference = inference
 
@@ -169,8 +170,13 @@ class PatchRecon(nn.Module):
         super(PatchRecon, self).__init__()
         self.in_channels = in_channels
         self.patch_size = patch_size
-        self.recon = nn.Linear(latent_dim,
-                               self.in_channels * self.patch_size**2)
+        self.recon = nn.Sequential(
+            nn.Linear(latent_dim,
+                      self.in_channels * self.patch_size**2),
+            nn.LeakyReLU(),
+            nn.Linear(self.in_channels * self.patch_size**2,
+                      self.in_channels * self.patch_size**2),
+        )
 
     def forward(self, z):
         B, S, _ = z.shape

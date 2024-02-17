@@ -36,9 +36,6 @@ def ssim(a: np.array, b: np.array, **kwargs) -> float:
 def range_aware_ssim(label_true: np.array, label_pred: np.array) -> float:
     '''
     Surprisingly, skimage ssim infers data range from data type...
-    It's okay within our neural network training since the scale is
-    quite close to its guess (-1 to 1 for float numbers), but
-    not okay in many other places.
     '''
     if isinstance(label_true.max(), bool):
         label_true = label_true.astype(np.float32)
