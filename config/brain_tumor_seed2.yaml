@@ -1,0 +1,18 @@
+dataset_name: 'brain_tumor'
+dataset_path: '$CUTS_ROOT/data/brain_tumor/'
+model_save_path: '$CUTS_ROOT/checkpoints/brain_tumor_seed2.pty'
+output_save_path: '$CUTS_ROOT/results/brain_tumor_seed2/'
+log_folder: '$CUTS_ROOT/logs'
+model_setting: 'full' # 'full', 'no_recon', 'no_contrastive'
+learning_rate: 1e-3
+weight_decay: 1e-4
+max_epochs: 200
+batch_size: 16
+num_kernels: 16
+sampled_patches_per_image: 8 # recommend: 4 or above.
+patch_size: 9
+num_workers: 8
+lambda_contrastive_loss: 0.001  # Between 0 and 1. no_recon == 1. no_contrastive == 0.
+random_seed: 2
+train_val_ratio: '7:3'
+is_binary: True
