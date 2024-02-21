@@ -151,13 +151,6 @@ def persistent_structures(hashmap: dict) -> dict:
     return hashmap
 
 
-# def print_latex(meta_metrics, metric_name_map, entity_tuples):
-#     df_mean_curr = df.groupby(['model', 'test_type'])[metric].mean().reset_index()
-
-#     import pdb
-#     pdb.set_trace()
-#     return
-
 def boxplots(meta_metrics, metric_name_map, entity_tuples, config_filepaths):
     filenames = [
         os.path.basename(f).replace('.yaml', '') for f in config_filepaths
@@ -216,8 +209,103 @@ def boxplots(meta_metrics, metric_name_map, entity_tuples, config_filepaths):
         else:
             ax.legend(bbox_to_anchor=(1.2, 1.05))
 
-    fig.tight_layout()
+    fig.tight_layout(pad=2)
     fig.savefig(figure_path)
+    return
+
+
+def barplots(meta_metrics, metric_name_map, entity_tuples, config_filepaths):
+    filenames = [
+        os.path.basename(f).replace('.yaml', '') for f in config_filepaths
+    ]
+    figure_path = 'barplot_metrics_' + '-'.join(filenames)
+
+    plt.rcParams["font.family"] = 'serif'
+    plt.rcParams['axes.spines.right'] = False
+    plt.rcParams['axes.spines.top'] = False
+
+    fig = plt.figure(figsize=(35, 5))
+    plt.rcParams['font.size'] = 24
+    plt.rcParams['legend.fontsize'] = 18
+
+    num_cols = len(metric_name_map.keys())
+    for i, key in enumerate(metric_name_map.keys(), start=1):
+        ax = fig.add_subplot(1, num_cols, i)
+
+        # Construct the dataframe.
+        data_list = []
+        for (entry, _, _) in entity_tuples:
+            for item in meta_metrics[key][entry]:
+                data_list.append([entry, metric_name_map[key], item])
+        df = pd.DataFrame(data_list, columns=['Method', 'metric', 'value'])
+
+        # Tune the color palette.
+        method_list = [entry for (entry, _, _) in entity_tuples]
+        my_palette = sns.color_palette('tab10',
+                                       n_colors=2 * len(method_list))[::-1]
+        palette_blues = sns.color_palette('Blues',
+                                          n_colors=2 * len(method_list))
+        palette_dark = sns.color_palette('Blues',
+                                         n_colors=4 * len(method_list))[::-1]
+        cuts_locs = np.argwhere(['CUTS' in method
+                                 for method in method_list]).reshape(-1)
+        supervised_locs = np.argwhere(
+            ['[Supervised]' in method for method in method_list]).reshape(-1)
+
+        for loc in cuts_locs:
+            my_palette[loc] = palette_blues[loc]
+        for loc in supervised_locs:
+            my_palette[loc] = palette_dark[loc]
+
+        # Barplot.
+        sns.barplot(data=df,
+                    x='metric',
+                    y='value',
+                    hue='Method',
+                    linewidth=1.5,
+                    capsize=0.02,
+                    ax=ax,
+                    palette=my_palette)
+        ax.set_xlabel('')
+        ax.set_ylabel('')
+        ax.get_legend().remove()
+
+    fig.tight_layout(pad=2)
+    fig.savefig(figure_path)
+    return
+
+
+def print_latex(meta_metrics, metric_name_map, entity_tuples):
+    key_digits_map = {
+        'dice': 3,
+        'hausdorff': 2,
+        'ssim': 3,
+        'ergas': 0,
+        'rmse': 3,
+    }
+
+    print('\n\n')
+    print('=======================================')
+    print('Meta Results [LATEX] (mean \u00B1 std) for', args.config)
+    print('=======================================')
+    for key in metric_name_map.keys():
+        print('\n\n', metric_name_map[key])
+        for (entry, _, _) in entity_tuples:
+            n_digits = key_digits_map[key]
+            mean_val = np.nanmean(meta_metrics[key][entry])
+            std_val = np.nanstd(meta_metrics[key][entry])
+            if n_digits == 0:
+                print(r'%s: $%.0f {\color{gray}{\pm %.0f}}$' %
+                    (entry, mean_val, std_val))
+            if n_digits == 1:
+                print(r'%s: $%.1f {\color{gray}{\pm %.1f}}$' %
+                    (entry, mean_val, std_val))
+            if n_digits == 2:
+                print(r'%s: $%.2f {\color{gray}{\pm %.2f}}$' %
+                    (entry, mean_val, std_val))
+            if n_digits == 3:
+                print(r'%s: $%.3f {\color{gray}{\pm %.3f}}$' %
+                    (entry, mean_val, std_val))
     return
 
 
@@ -634,5 +722,6 @@ if __name__ == '__main__':
                        np.nanstd(meta_metrics[key][entry])))
 
     if META_ANALYSIS:
-        # print_latex(meta_metrics, metric_name_map, entity_tuples)
         boxplots(meta_metrics, metric_name_map, entity_tuples, args.config)
+        barplots(meta_metrics, metric_name_map, entity_tuples, args.config)
+        print_latex(meta_metrics, metric_name_map, entity_tuples)
