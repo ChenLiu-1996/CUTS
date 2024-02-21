@@ -10,7 +10,7 @@ max_epochs: 200
 batch_size: 16
 num_kernels: 16
 sampled_patches_per_image: 8 # recommend: 4 or above.
-patch_size: 9
+patch_size: 5
 num_workers: 8
 lambda_contrastive_loss: 0.001  # Between 0 and 1. no_recon == 1. no_contrastive == 0.
 random_seed: 3

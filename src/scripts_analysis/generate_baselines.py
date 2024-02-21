@@ -18,7 +18,7 @@ from utils.parse import parse_settings
 from utils.seed import seed_everything
 
 
-def get_baseline_predictions(img: np.array, method: str):
+def get_baseline_predictions(img: np.array, method: str, dataset_name:str = None):
     img = (img * 255).astype(np.uint8)
 
     if len(img.shape) == 2:
@@ -26,30 +26,31 @@ def get_baseline_predictions(img: np.array, method: str):
         img = img[..., None]
 
     if method == 'watershed':
+        '''
+        NOTE: This is written as "watershed", but in reality it's just Otsu's thresholding.
+        '''
         if img.shape[-1] == 1:
             # (H, W, 1) to (H, W, 3)
             img = np.repeat(img, 3, axis=-1)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        gray = cv2.morphologyEx(gray, cv2.MORPH_OPEN, np.ones((3, 3),
-                                                              dtype=int))
-
+        gray = cv2.GaussianBlur(gray, (3, 3), 0)
         _, threshed = cv2.threshold(gray, 128, 255,
-                                    cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+                                    cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-        distance = scipy.ndimage.distance_transform_edt(threshed)
-        coords = skimage.feature.peak_local_max(distance,
-                                                labels=threshed,
-                                                threshold_rel=0.9)
+        label_pred = gray > threshed
 
-        mask = np.zeros(distance.shape, dtype=bool)
-        mask[tuple(coords.T)] = True
-        markers, _ = scipy.ndimage.label(mask)
-
-        label_pred = skimage.segmentation.watershed(-distance,
-                                                    markers,
-                                                    mask=threshed)
     elif method == 'felzenszwalb':
-        label_pred = skimage.segmentation.felzenszwalb(img)
+        param_map = {
+            'retina': (200, 1.0),
+            'brain_ventricles': (1000, 2.0),
+            'brain_tumor': (100, 0.8),
+            'default': (100, 0.8)
+        }
+        if dataset_name in param_map.keys():
+            params = param_map[dataset_name]
+        else:
+            params = param_map['default']
+        label_pred = skimage.segmentation.felzenszwalb(img, scale=params[0], sigma=params[1], min_size=10)
 
     elif method == 'slic':
         if img.shape[-1] == 1:
@@ -74,6 +75,7 @@ if __name__ == '__main__':
     config = AttributeHashmap(yaml.safe_load(open(args.config)))
     config.config_file_name = args.config
     config = parse_settings(config, log_settings=False)
+    dataset_name = config.dataset_name
 
     files_folder = '%s/%s' % (config.output_save_path, 'numpy_files')
     np_files_path = sorted(glob('%s/%s' % (files_folder, '*.npz')))
@@ -116,8 +118,7 @@ if __name__ == '__main__':
 
             elif method == 'felzenszwalb':
                 label_pred_felzenszwalb = get_baseline_predictions(
-                    image, method='felzenszwalb').astype(np.uint8)
-
+                    image, method='felzenszwalb', dataset_name=dataset_name).astype(np.uint8)
             elif method == 'slic':
                 label_pred_slic = get_baseline_predictions(
                     image, method='slic').astype(np.uint8)

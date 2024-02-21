@@ -19,6 +19,7 @@ from utils.attribute_hashmap import AttributeHashmap
 from utils.diffusion_condensation import continuous_renumber, get_persistent_structures
 from utils.parse import parse_settings
 from utils.segmentation import label_hint_seg
+from utils.metrics import dice_coeff, per_class_dice_coeff
 
 warnings.filterwarnings("ignore")
 
@@ -54,16 +55,15 @@ def find_nearest_idx(arr: np.array, num: float) -> int:
 def plot_comparison(fig: plt.figure, num_samples: int, sample_idx: int,
                     data_hashmap: Dict, image_grayscale: bool,
                     label_binary: bool):
-    # 1 row, 12 columns.
+    # 1 row, (num_labels + 1) columns.
     # 1-st row are the images, labels, segmentations.
     # 2-nd row are the msphate plots if applicable.
-
-    H, W = data_hashmap['label_true'].shape[:2]
 
     label_keys = [
         'label_true',
         'seg_kmeans' if label_binary else 'label_kmeans',
         'seg_persistent' if label_binary else 'label_persistent',
+        'seg_best' if label_binary else 'label_best',
         'label_random',
         'label_watershed',
         'label_felzenszwalb',
@@ -105,6 +105,7 @@ def plot_overlaid_comparison(fig: plt.figure,
     label_keys = [
         'seg_kmeans',
         'seg_persistent',
+        'seg_best',
         'label_random',
         'label_watershed',
         'label_felzenszwalb',
@@ -364,8 +365,8 @@ if __name__ == '__main__':
         if np.isnan(label_true).all():
             print('\n\n[Major Warning !!!] We found that the true label is all `NaN`s.' + \
             '\nThis shall only happen if you are not providing labels. Please double check!\n\n')
-        # For compatibility with `label_hint_seg`.
-        label_true = np.ones_like(label_true)
+            # For compatibility with `label_hint_seg`.
+            label_true = np.ones_like(label_true)
         label_true = label_true.astype(np.int16)
         latent = numpy_array_raw['latent']
 
@@ -470,10 +471,30 @@ if __name__ == '__main__':
         label_persistent = get_persistent_structures(
             labels_diffusion.reshape((B, H, W)))
 
+        # Find the best label among all diffusion condensation granularities.
+        label_best = np.zeros_like(label_true)
+        best_dice_val = 0
+        for curr_granularity_idx in range(B):
+            label_curr_granularity = labels_diffusion.reshape((B, H, W))[curr_granularity_idx]
+            seg_curr_granularity = label_hint_seg(label_pred=label_curr_granularity,
+                                                  label_true=label_true)
+            if args.binary:
+                dice_metric = dice_coeff
+            else:
+                dice_metric = per_class_dice_coeff
+            curr_dice_val = dice_metric(label_pred=seg_curr_granularity,
+                                        label_true=label_true)
+            if curr_dice_val > best_dice_val:
+                best_dice_val = curr_dice_val
+                label_best = label_curr_granularity
+                seg_best = seg_curr_granularity
+
         seg_kmeans = label_hint_seg(label_pred=label_kmeans,
                                     label_true=label_true)
         seg_persistent = label_hint_seg(label_pred=label_persistent,
                                         label_true=label_true)
+        seg_best = label_hint_seg(label_pred=label_best,
+                                  label_true=label_true)
 
         data_hashmap = {
             'image': image,
@@ -494,6 +515,8 @@ if __name__ == '__main__':
             'labels_diffusion': labels_diffusion,
             'label_persistent': label_persistent,
             'seg_persistent': seg_persistent,
+            'label_best': label_best,
+            'seg_best': seg_best,
         }
 
         if args.comparison:
@@ -528,7 +551,6 @@ if __name__ == '__main__':
 
     fig_path = '%s/sample_%s' % (figure_folder, figure_str)
     fig.tight_layout()
-    # plt.subplots_adjust(wspace=0.05, hspace=0.05)
 
     if args.comparison:
         if args.separate:

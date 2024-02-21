@@ -214,34 +214,38 @@ def get_persistent_structures(labels: np.array) -> np.array:
     Given a set of B labels on the same image, with shape [B, H, W]
     Return a label with the most persistent structures, with shape [H, W]
     '''
-    size_diff_tolerance = 1e-2
-
+    min_area_ratio = 1e-2
     B, H, W = labels.shape
+    min_area = min_area_ratio * H * W
+
     persistent_label = np.zeros((H, W), dtype=np.int16)
-    persistence_tuple = []  # (persistence, size, label_idx, frame_idx)
+    persistence_tuple = []  # (persistence, area, label_idx, frame_idx)
 
     for label_idx in np.unique(labels):
-        curr_persistence, max_persistence, best_frame = 0, 0, -1
+        curr_persistence, max_persistence, max_area, best_frame = 0, 0, 0, None
         for frame_idx in range(B - 1):
-            size = np.sum(labels[frame_idx, ...] == label_idx)
-            diff = np.sum(
-                (labels[frame_idx,
-                        ...] == label_idx) != (labels[frame_idx + 1,
-                                                      ...] == label_idx))
-            if size > 0 and diff <= size * size_diff_tolerance:
+            curr_area = np.sum(labels[frame_idx, ...] == label_idx)
+            if curr_area > 0 and best_frame is None:
+                best_frame = frame_idx
+                max_area = curr_area
+            if curr_area > 0:
                 curr_persistence += 1
                 if curr_persistence > max_persistence:
                     max_persistence = curr_persistence
+                if curr_area > max_area:
+                    max_area = curr_area
                     best_frame = frame_idx
-            else:
-                curr_persistence = 0
-        size = np.sum(labels[best_frame, ...] == label_idx)
+        area = np.sum(labels[best_frame, ...] == label_idx)
+        if area < min_area:
+            continue
+        if max_persistence < 2:
+            continue
         persistence_tuple.append(
-            (max_persistence, size, label_idx, best_frame))
+            (max_persistence, area, label_idx, best_frame))
 
-    persistence_tuple = sorted(persistence_tuple, key=lambda x: (x[0], -x[1]))
+    persistence_tuple = sorted(persistence_tuple, key=lambda x: (-x[1], -x[0]))
 
-    for (persistence, size, label_idx, frame_idx) in persistence_tuple:
+    for (_, area, label_idx, frame_idx) in persistence_tuple:
         loc = labels[frame_idx, ...] == label_idx
         persistent_label[loc] = label_idx
 

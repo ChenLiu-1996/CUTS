@@ -55,6 +55,26 @@ def load_diffusion(path: str) -> dict:
     return hashmap
 
 
+def load_pixel_kmeans(path: str) -> dict:
+    numpy_array = np.load(path)
+    hashmap = {}
+    hashmap['image'] = numpy_array['image']
+    hashmap['label_true'] = numpy_array['label']
+    hashmap['latent'] = numpy_array['latent']
+    hashmap['label_pixel_kmeans'] = numpy_array['label_kmeans']
+    return hashmap
+
+
+def load_pixel_diffusion(path: str) -> dict:
+    numpy_array = np.load(path)
+    hashmap = {}
+    hashmap['image'] = numpy_array['image']
+    hashmap['recon'] = numpy_array['recon']
+    hashmap['label_true'] = numpy_array['label']
+    hashmap['latent'] = numpy_array['latent']
+    hashmap['labels_pixel_diffusion'] = numpy_array['labels_diffusion']
+    return hashmap
+
 def load_dfc(path: str) -> dict:
     numpy_array = np.load(path)
     hashmap = {}
@@ -136,6 +156,25 @@ def segment_every_diffusion(hashmap: dict) -> dict:
     return hashmap
 
 
+def segment_every_pixel_diffusion(hashmap: dict) -> dict:
+    label_true = hashmap['label_true']
+    labels_pred = hashmap['labels_pixel_diffusion']
+
+    B = labels_pred.shape[0]
+    H, W = label_true.shape
+    segs = np.zeros_like(labels_pred)
+    for i in range(B):
+        label_pred = labels_pred[i, ...].reshape((H, W))
+
+        seg = label_hint_seg(label_pred=label_pred, label_true=label_true)
+
+        segs[i, ...] = seg
+
+    hashmap['segs_pixel_diffusion'] = segs
+
+    return hashmap
+
+
 def persistent_structures(hashmap: dict) -> dict:
     label_true = hashmap['label_true']
     labels_diffusion = hashmap['labels_diffusion']
@@ -147,6 +186,21 @@ def persistent_structures(hashmap: dict) -> dict:
 
     hashmap['labels_diffusion'] = labels_diffusion
     hashmap['label_diffusion-persistent'] = persistent_label
+
+    return hashmap
+
+
+def pixel_persistent_structures(hashmap: dict) -> dict:
+    label_true = hashmap['label_true']
+    labels_diffusion = hashmap['labels_pixel_diffusion']
+
+    H, W = label_true.shape
+    B = labels_diffusion.shape[0]
+    labels_diffusion = labels_diffusion.reshape((B, H, W))
+    persistent_label = get_persistent_structures(labels_diffusion)
+
+    hashmap['labels_pixel_diffusion'] = labels_diffusion
+    hashmap['label_pixel_diffusion-persistent'] = persistent_label
 
     return hashmap
 
@@ -353,6 +407,10 @@ if __name__ == '__main__':
                                          'numpy_files_seg_kmeans')
         files_folder_diffusion = '%s/%s' % (config.output_save_path,
                                             'numpy_files_seg_diffusion')
+        files_folder_pixel_kmeans = '%s/%s' % (config.output_save_path,
+                                               'numpy_files_seg_pixel_kmeans')
+        files_folder_pixel_diffusion = '%s/%s' % (config.output_save_path,
+                                                  'numpy_files_seg_pixel_diffusion')
         files_folder_sam = '%s/%s' % (config.output_save_path,
                                       'numpy_files_seg_SAM')
         files_folder_unet = '%s/%s' % (config.output_save_path,
@@ -369,6 +427,10 @@ if __name__ == '__main__':
             glob('%s/%s' % (files_folder_kmeans, '*.npz')))
         np_files_path_diffusion = sorted(
             glob('%s/%s' % (files_folder_diffusion, '*.npz')))
+        np_files_path_pixel_kmeans = sorted(
+            glob('%s/%s' % (files_folder_pixel_kmeans, '*.npz')))
+        np_files_path_pixel_diffusion = sorted(
+            glob('%s/%s' % (files_folder_pixel_diffusion, '*.npz')))
         np_files_path_sam = sorted(glob('%s/%s' % (files_folder_sam, '*.npz')))
         np_files_path_unet = sorted(
             glob('%s/%s' % (files_folder_unet, '*.npz')))
@@ -381,6 +443,8 @@ if __name__ == '__main__':
             len(np_files_path_stego),
             len(np_files_path_kmeans),
             len(np_files_path_diffusion),
+            len(np_files_path_pixel_kmeans),
+            len(np_files_path_pixel_diffusion),
             len(np_files_path_sam),
             len(np_files_path_unet),
             len(np_files_path_nnunet),
@@ -396,6 +460,10 @@ if __name__ == '__main__':
             np_files_path_kmeans) == 0
         assert len(np_files_path_diffusion) == num_files or len(
             np_files_path_diffusion) == 0
+        assert len(np_files_path_pixel_kmeans) == num_files or len(
+            np_files_path_pixel_kmeans) == 0
+        assert len(np_files_path_pixel_diffusion) == num_files or len(
+            np_files_path_pixel_diffusion) == 0
         assert len(np_files_path_sam) == num_files or len(
             np_files_path_sam) == 0
         assert len(np_files_path_unet) == num_files or len(
@@ -408,8 +476,9 @@ if __name__ == '__main__':
         has_dfc = True if len(np_files_path_dfc) == num_files else False
         has_stego = True if len(np_files_path_stego) == num_files else False
         has_kmeans = True if len(np_files_path_kmeans) == num_files else False
-        has_diffusion = True if len(
-            np_files_path_diffusion) == num_files else False
+        has_diffusion = True if len(np_files_path_diffusion) == num_files else False
+        has_pixel_kmeans = True if len(np_files_path_pixel_kmeans) == num_files else False
+        has_pixel_diffusion = True if len(np_files_path_pixel_diffusion) == num_files else False
         has_sam = True if len(np_files_path_sam) == num_files else False
         has_unet = True if len(np_files_path_unet) == num_files else False
         has_nnunet = True if len(np_files_path_nnunet) == num_files else False
@@ -475,6 +544,30 @@ if __name__ == '__main__':
                     ('CUTS + Diffusion (best one)', 'label_true',
                      'label_diffusion-best'),
                 ])
+        if has_pixel_kmeans:
+            if hparams.is_binary:
+                entity_tuples.extend([
+                    ('Image + Spectral $k$-means', 'label_true', 'seg_pixel_kmeans'),
+                ])
+            else:
+                entity_tuples.extend([
+                    ('Image + Spectral $k$-means', 'label_true', 'label_pixel_kmeans'),
+                ])
+        if has_pixel_diffusion:
+            if hparams.is_binary:
+                entity_tuples.extend([
+                    ('Image + Diffusion (persistent)', 'label_true',
+                     'seg_pixel_diffusion-persistent'),
+                    ('Image + Diffusion (best one)', 'label_true',
+                     'seg_pixel_diffusion-best'),
+                ])
+            else:
+                entity_tuples.extend([
+                    ('Image + Diffusion (persistent)', 'label_true',
+                     'label_pixel_diffusion-persistent'),
+                    ('Image + Diffusion (best one)', 'label_true',
+                     'label_pixel_diffusion-best'),
+                ])
         if has_sam:
             entity_tuples.extend([
                 ('[Supervised Pre-training] SAM', 'label_true',
@@ -514,6 +607,7 @@ if __name__ == '__main__':
 
         for image_idx in tqdm(range(num_files)):
             baselines_hashmap, kmeans_hashmap, diffusion_hashmap = {}, {}, {}
+            pixel_kmeans_hashmap, pixel_diffusion_hashmap = {}, {}
             dfc_hashmap, stego_hashmap, sam_hashmap = {}, {}, {}
             unet_hashmap, nnunet_hashmap = {}, {}
 
@@ -529,6 +623,11 @@ if __name__ == '__main__':
             if has_diffusion:
                 diffusion_hashmap = load_diffusion(
                     np_files_path_diffusion[image_idx])
+            if has_pixel_kmeans:
+                pixel_kmeans_hashmap = load_pixel_kmeans(np_files_path_pixel_kmeans[image_idx])
+            if has_pixel_diffusion:
+                pixel_diffusion_hashmap = load_pixel_diffusion(
+                    np_files_path_pixel_diffusion[image_idx])
             if has_sam:
                 sam_hashmap = load_sam(np_files_path_sam[image_idx])
             if has_unet:
@@ -538,7 +637,8 @@ if __name__ == '__main__':
 
             hashmap = combine_hashmaps(baselines_hashmap, dfc_hashmap,
                                        stego_hashmap, kmeans_hashmap,
-                                       diffusion_hashmap, sam_hashmap,
+                                       diffusion_hashmap, pixel_kmeans_hashmap,
+                                       pixel_diffusion_hashmap, sam_hashmap,
                                        unet_hashmap, nnunet_hashmap)
 
             if has_baselines:
@@ -555,6 +655,12 @@ if __name__ == '__main__':
                 hashmap = persistent_structures(hashmap)
                 hashmap = segment(hashmap, label_name='diffusion-persistent')
                 hashmap = segment_every_diffusion(hashmap)
+            if has_pixel_kmeans:
+                hashmap = segment(hashmap, label_name='pixel_kmeans')
+            if has_pixel_diffusion:
+                hashmap = pixel_persistent_structures(hashmap)
+                hashmap = segment(hashmap, label_name='pixel_diffusion-persistent')
+                hashmap = segment_every_pixel_diffusion(hashmap)
             # SAM already segments during inference. No need to do here.
 
             # Re-label the label indices for multi-class labels.
@@ -564,6 +670,12 @@ if __name__ == '__main__':
                     for i in range(hashmap['labels_diffusion'].shape[0]):
                         hashmap['labels_diffusion'][i, ...] = guided_relabel(
                             label_pred=hashmap['labels_diffusion'][i, ...],
+                            label_true=hashmap['label_true'])
+                # Relabel each of the diffusion labels.
+                if has_diffusion:
+                    for i in range(hashmap['labels_pixel_diffusion'].shape[0]):
+                        hashmap['labels_pixel_diffusion'][i, ...] = guided_relabel(
+                            label_pred=hashmap['labels_pixel_diffusion'][i, ...],
                             label_true=hashmap['label_true'])
                 # Relabel all the other predicted labels.
                 for (_, _, p2) in entity_tuples:
@@ -649,6 +761,81 @@ if __name__ == '__main__':
                             rmse(hashmap['label_true'],
                                  hashmap['segs_diffusion'][i, ...])
                             for i in range(hashmap['segs_diffusion'].shape[0])
+                        ]))
+                elif p2 == 'label_pixel_diffusion-best':
+                    # Get the best among all diffusion labels.
+                    assert not hparams.is_binary
+                    metrics['dice'][entry].append(
+                        max([
+                            per_class_dice_coeff(
+                                label_true=hashmap['label_true'],
+                                label_pred=hashmap['labels_pixel_diffusion'][i, ...])
+                            for i in range(
+                                hashmap['labels_pixel_diffusion'].shape[0])
+                        ]))
+                    metrics['hausdorff'][entry].append(
+                        min([
+                            per_class_hausdorff(
+                                label_true=hashmap['label_true'],
+                                label_pred=hashmap['labels_pixel_diffusion'][i, ...])
+                            for i in range(
+                                hashmap['labels_pixel_diffusion'].shape[0])
+                        ]))
+                    metrics['ssim'][entry].append(
+                        max([
+                            range_aware_ssim(
+                                label_true=hashmap['label_true'],
+                                label_pred=hashmap['labels_pixel_diffusion'][i, ...])
+                            for i in range(
+                                hashmap['labels_pixel_diffusion'].shape[0])
+                        ]))
+                    metrics['ergas'][entry].append(
+                        min([
+                            ergas(hashmap['label_true'],
+                                  hashmap['labels_pixel_diffusion'][i, ...]) for i in
+                            range(hashmap['labels_pixel_diffusion'].shape[0])
+                        ]))
+                    metrics['rmse'][entry].append(
+                        min([
+                            rmse(hashmap['label_true'],
+                                 hashmap['labels_pixel_diffusion'][i, ...]) for i in
+                            range(hashmap['labels_pixel_diffusion'].shape[0])
+                        ]))
+                elif p2 == 'seg_pixel_diffusion-best':
+                    # Get the best among all diffusion segmentations.
+                    assert hparams.is_binary
+                    metrics['dice'][entry].append(
+                        max([
+                            dice_coeff(
+                                label_true=hashmap['label_true'],
+                                label_pred=hashmap['segs_pixel_diffusion'][i, ...])
+                            for i in range(hashmap['segs_pixel_diffusion'].shape[0])
+                        ]))
+                    metrics['hausdorff'][entry].append(
+                        min([
+                            hausdorff(
+                                label_true=hashmap['label_true'],
+                                label_pred=hashmap['segs_pixel_diffusion'][i, ...])
+                            for i in range(hashmap['segs_pixel_diffusion'].shape[0])
+                        ]))
+                    metrics['ssim'][entry].append(
+                        max([
+                            range_aware_ssim(
+                                label_true=hashmap['label_true'],
+                                label_pred=hashmap['segs_pixel_diffusion'][i, ...])
+                            for i in range(hashmap['segs_pixel_diffusion'].shape[0])
+                        ]))
+                    metrics['ergas'][entry].append(
+                        min([
+                            ergas(hashmap['label_true'],
+                                  hashmap['segs_pixel_diffusion'][i, ...])
+                            for i in range(hashmap['segs_pixel_diffusion'].shape[0])
+                        ]))
+                    metrics['rmse'][entry].append(
+                        min([
+                            rmse(hashmap['label_true'],
+                                 hashmap['segs_pixel_diffusion'][i, ...])
+                            for i in range(hashmap['segs_pixel_diffusion'].shape[0])
                         ]))
                 elif p2 not in hashmap.keys():
                     # nan-padding for unavailable measurements.
