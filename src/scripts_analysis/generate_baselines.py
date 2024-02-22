@@ -43,8 +43,7 @@ def get_baseline_predictions(img: np.array, method: str, dataset_name:str = None
         param_map = {
             'retina': (200, 1.0),
             'brain_ventricles': (1000, 2.0),
-            'brain_tumor': (100, 0.8),
-            'default': (100, 0.8)
+            'default': (1, 0.8)
         }
         if dataset_name in param_map.keys():
             params = param_map[dataset_name]

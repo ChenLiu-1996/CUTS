@@ -50,16 +50,20 @@ def diffusion_condensation_msphate(X: np.array,
         where N := number of feature vectors
               C := number of features
     '''
-    msphate_op = multiscale_phate.Multiscale_PHATE(knn=knn,
-                                                   random_state=random_seed,
-                                                   n_jobs=num_workers)
-    msphate_op.fit(normalize(X, axis=1))
-    levels = msphate_op.levels
-    assert levels[0] == 0
-    levels = levels[1:]  # Ignore finest resolution of all-distinct labels.
+    try:
+        msphate_op = multiscale_phate.Multiscale_PHATE(knn=knn,
+                                                       random_state=random_seed,
+                                                       n_jobs=num_workers)
+        msphate_op.fit(normalize(X, axis=1))
+        levels = msphate_op.levels
+        assert levels[0] == 0
+        levels = levels[1:]  # Ignore finest resolution of all-distinct labels.
 
-    labels_pred = np.array([msphate_op.NxTs[lvl] for lvl in levels])
-    granularities = [len(msphate_op.NxTs) + lvl for lvl in levels]
+        labels_pred = np.array([msphate_op.NxTs[lvl] for lvl in levels])
+        granularities = [len(msphate_op.NxTs) + lvl for lvl in levels]
+    except:
+        print('Diffusion condensation fails.')
+        labels_pred, granularities = None, None
     return labels_pred, granularities
 
 
