@@ -181,8 +181,7 @@ def plot_results(fig: plt.figure,
     H, W = data_hashmap['label_true'].shape[:2]
     latent = data_hashmap['latent']
 
-    msphate_op = multiscale_phate.Multiscale_PHATE(knn=50,
-                                                   landmarks=100,
+    msphate_op = multiscale_phate.Multiscale_PHATE(knn=100,
                                                    random_state=0,
                                                    n_jobs=1)
     msphate_op.fit(normalize(latent, axis=1))
@@ -559,3 +558,7 @@ if __name__ == '__main__':
             fig.savefig('%s_figure_plot_comparison.png' % fig_path)
     else:
         fig.savefig('%s_figure_plot.png' % fig_path)
+
+    # Somehow the code may hang at this point...
+    # Force exit.
+    os._exit(0)

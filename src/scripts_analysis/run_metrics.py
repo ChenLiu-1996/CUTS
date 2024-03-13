@@ -215,7 +215,7 @@ def boxplots(meta_metrics, metric_name_map, entity_tuples, config_filepaths):
     plt.rcParams['axes.spines.right'] = False
     plt.rcParams['axes.spines.top'] = False
 
-    fig = plt.figure(figsize=(35, 5))
+    fig = plt.figure(figsize=(40, 8))
     plt.rcParams['font.size'] = 24
     plt.rcParams['legend.fontsize'] = 18
 
@@ -278,7 +278,7 @@ def barplots(meta_metrics, metric_name_map, entity_tuples, config_filepaths):
     plt.rcParams['axes.spines.right'] = False
     plt.rcParams['axes.spines.top'] = False
 
-    fig = plt.figure(figsize=(35, 5))
+    fig = plt.figure(figsize=(40, 8))
     plt.rcParams['font.size'] = 24
     plt.rcParams['legend.fontsize'] = 18
 
