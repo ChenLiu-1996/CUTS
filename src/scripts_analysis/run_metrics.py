@@ -33,7 +33,6 @@ def load_baselines(path: str) -> dict:
     hashmap['label_slic'] = numpy_array['label_slic']
     return hashmap
 
-
 def load_kmeans(path: str) -> dict:
     numpy_array = np.load(path)
     hashmap = {}
@@ -42,7 +41,6 @@ def load_kmeans(path: str) -> dict:
     hashmap['latent'] = numpy_array['latent']
     hashmap['label_kmeans'] = numpy_array['label_kmeans']
     return hashmap
-
 
 def load_diffusion(path: str) -> dict:
     numpy_array = np.load(path)
@@ -54,7 +52,6 @@ def load_diffusion(path: str) -> dict:
     hashmap['labels_diffusion'] = numpy_array['labels_diffusion']
     return hashmap
 
-
 def load_pixel_kmeans(path: str) -> dict:
     numpy_array = np.load(path)
     hashmap = {}
@@ -63,7 +60,6 @@ def load_pixel_kmeans(path: str) -> dict:
     hashmap['latent'] = numpy_array['latent']
     hashmap['label_pixel_kmeans'] = numpy_array['label_kmeans']
     return hashmap
-
 
 def load_pixel_diffusion(path: str) -> dict:
     numpy_array = np.load(path)
@@ -81,7 +77,6 @@ def load_dfc(path: str) -> dict:
     hashmap['label_dfc'] = numpy_array['label_dfc']
     return hashmap
 
-
 def load_stego(path: str) -> dict:
     numpy_array = np.load(path)
     hashmap = {}
@@ -89,13 +84,35 @@ def load_stego(path: str) -> dict:
     hashmap['label_stego'] = numpy_array['label_stego']
     return hashmap
 
-
 def load_sam(path: str) -> dict:
     numpy_array = np.load(path)
     hashmap = {}
     hashmap['label_sam'] = numpy_array['label_sam']
     return hashmap
 
+def load_sam_med2d(path: str) -> dict:
+    numpy_array = np.load(path)
+    hashmap = {}
+    hashmap['label_sam_med2d'] = numpy_array['label_sam_med2d']
+    return hashmap
+
+def load_sam_med2d_box(path: str) -> dict:
+    numpy_array = np.load(path)
+    hashmap = {}
+    hashmap['label_sam_med2d_box'] = numpy_array['label_sam_med2d_box']
+    return hashmap
+
+def load_medsam(path: str) -> dict:
+    numpy_array = np.load(path)
+    hashmap = {}
+    hashmap['label_medsam'] = numpy_array['label_medsam']
+    return hashmap
+
+def load_medsam_box(path: str) -> dict:
+    numpy_array = np.load(path)
+    hashmap = {}
+    hashmap['label_medsam_box'] = numpy_array['label_medsam_box']
+    return hashmap
 
 def load_unet(path: str) -> dict:
     numpy_array = np.load(path)
@@ -104,7 +121,6 @@ def load_unet(path: str) -> dict:
     hashmap['label_true'] = numpy_array['label_true']
     hashmap['label_unet'] = numpy_array['label_pred']
     return hashmap
-
 
 def load_nnunet(path: str) -> dict:
     numpy_array = np.load(path)
@@ -413,6 +429,14 @@ if __name__ == '__main__':
                                                   'numpy_files_seg_pixel_diffusion')
         files_folder_sam = '%s/%s' % (config.output_save_path,
                                       'numpy_files_seg_SAM')
+        files_folder_sam_med2d = '%s/%s' % (config.output_save_path,
+                                            'numpy_files_seg_SAM_Med2D')
+        files_folder_sam_med2d_box = '%s/%s' % (config.output_save_path,
+                                                'numpy_files_seg_SAM_Med2D_box')
+        files_folder_medsam = '%s/%s' % (config.output_save_path,
+                                         'numpy_files_seg_MedSAM')
+        files_folder_medsam_box = '%s/%s' % (config.output_save_path,
+                                             'numpy_files_seg_MedSAM_box')
         files_folder_unet = '%s/%s' % (config.output_save_path,
                                        'numpy_files_seg_supervised_unet')
         files_folder_nnunet = '%s/%s' % (config.output_save_path,
@@ -432,6 +456,10 @@ if __name__ == '__main__':
         np_files_path_pixel_diffusion = sorted(
             glob('%s/%s' % (files_folder_pixel_diffusion, '*.npz')))
         np_files_path_sam = sorted(glob('%s/%s' % (files_folder_sam, '*.npz')))
+        np_files_path_sam_med2d = sorted(glob('%s/%s' % (files_folder_sam_med2d, '*.npz')))
+        np_files_path_sam_med2d_box = sorted(glob('%s/%s' % (files_folder_sam_med2d_box, '*.npz')))
+        np_files_path_medsam = sorted(glob('%s/%s' % (files_folder_medsam, '*.npz')))
+        np_files_path_medsam_box = sorted(glob('%s/%s' % (files_folder_medsam_box, '*.npz')))
         np_files_path_unet = sorted(
             glob('%s/%s' % (files_folder_unet, '*.npz')))
         np_files_path_nnunet = sorted(
@@ -446,6 +474,10 @@ if __name__ == '__main__':
             len(np_files_path_pixel_kmeans),
             len(np_files_path_pixel_diffusion),
             len(np_files_path_sam),
+            len(np_files_path_sam_med2d),
+            len(np_files_path_sam_med2d_box),
+            len(np_files_path_medsam),
+            len(np_files_path_medsam_box),
             len(np_files_path_unet),
             len(np_files_path_nnunet),
         ])
@@ -466,6 +498,14 @@ if __name__ == '__main__':
             np_files_path_pixel_diffusion) == 0
         assert len(np_files_path_sam) == num_files or len(
             np_files_path_sam) == 0
+        assert len(np_files_path_sam_med2d) == num_files or len(
+            np_files_path_sam_med2d) == 0
+        assert len(np_files_path_sam_med2d_box) == num_files or len(
+            np_files_path_sam_med2d_box) == 0
+        assert len(np_files_path_medsam) == num_files or len(
+            np_files_path_medsam) == 0
+        assert len(np_files_path_medsam_box) == num_files or len(
+            np_files_path_medsam_box) == 0
         assert len(np_files_path_unet) == num_files or len(
             np_files_path_unet) == 0
         assert len(np_files_path_nnunet) == num_files or len(
@@ -480,6 +520,10 @@ if __name__ == '__main__':
         has_pixel_kmeans = True if len(np_files_path_pixel_kmeans) == num_files else False
         has_pixel_diffusion = True if len(np_files_path_pixel_diffusion) == num_files else False
         has_sam = True if len(np_files_path_sam) == num_files else False
+        has_sam_med2d = True if len(np_files_path_sam_med2d) == num_files else False
+        has_sam_med2d_box = True if len(np_files_path_sam_med2d_box) == num_files else False
+        has_medsam = True if len(np_files_path_medsam) == num_files else False
+        has_medsam_box = True if len(np_files_path_medsam_box) == num_files else False
         has_unet = True if len(np_files_path_unet) == num_files else False
         has_nnunet = True if len(np_files_path_nnunet) == num_files else False
 
@@ -573,6 +617,26 @@ if __name__ == '__main__':
                 ('[Supervised Pre-training] SAM', 'label_true',
                  'label_sam'),  # Already segmented in SAM.
             ])
+        if has_sam_med2d:
+            entity_tuples.extend([
+                ('[Supervised Pre-training] SAM-Med2D', 'label_true',
+                 'label_sam_med2d'),  # Already segmented in SAM-Med2D.
+            ])
+        if has_sam_med2d_box:
+            entity_tuples.extend([
+                ('[Supervised Pre-training] SAM-Med2D (box)', 'label_true',
+                 'label_sam_med2d_box'),  # Already segmented in SAM-Med2D.
+            ])
+        if has_medsam:
+            entity_tuples.extend([
+                ('[Supervised Pre-training] MedSAM', 'label_true',
+                 'label_medsam'),  # Already segmented in MedSAM.
+            ])
+        if has_medsam_box:
+            entity_tuples.extend([
+                ('[Supervised Pre-training] MedSAM (box)', 'label_true',
+                 'label_medsam_box'),  # Already segmented in MedSAM.
+            ])
         if has_unet:
             entity_tuples.extend([
                 ('[Supervised] UNet', 'label_true', 'label_unet'),
@@ -609,6 +673,7 @@ if __name__ == '__main__':
             baselines_hashmap, kmeans_hashmap, diffusion_hashmap = {}, {}, {}
             pixel_kmeans_hashmap, pixel_diffusion_hashmap = {}, {}
             dfc_hashmap, stego_hashmap, sam_hashmap = {}, {}, {}
+            sam_med2d_hashmap, sam_med2d_box_hashmap, medsam_hashmap, medsam_box_hashmap = {}, {}, {}, {}
             unet_hashmap, nnunet_hashmap = {}, {}
 
             if has_baselines:
@@ -630,6 +695,14 @@ if __name__ == '__main__':
                     np_files_path_pixel_diffusion[image_idx])
             if has_sam:
                 sam_hashmap = load_sam(np_files_path_sam[image_idx])
+            if has_sam_med2d:
+                sam_med2d_hashmap = load_sam_med2d(np_files_path_sam_med2d[image_idx])
+            if has_sam_med2d_box:
+                sam_med2d_box_hashmap = load_sam_med2d_box(np_files_path_sam_med2d_box[image_idx])
+            if has_medsam:
+                medsam_hashmap = load_medsam(np_files_path_medsam[image_idx])
+            if has_medsam_box:
+                medsam_box_hashmap = load_medsam_box(np_files_path_medsam_box[image_idx])
             if has_unet:
                 unet_hashmap = load_unet(np_files_path_unet[image_idx])
             if has_nnunet:
@@ -639,6 +712,8 @@ if __name__ == '__main__':
                                        stego_hashmap, kmeans_hashmap,
                                        diffusion_hashmap, pixel_kmeans_hashmap,
                                        pixel_diffusion_hashmap, sam_hashmap,
+                                       sam_med2d_hashmap, sam_med2d_box_hashmap,
+                                       medsam_hashmap, medsam_box_hashmap,
                                        unet_hashmap, nnunet_hashmap)
 
             if has_baselines:
@@ -662,6 +737,7 @@ if __name__ == '__main__':
                 hashmap = segment(hashmap, label_name='pixel_diffusion-persistent')
                 hashmap = segment_every_pixel_diffusion(hashmap)
             # SAM already segments during inference. No need to do here.
+            # SAM-Med2D already segments during inference. No need to do here.
 
             # Re-label the label indices for multi-class labels.
             if not hparams.is_binary:

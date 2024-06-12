@@ -12,11 +12,6 @@
 ## A Glimpse into the Methods
 <img src = "assets/architecture.png" width=800>
 
-## Quick Flavors of the Results
-<img src = "assets/qualitative.png" width=800>
-<img src = "assets/brain_tumor_results.png" width=800>
-<img src = "assets/table1.png" width=800>
-
 
 ## Citation
 ```
@@ -130,6 +125,26 @@ mkdir SAM_checkpoint && cd SAM_checkpoint
 wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
 
 ## Under `comparison/SAM/CUTS_scripts/`
+python step01_produce_results.py --config ../../../config/retina_seed2.yaml
+```
+
+#### To use MedSAM.
+```
+## Under `comparison/MedSAM/`
+mkdir MedSAM_checkpoint && cd MedSAM_checkpoint
+download from https://drive.google.com/file/d/1ARiB5RkSsWmAB_8mqWnwDF8ZKTtFwsjl/view
+
+## Under `comparison/SAM_Med2D/CUTS_scripts/`
+python step01_produce_results.py --config ../../../config/retina_seed2.yaml
+```
+
+#### To use SAM-Med2D.
+```
+## Under `comparison/SAM_Med2D/`
+mkdir SAM_Med2D_checkpoint && cd SAM_Med2D_checkpoint
+download from https://drive.google.com/file/d/1ARiB5RkSsWmAB_8mqWnwDF8ZKTtFwsjl/view
+
+## Under `comparison/SAM_Med2D/CUTS_scripts/`
 python step01_produce_results.py --config ../../../config/retina_seed2.yaml
 ```
 </details>
@@ -301,6 +316,13 @@ python -m pip install azureml.core
 
 # (Optional) For SAM
 python -m pip install git+https://github.com/facebookresearch/segment-anything.git
+
+# (Optional) For MedSAM
+python -m pip install git+https://github.com/bowang-lab/MedSAM.git
+
+# (Optional) For SAM-Med2D
+python -m pip install albumentations
+python -m pip install scikit-learn==1.1.3  # need to downgrade to 1.1.3
 ```
 Installation usually takes between 20 minutes and 1 hour on a normal desktop computer.
 
@@ -332,3 +354,5 @@ For the comparison against other methods, we use the official implementations fr
 - [**STEGO**, *ICLR 2022*: Unsupervised Semantic Segmentation by Distilling Feature Correspondences](https://github.com/mhamilton723/STEGO)
 - [**SAM**, *Arxiv* (Meta AI Research): Segment Anything](https://github.com/facebookresearch/segment-anything)
 - [**SAM**, *Medical Image Analysis 2024*: Segment Anything Model for Medical Image Analysis: an Experimental Study](https://github.com/mazurowski-lab/segment-anything-medical-evaluation)
+- [**SAM-Med2D**, *ArXiv*: SAM-Med2D](https://github.com/OpenGVLab/SAM-Med2D)
+- [**MedSAM**, *Nature Communications 2024*: Segment anything in medical images](https://github.com/bowang-lab/MedSAM)

@@ -71,6 +71,10 @@ def plot_comparison(fig: plt.figure, num_samples: int, sample_idx: int,
         'label_dfc',
         'label_stego',
         'label_sam',
+        'label_sam_med2d',
+        'label_sam_med2d_box',
+        'label_medsam',
+        'label_medsam_box',
         'label_supervised_unet',
         'label_supervised_nnunet',
     ]
@@ -113,6 +117,10 @@ def plot_overlaid_comparison(fig: plt.figure,
         'label_dfc',
         'label_stego',
         'label_sam',
+        'label_sam_med2d',
+        'label_sam_med2d_box',
+        'label_medsam',
+        'label_medsam_box',
         'label_supervised_unet',
         'label_supervised_nnunet',
     ]
@@ -316,6 +324,14 @@ if __name__ == '__main__':
                                     'numpy_files_seg_STEGO')
     files_folder_sam = '%s/%s' % (config.output_save_path,
                                   'numpy_files_seg_SAM')
+    files_folder_sam_med2d = '%s/%s' % (config.output_save_path,
+                                        'numpy_files_seg_SAM_Med2D')
+    files_folder_sam_med2d_box = '%s/%s' % (config.output_save_path,
+                                            'numpy_files_seg_SAM_Med2D_box')
+    files_folder_medsam = '%s/%s' % (config.output_save_path,
+                                     'numpy_files_seg_MedSAM')
+    files_folder_medsam_box = '%s/%s' % (config.output_save_path,
+                                         'numpy_files_seg_MedSAM_box')
     files_folder_supervised_unet = '%s/%s' % (
         config.output_save_path, 'numpy_files_seg_supervised_unet')
     files_folder_supervised_nnunet = '%s/%s' % (
@@ -334,6 +350,10 @@ if __name__ == '__main__':
     files_path_dfc = sorted(glob('%s/%s' % (files_folder_dfc, '*.npz')))
     files_path_stego = sorted(glob('%s/%s' % (files_folder_stego, '*.npz')))
     files_path_sam = sorted(glob('%s/%s' % (files_folder_sam, '*.npz')))
+    files_path_sam_med2d = sorted(glob('%s/%s' % (files_folder_sam_med2d, '*.npz')))
+    files_path_sam_med2d_box = sorted(glob('%s/%s' % (files_folder_sam_med2d_box, '*.npz')))
+    files_path_medsam = sorted(glob('%s/%s' % (files_folder_medsam, '*.npz')))
+    files_path_medsam_box = sorted(glob('%s/%s' % (files_folder_medsam_box, '*.npz')))
     files_path_supervised_unet = sorted(
         glob('%s/%s' % (files_folder_supervised_unet, '*.npz')))
     files_path_supervised_nnunet = sorted(
@@ -446,6 +466,42 @@ if __name__ == '__main__':
             label_sam = np.zeros_like(label_true)
 
         try:
+            numpy_array_sam_med2d = np.load(files_path_sam_med2d[image_idx])
+            label_sam_med2d = numpy_array_sam_med2d['label_sam_med2d']
+        except:
+            print(
+                'Warning! `SAM-Med2D` results not found. Placeholding with blank labels.'
+            )
+            label_sam_med2d = np.zeros_like(label_true)
+
+        try:
+            numpy_array_sam_med2d_box = np.load(files_path_sam_med2d_box[image_idx])
+            label_sam_med2d_box = numpy_array_sam_med2d_box['label_sam_med2d_box']
+        except:
+            print(
+                'Warning! `SAM-Med2D (box)` results not found. Placeholding with blank labels.'
+            )
+            label_sam_med2d_box = np.zeros_like(label_true)
+
+        try:
+            numpy_array_medsam = np.load(files_path_medsam[image_idx])
+            label_medsam = numpy_array_medsam['label_medsam']
+        except:
+            print(
+                'Warning! `MedSAM` results not found. Placeholding with blank labels.'
+            )
+            label_medsam = np.zeros_like(label_true)
+
+        try:
+            numpy_array_medsam_box = np.load(files_path_medsam_box[image_idx])
+            label_medsam_box = numpy_array_medsam_box['label_medsam_box']
+        except:
+            print(
+                'Warning! `MedSAM (box)` results not found. Placeholding with blank labels.'
+            )
+            label_medsam_box = np.zeros_like(label_true)
+
+        try:
             numpy_array_unet = np.load(files_path_supervised_unet[image_idx])
             label_supervised_unet = numpy_array_unet['label_pred']
         except:
@@ -507,6 +563,10 @@ if __name__ == '__main__':
             'label_dfc': label_dfc,
             'label_stego': label_stego,
             'label_sam': label_sam,
+            'label_sam_med2d': label_sam_med2d,
+            'label_sam_med2d_box': label_sam_med2d_box,
+            'label_medsam': label_medsam,
+            'label_medsam_box': label_medsam_box,
             'label_supervised_unet': label_supervised_unet,
             'label_supervised_nnunet': label_supervised_nnunet,
             'label_kmeans': label_kmeans,
