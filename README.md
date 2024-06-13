@@ -9,7 +9,6 @@
 
 <br>
 
-## A Glimpse into the Methods
 <img src = "assets/architecture.png" width=800>
 
 
