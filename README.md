@@ -1,4 +1,4 @@
-# CUTS: A Deep Learning and Topological Framework for Multigranular Unsupervised Medical Image Segmentation
+# [MICCAI 2024] CUTS: A Deep Learning and Topological Framework for Multigranular Unsupervised Medical Image Segmentation
 ### Krishnaswamy Lab, Yale University
 [![Twitter](https://img.shields.io/twitter/follow/KrishnaswamyLab.svg?style=social&label=Follow)](https://twitter.com/KrishnaswamyLab)
 [![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/UnsupervisedMedicalSeg.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/UnsupervisedMedicalSeg/)
