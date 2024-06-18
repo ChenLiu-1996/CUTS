@@ -350,7 +350,7 @@ If you encounter `zsh bus error` while running some of the python scripts, for e
 For the comparison against other methods, we use the official implementations from the following repositories:
 - [**DFC**, *IEEE TIP 2020*: Unsupervised Learning of Image Segmentation Based on Differentiable Feature Clustering](https://github.com/kanezaki/pytorch-unsupervised-segmentation-tip)
 - [**STEGO**, *ICLR 2022*: Unsupervised Semantic Segmentation by Distilling Feature Correspondences](https://github.com/mhamilton723/STEGO)
-- [**SAM**, *Arxiv* (Meta AI Research): Segment Anything](https://github.com/facebookresearch/segment-anything)
+- [**SAM**, *ICCV 2023* (Meta AI Research): Segment Anything](https://github.com/facebookresearch/segment-anything)
 - [**SAM**, *Medical Image Analysis 2024*: Segment Anything Model for Medical Image Analysis: an Experimental Study](https://github.com/mazurowski-lab/segment-anything-medical-evaluation)
 - [**SAM-Med2D**, *ArXiv*: SAM-Med2D](https://github.com/OpenGVLab/SAM-Med2D)
 - [**MedSAM**, *Nature Communications 2024*: Segment anything in medical images](https://github.com/bowang-lab/MedSAM)
