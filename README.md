@@ -13,11 +13,19 @@ This is the **official** PyTorch implementation of [**CUTS: A Deep Learning and 
 
 ## Citation
 ```
-@article{chen2022cuts,
+@article{liu2022cuts,
   title={CUTS: A Framework for Multigranular Unsupervised Medical Image Segmentation},
   author={Liu, Chen and Amodio, Matthew and Shen, Liangbo L and Gao, Feng and Avesta, Arman and Aneja, Sanjay and Wang, Jay and Del Priore, Lucian V and Krishnaswamy, Smita},
   journal={arXiv preprint arXiv:2209.11359},
   year={2022}
+}
+
+@inproceedings{liu2024cuts,
+  title={CUTS: A Deep Learning and Topological Framework for Multigranular Unsupervised Medical Image Segmentation},
+  author={Liu, Chen and Amodio, Matthew and Shen, Liangbo L and Gao, Feng and Avesta, Arman and Aneja, Sanjay and Wang, Jay and Del Priore, Lucian V and Krishnaswamy, Smita},
+  journal={International Conference on Medical Image Computing and Computer-Assisted Intervention},
+  year={2024},
+  organization={Springer}
 }
 ```
 
