@@ -265,6 +265,7 @@ The process is largely the same as detailed in the section: **To reproduce the r
     - If your dataset is very small (e.g., 50 images), you can refer to `src/datasets/brain_ventricles.py` or `src/datasets/retina.py`, where the data is pre-loaded to the CPU prior to training.
     - If your dataset is rather big, you can refer to `src/datasets/brain_tumor.py`, where the data is loaded on-the-fly during training.
 4. Make sure your custom `Dataset` is included in `src/data_utils/prepare_datasets.py`, both in the import section on the top of the page, and inside the `prepare_dataset` function, alongside the lines such as `dataset = Retina(base_path=config.dataset_path)`.
+5. Currently, most of our example `Dataset` classes expect matching names between the image and the label. If your data is organized differently, please be mindful you need to change your logic in your class. (Credit to [DerrickGuu](https://github.com/ChenLiu-1996/CUTS/issues/13#issuecomment-2192022353))
 </details>
 
 Other than that, you can use the pipeline as usual.
