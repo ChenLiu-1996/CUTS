@@ -3,7 +3,7 @@
 [![Twitter](https://img.shields.io/twitter/follow/KrishnaswamyLab.svg?style=social&label=Follow)](https://twitter.com/KrishnaswamyLab)
 [![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/UnsupervisedMedicalSeg.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/UnsupervisedMedicalSeg/)
 
-This is the **official** PyTorch implementation of [**CUTS: A Deep Learning and Topological Framework for Multigranular Unsupervised Medical Image Segmentation**](https://arxiv.org/abs/2209.11359)
+This is the authors' PyTorch implementation of [**CUTS**](https://arxiv.org/abs/2209.11359). The official version is maintained in the [Lab GitHub repo](https://github.com/KrishnaswamyLab/CUTS).
 
 <br>
 
