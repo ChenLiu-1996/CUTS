@@ -5,8 +5,6 @@
 
 This is the authors' PyTorch implementation of [**CUTS**](https://arxiv.org/abs/2209.11359). The official version is maintained in the [Lab GitHub repo](https://github.com/KrishnaswamyLab/CUTS).
 
-<br>
-
 ## A Glimpse into the Methods
 <img src = "assets/architecture.png" width=800>
 
