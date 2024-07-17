@@ -4,6 +4,7 @@
 [![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/UnsupervisedMedicalSeg.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/UnsupervisedMedicalSeg/)
 
 This is the authors' PyTorch implementation of [**CUTS**](https://arxiv.org/abs/2209.11359), MICCAI 2024.
+
 The official version is maintained in the [Lab GitHub repo](https://github.com/KrishnaswamyLab/CUTS).
 
 ## A Glimpse into the Methods
