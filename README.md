@@ -2,8 +2,10 @@
 ### Krishnaswamy Lab, Yale University
 [![Twitter](https://img.shields.io/twitter/follow/KrishnaswamyLab.svg?style=social&label=Follow)](https://twitter.com/KrishnaswamyLab)
 [![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/UnsupervisedMedicalSeg.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/UnsupervisedMedicalSeg/)
+[![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.48550/arXiv.2209.11359)](https://juleskreuer.eu/citation-badge/)
 [![ArXiv](https://img.shields.io/badge/ArXiv-CUTS-firebrick)](https://arxiv.org/abs/2209.11359)
 [![MICCAI 2024](https://img.shields.io/badge/MICCAI_2024-aeeafc)]()
+
 
 This is the authors' PyTorch implementation of [**CUTS**](https://arxiv.org/abs/2209.11359), MICCAI 2024.
 
