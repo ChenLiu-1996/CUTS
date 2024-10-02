@@ -4,6 +4,7 @@
 [![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/UnsupervisedMedicalSeg.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/UnsupervisedMedicalSeg/)
 [![ArXiv](https://img.shields.io/badge/ArXiv-CUTS-firebrick)](https://arxiv.org/abs/2209.11359)
 [![MICCAI 2024](https://img.shields.io/badge/MICCAI_2024-aeeafc)]()
+[![Poster](https://img.shields.io/badge/Poster-0f4d92)](https://www.chenliu1996.com/publication/2024_cuts/CUTS_MICCAI2024_poster.pdf)
 
 
 This is the authors' PyTorch implementation of [**CUTS**](https://arxiv.org/abs/2209.11359), MICCAI 2024.
