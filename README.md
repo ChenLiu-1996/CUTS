@@ -3,7 +3,7 @@
 [![Twitter](https://img.shields.io/twitter/follow/KrishnaswamyLab.svg?style=social&label=Follow)](https://twitter.com/KrishnaswamyLab)
 [![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/UnsupervisedMedicalSeg.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/UnsupervisedMedicalSeg/)
 [![ArXiv](https://img.shields.io/badge/ArXiv-CUTS-firebrick)](https://arxiv.org/abs/2209.11359)
-[![MICCAI 2024](https://img.shields.io/badge/MICCAI_2024-aeeafc)]()
+[![MICCAI 2024](https://img.shields.io/badge/MICCAI_2024-aeeafc)](https://papers.miccai.org/miccai-2024/paper/1569_paper.pdf)
 [![Poster](https://img.shields.io/badge/Poster-0f4d92)](https://www.chenliu1996.com/publication/2024_cuts/CUTS_MICCAI2024_poster.pdf)
 
 
@@ -17,12 +17,15 @@ The official version is maintained in the [Lab GitHub repo](https://github.com/K
 
 ## Citation
 ```
-@inproceedings{liu2024cuts,
-  title={CUTS: A Deep Learning and Topological Framework for Multigranular Unsupervised Medical Image Segmentation},
-  author={Liu, Chen and Amodio, Matthew and Shen, Liangbo L and Gao, Feng and Avesta, Arman and Aneja, Sanjay and Wang, Jay and Del Priore, Lucian V and Krishnaswamy, Smita},
-  journal={International Conference on Medical Image Computing and Computer-Assisted Intervention},
-  year={2024},
-  organization={Springer}
+@inproceedings{Liu_CUTS_MICCAI2024,
+    author = { Liu, Chen and Amodio, Matthew and Shen, Liangbo L. and Gao, Feng and Avesta, Arman and Aneja, Sanjay and Wang, Jay C. and Del Priore, Lucian V. and Krishnaswamy, Smita},
+    title = { { CUTS: A Deep Learning and Topological Framework for Multigranular Unsupervised Medical Image Segmentation } },
+    booktitle = {proceedings of Medical Image Computing and Computer Assisted Intervention -- MICCAI 2024},
+    year = {2024},
+    publisher = {Springer Nature Switzerland},
+    volume = {LNCS 15008},
+    month = {October},
+    page = {pending}
 }
 ```
 
