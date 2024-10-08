@@ -18,14 +18,14 @@ The official version is maintained in the [Lab GitHub repo](https://github.com/K
 ## Citation
 ```
 @inproceedings{Liu_CUTS_MICCAI2024,
-    author = { Liu, Chen and Amodio, Matthew and Shen, Liangbo L. and Gao, Feng and Avesta, Arman and Aneja, Sanjay and Wang, Jay C. and Del Priore, Lucian V. and Krishnaswamy, Smita},
     title = { { CUTS: A Deep Learning and Topological Framework for Multigranular Unsupervised Medical Image Segmentation } },
+    author = { Liu, Chen and Amodio, Matthew and Shen, Liangbo L. and Gao, Feng and Avesta, Arman and Aneja, Sanjay and Wang, Jay C. and Del Priore, Lucian V. and Krishnaswamy, Smita},
     booktitle = {proceedings of Medical Image Computing and Computer Assisted Intervention -- MICCAI 2024},
-    year = {2024},
     publisher = {Springer Nature Switzerland},
     volume = {LNCS 15008},
+    page = {155–165}
+    year = {2024},
     month = {October},
-    page = {pending}
 }
 ```
 
