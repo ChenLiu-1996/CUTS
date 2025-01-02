@@ -3,7 +3,7 @@ CUTS
 </h1>
 
 <p align="center">
-<strong>CUTS: A Deep Learning and Topological Framework for Multigranular Unsupervised Medical Image Segmentation</strong> [<a href="https://arxiv.org/pdf/2209.11359">PDF</a>]
+<strong>CUTS: A Deep Learning and Topological Framework for Multigranular Unsupervised Medical Image Segmentation</strong>
 </p>
 
 <div align="center">
