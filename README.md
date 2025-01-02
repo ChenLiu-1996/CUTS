@@ -1,5 +1,5 @@
 <h1 align="center">
-CUTS
+[MICCAI 2024] CUTS
 </h1>
 
 <p align="center">
