@@ -16,10 +16,7 @@
 
 </div>
 
-<p align="center">
-Krishnaswamy Lab, Yale University
-</p>
-
+### Krishnaswamy Lab, Yale University
 
 This is the authors' PyTorch implementation of [**CUTS**](https://arxiv.org/abs/2209.11359), MICCAI 2024.
 
