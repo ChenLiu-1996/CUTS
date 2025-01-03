@@ -8,11 +8,13 @@
 
 <div align="center">
 
-[![Twitter](https://img.shields.io/twitter/follow/KrishnaswamyLab.svg?style=social&label=Follow)](https://twitter.com/KrishnaswamyLab)
-[![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/UnsupervisedMedicalSeg.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/UnsupervisedMedicalSeg/)
 [![ArXiv](https://img.shields.io/badge/ArXiv-CUTS-firebrick)](https://arxiv.org/abs/2209.11359)
 [![MICCAI 2024](https://img.shields.io/badge/MICCAI_2024-aeeafc)](https://link.springer.com/chapter/10.1007/978-3-031-72111-3_15)
 [![Poster](https://img.shields.io/badge/Poster-0f4d92)](https://www.chenliu1996.com/publication/2024_cuts/CUTS_MICCAI2024_poster.pdf)
+[![Twitter](https://img.shields.io/twitter/follow/KrishnaswamyLab.svg?style=social)](https://twitter.com/KrishnaswamyLab)
+[![Twitter](https://img.shields.io/twitter/follow/ChenLiu-1996.svg?style=social)](https://twitter.com/ChenLiu_1996)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-ChenLiu-1996?color=blue)](https://www.linkedin.com/in/chenliu1996/)
+[![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/UnsupervisedMedicalSeg.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/UnsupervisedMedicalSeg/)
 
 </div>
 
