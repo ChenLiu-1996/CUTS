@@ -73,7 +73,9 @@ Relatively core files or folders are marked with (*).
 ```
 
 ## Data Provided
-The `berkeley_natural_images` and `retina` datasets are provided in `zip` format. The `brain_ventricles` dataset exceeds the GitHub size limits, and can be made available upon reasonable request.
+As some background info, I inherited the datasets from a graduated member of the lab when I worked on this project. These datasets are small in sample size N and already preprocessed by the time I had them. For reproducibility, I have included the `berkeley_natural_images`, `brain_tumor` and `retina` datasets in `zip` format in this directory. The `brain_ventricles` dataset exceeds the GitHub size limits, and can be found on [Google Drive](https://drive.google.com/file/d/1TB5Zu3J4UbEleJUuNf-h1AymOn1jOoQe/view?usp=sharing).
+
+Also, though not used in the paper, I recently found the full (likely unprocessed) NifTI files for the brain tumor dataset too, which I also include in this directory. I believe the brain_tumor dataset used is some of the slices from brain_tumor_nifti.
 
 ## To reproduce the results in the paper.
 The following commands are using `retina_seed2` as an example (retina dataset, random seed set to 2022).
