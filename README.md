@@ -352,6 +352,8 @@ python -m pip install scikit-learn==1.1.3  # need to downgrade to 1.1.3
 ```
 Installation usually takes between 20 minutes and 1 hour on a normal desktop computer.
 
+The installation method above has been verified on a few different devices. Alternatively, you can try to use the `environment.yaml` or `requirements.txt` to install, but these are not verified.
+
 ## DEBUG Notes
 <details>
   <summary>Regarding "dead lock" (e.g., never-ending repeated `Time out!`) when generating results.</summary>
