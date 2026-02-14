@@ -12,12 +12,12 @@
 [![MICCAI 2024](https://img.shields.io/badge/MICCAI_2024-aeeafc)](https://link.springer.com/chapter/10.1007/978-3-031-72111-3_15)
 [![Poster](https://img.shields.io/badge/Poster-0f4d92)](https://chenliu-1996.github.io/posters/CUTS_MICCAI2024_poster.pdf)
 [![HuggingFace Dataset](https://img.shields.io/badge/HuggingFace-Dataset-orange)](https://huggingface.co/datasets/ChenLiu1996/CUTS)
+[![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/CUTS.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/CUTS/)
 <br>
 [![Twitter](https://img.shields.io/twitter/follow/KrishnaswamyLab.svg?style=social)](https://twitter.com/KrishnaswamyLab)
 [![Twitter](https://img.shields.io/twitter/follow/ChenLiu-1996.svg?style=social)](https://twitter.com/ChenLiu_1996)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-ChenLiu-1996?color=blue)](https://www.linkedin.com/in/chenliu1996/)
 [![Google Scholar](https://img.shields.io/badge/Google_Scholar-Chen-4a86cf?logo=google-scholar&logoColor=white)](https://scholar.google.com/citations?user=3rDjnykAAAAJ&sortby=pubdate)
-[![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/CUTS.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/CUTS/)
 
 </div>
 
