@@ -8,7 +8,7 @@
 
 <div align="center">
 
-[![ArXiv](https://img.shields.io/badge/ArXiv-CUTS-firebrick)](https://arxiv.org/abs/2209.11359)
+[![arXiv](https://img.shields.io/badge/arXiv-CUTS-firebrick)](https://arxiv.org/abs/2209.11359)
 [![MICCAI 2024](https://img.shields.io/badge/MICCAI_2024-aeeafc)](https://link.springer.com/chapter/10.1007/978-3-031-72111-3_15)
 [![Poster](https://img.shields.io/badge/Poster-0f4d92)](https://chenliu-1996.github.io/posters/CUTS_MICCAI2024_poster.pdf)
 [![HuggingFace Dataset](https://img.shields.io/badge/HuggingFace-Dataset-orange)](https://huggingface.co/datasets/ChenLiu1996/CUTS)
